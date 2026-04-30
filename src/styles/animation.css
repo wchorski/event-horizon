@@ -1,0 +1,169 @@
+/* @media (prefers-reduced-motion: reduce) {
+  .animation {
+    animation: dissolve 4s linear infinite both;
+    background-color: green;
+    text-decoration: overline;
+  }
+} */
+
+button {
+  transition-property:
+    background-position, background-color, color, border, width, height, filter;
+  transition-duration: 100ms;
+  transition-timing-function: ease-in;
+  transition-delay: 0;
+}
+
+@keyframes loading-bottom-border {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+button[type="submit"].success {
+  position: relative;
+  &::after {
+    opacity: 0;
+    pointer-events: none;
+    content: "✔ success";
+    position: absolute;
+    bottom: 4rem;
+    color: var(--c-success);
+    width: 100%;
+
+    animation-name: slide-down-fade-out;
+    animation-duration: 5s;
+    animation-timing-function: ease-out;
+    animation-delay: 0;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+  }
+}
+
+@keyframes slide-down-fade-out {
+  0% {
+    opacity: 0.3;
+    transform: translateY(100%);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+button.htmx-request {
+  anchor-name: --submit-button;
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    /* anchor-name: --submit-button;
+    position-area: center bottom; */
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -3px;
+
+    width: 90%;
+    height: 2px;
+    background-color: yellow;
+    background: var(--lg-loading);
+    background-size: 200% 100%;
+    background-position: 0 0;
+
+    animation-name: loading-bottom-border;
+    animation-duration: 900ms;
+    animation-timing-function: ease-in;
+    animation-delay: 0;
+    animation-iteration-count: infinite;
+    animation-direction: reverse;
+  }
+}
+
+.anim-vibrate {
+  animation-name: vibrate;
+  animation-duration: 100ms;
+  animation-timing-function: linear;
+  animation-delay: 0ms;
+  animation-iteration-count: 3;
+  animation-direction: normal;
+}
+
+anchored-box .message span {
+  display: inline-block;
+}
+
+@keyframes vibrate {
+  0% {
+    opacity: 0.3;
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.anim-raise-in {
+  animation-name: raise-in;
+  animation-duration: 200ms;
+  animation-timing-function: ease-in;
+  animation-delay: 0;
+  animation-iteration-count: 1;
+  animation-direction: normal;
+}
+
+@keyframes raise-in {
+  0% {
+    opacity: 0.3;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fall-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+dialog.closing {
+  animation: fall-out 150ms ease-in forwards;
+}
+
+@keyframes fall-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}

@@ -1,0 +1,85 @@
+---
+// components/mgmt/FormSuccess.partial.astro
+import type { FieldConfig, BaseRow } from "@ty/FieldConfig";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+interface Props<T extends BaseRow = BaseRow> {
+  entity: T;
+  method: "DELETE" | "PATCH" | "GET" | "POST";
+  partialType: "table-row" | "single-page";
+  ctx: {
+    crud: CrudRegistryType;
+    config: FieldConfig<T>;
+    endpoint: string;
+    headers: string[];
+  };
+}
+import RowView from "@components/tables/RowView.astro";
+import SubmitButton from "@components/form/SubmitButton.astro";
+import TopLevelError from "./TopLevelError.partial.astro";
+
+const { entity, method, partialType, ctx } = Astro.props as Props;
+---
+
+{
+  method === "DELETE" ? (
+    partialType === "table-row" ? (
+      <tr id={`row-${ctx.crud}-${entity.id}`} hx-swap-oob="outerHTML">
+        <td colspan="100%" class="danger">
+          DELETED{" "}
+          {ctx.crud +
+            " " +
+            `${entity.name || entity.first_name || entity.subject} [id:${entity.id}]`}
+        </td>
+      </tr>
+    ) : partialType === "single-page" ? (
+      <p>PAGE DELETED</p>
+    ) : (
+      <p class="callout error">unsupported partialType</p>
+    )
+  ) : method === "PATCH" ? (
+    partialType === "table-row" ? (
+      <RowView row={entity} {...ctx} classList={["updated-row"]} oob />
+    ) : partialType === "single-page" ? (
+      <>
+        <SubmitButton
+          id="submit-button"
+          class={"success"}
+          text="Update"
+          indicatorText="Updating..."
+        />
+        <span
+          id={`top-level-error-${ctx.crud}-${entity.id}`}
+          hx-swap-oob="outerHTML"
+        />
+        {ctx.headers.map((fieldName) => (
+          <span
+            id={`field-error-${ctx.crud}-${entity.id}-${fieldName}`}
+            hx-swap-oob="outerHTML"
+          />
+        ))}
+      </>
+    ) : (
+      <p class="callout error">unsupported partialType</p>
+    )
+  ) : method === "POST" ? (
+    partialType === "table-row" ? (
+      <>
+        <RowView row={entity} {...ctx} classList={["new-row"]} />
+        <TopLevelError
+          crud={ctx.crud}
+          id={"create"}
+          headers={ctx.headers}
+          message=""
+        />
+      </>
+    ) : partialType === "single-page" ? (
+      <p class="callout debug">TODO single page POST method</p>
+    ) : (
+      <p class="callout error">unsupported partialType</p>
+    )
+  ) : method === "GET" ? (
+    <RowView row={entity} {...ctx} oob />
+  ) : (
+    <p class="callout error">method not supported</p>
+  )
+}

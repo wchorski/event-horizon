@@ -1,0 +1,98 @@
+---
+interface Params {
+  event_id: string;
+}
+import { db } from "@db/db";
+import { Event, Location } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import MembersSearchForm from "@components/MembersSearchForm.astro";
+import { prettyPlainCivilDateFull } from "@lib/formatters";
+
+export const prerender = false; // Not needed in 'server' mode
+const { event_id } = Astro.params;
+
+if (!event_id) throw new Error("no event_id found. throw 404");
+const [course] = await db
+  .select()
+  .from(Event)
+  .where(eq(Event.id, event_id))
+  .limit(1);
+if (!course) return Astro.redirect("/404");
+
+const [location] = await db
+  .select()
+  .from(Location)
+  .where(eq(Location.id, course.location_id))
+  .limit(1);
+if (!location) return Astro.redirect("/404");
+
+const { subject, timestamp, excerpt, date_civil } = course;
+---
+
+<BaseLayout>
+  <main>
+    <header>
+      <p class="sub-text">Check-In for</p>
+      <h1>
+        {subject}
+      </h1>
+      <div class="flex space-between">
+        <address>
+          <img
+            class="icon"
+            src="/icons/location.svg"
+            alt="drop pin location icon"
+            width="30"
+            height="30"
+          />
+          {location.name}
+          <br />
+          {location.address}
+          <br />
+          {location.city}, {location.state}
+          {location.zip}
+          USA
+        </address>
+        <p>
+          <img
+            class="icon"
+            src="/icons/date.svg"
+            alt="date time icon"
+            width="30"
+            height="30"
+          />
+          <time datetime={date_civil}
+            >{prettyPlainCivilDateFull(date_civil)}</time
+          >
+          <br />
+          <time class="real" datetime={timestamp.toISOString()}>
+            {timestamp}
+          </time>
+          <br />
+        </p>
+      </div>
+      <p class="excerpt">{excerpt}</p>
+      <hr />
+    </header>
+    <div data-layout="content" class="content">
+      <MembersSearchForm course={course} />
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    max-width: 800px;
+    margin-inline: auto;
+  }
+
+  time.real {
+    color: grey;
+    font-size: 0.7rem;
+  }
+  [data-layout="content"] {
+    display: grid;
+    gap: 1rem;
+  }
+</style>

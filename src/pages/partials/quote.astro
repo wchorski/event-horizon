@@ -1,0 +1,27 @@
+---
+// src/pages/api/quote.astro
+/**
+ * Returns a random quote
+ */
+export const partial = true;
+export const prerender = false;
+
+const quotes = [
+  { text: "The best way to predict the future is to invent it.", author: "Alan Kay" },
+  { text: "Life is 10% what happens to you and 90% how you react to it.", author: "Charles R. Swindoll" },
+  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { text: "Innovation distinguishes between a leader and a follower.", author: "Steve Jobs" },
+  { text: "Code is like humor. When you have to explain it, it's bad.", author: "Cory House" },
+  { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
+  { text: "Simplicity is the soul of efficiency.", author: "Austin Freeman" },
+];
+
+const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+---
+
+<div class="result" style="margin-top: 1rem;">
+  <blockquote style="font-style: italic; margin-bottom: 0.5rem;">
+    "{randomQuote.text}"
+  </blockquote>
+  <p style="text-align: right; color: #666;">— {randomQuote.author}</p>
+</div>

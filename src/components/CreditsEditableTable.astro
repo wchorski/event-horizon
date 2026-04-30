@@ -1,0 +1,42 @@
+---
+interface Props {
+  
+  tickets: CreditSelect[];
+  users: UserSelect[];
+  events: CourseSelect[];
+  
+}
+
+import TableEditable from "@components/TableEditable.astro";
+import type { CourseSelect, CreditSelect, UserSelect } from "@ty/Schema";
+import RowCreate from "./tables/RowCreate.astro";
+import { ticketsConfigRequired } from "@lib/tableConfigs";
+const { tickets: tableRows, users, events } = Astro.props;
+const config = ticketsConfigRequired(users, events);
+
+const ctx = {
+  crud: "tickets" as const,
+  // endpoint: "/attendance/admin/tickets/id",
+  config,
+  headers: Object.keys(config)
+}
+---
+
+{
+  tableRows.length === 0 ? (
+    <p class="callout not-found">no tickets found</p>
+    <table>
+      <tbody>
+        <RowCreate {...ctx} class:list={'highlight-green'}/>
+      </tbody>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={tableRows}
+      config={ctx.config}
+    />
+  )
+}
+
+

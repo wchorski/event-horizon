@@ -1,0 +1,214 @@
+---
+// components/tables/RowCreate.astro
+import type {
+  FieldConfig,
+  FieldSlot,
+  InputFieldSlot,
+  SearchSelectFieldSlot,
+  SelectFieldSlot,
+} from "@ty/FieldConfig";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+import SelectField from "@components/form/SelectField.astro";
+import TextareaField from "@components/form/TextareaField.astro";
+import InputField from "@components/form/InputField.astro";
+import { slugify } from "@lib/formatters";
+import { ZodError } from "astro:schema";
+import SearchSelect from "@components/form/SearchSelect.astro";
+import AnchoredBox from "@components/AnchoredBox.astro";
+
+interface Props {
+  crud: CrudRegistryType;
+  config: FieldConfig;
+  headers: string[];
+  oob?: boolean;
+  oobSwap?: string;
+  actionUrl?: string;
+  error?: string | ReturnType<ZodError["flatten"]> | null;
+}
+
+const {
+  config,
+  crud,
+  headers,
+  oob,
+  oobSwap,
+  error,
+  actionUrl = `/partials/${slugify(crud)}/create`,
+} = Astro.props;
+
+const formId = `create-form-${crud}`;
+const topLevelError = typeof error === "string" ? error : null;
+const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
+---
+
+<tr
+  data-entity={crud}
+  id={`row-create-${crud}`}
+  hx-swap-oob={oobSwap ?? (oob ? "outerHTML" : undefined)}
+  data-status="creating"
+  class="highlight-green"
+>
+  {
+    headers.map((key) => {
+      const field = config[key] ?? {};
+      const {
+        value: override,
+        type,
+        label,
+        ...inputAttrs
+      } = field as FieldSlot;
+      delete (inputAttrs as any).options;
+      const { options } = field as SelectFieldSlot;
+      delete (inputAttrs as any).datalist;
+      const { datalist } = field as InputFieldSlot;
+      const fieldErrorId = `field-error-${crud}-${"create"}-${key}`;
+
+      if (key === "id") {
+        return (
+          <td data-type={type} class="background-success">
+            <span id={fieldErrorId} style="display: none;"></span>
+          </td>
+        );
+      }
+      if (type === "select")
+        return (
+          <td data-type={type}>
+            <SelectField
+              {...inputAttrs}
+              formId={formId}
+              errorId={fieldErrorId}
+              name={key}
+              label={label}
+              inputAttrs={inputAttrs}
+              options={options}
+            />
+          </td>
+        );
+      if (type === "textarea")
+        return (
+          <td data-type={type}>
+            <TextareaField {...inputAttrs} name={key} errorId={fieldErrorId} />
+          </td>
+        );
+      if (type === "searchSelect") {
+        const {
+          type: _,
+          label: _l,
+          value: _v,
+          ...ssProps
+        } = field as SearchSelectFieldSlot;
+        return (
+          <td data-type={type}>
+            <SearchSelect
+              {...ssProps}
+              id={`ss-create-${crud}-${key}`}
+              name={key}
+              label={label ?? key}
+              value={override}
+            />
+          </td>
+        );
+      }
+      return (
+        <td data-type={type}>
+          <InputField
+            {...inputAttrs}
+            checked={false}
+            formId={formId}
+            errorId={fieldErrorId}
+            name={key}
+            label={label}
+            type={type}
+            value={override}
+            datalist={datalist}
+            inputAttrs={inputAttrs}
+          />
+        </td>
+      );
+    })
+  }
+
+  <td class="action-cell">
+    <form
+      id={formId}
+      style="display:none"
+      hx-post={actionUrl}
+      hx-headers='{"X-Partial-Type": "table-row"}'
+      hx-target={`#${crud}-table-body`}
+      hx-target-error={`#top-level-error-${crud}-create`}
+      hx-swap="beforeend"
+    >
+    </form>
+    <button
+      type="submit"
+      form={formId}
+      class="save"
+      title={`create new ${crud}`}
+      ><img
+        class="icon"
+        src="/icons/add.svg"
+        alt="delete icon"
+        width="30"
+        height="30"
+      /></button
+    >
+    <button
+      title="clear fields"
+      type="button"
+      class="cancel"
+      data-clear-form={formId}
+    >
+      <img
+        class="icon"
+        src="/icons/delete.svg"
+        alt="delete icon"
+        width="30"
+        height="30"
+      />
+    </button>
+  </td>
+  <td class="error-cell">
+    <AnchoredBox
+      messageId={`row-create-error-${crud}`}
+      anchorName={anchorName}
+      class="row-error error top-level"
+    >
+      <span id={`top-level-error-${crud}-create`}>{topLevelError}</span>
+    </AnchoredBox>
+  </td>
+</tr>
+
+<script>
+  document
+    .querySelector("[data-clear-form]")
+    ?.addEventListener("click", (e) => {
+      const formId = (e.currentTarget as HTMLElement).dataset.clearForm;
+      const form = document.getElementById(formId!) as HTMLFormElement;
+
+      [...form.elements].forEach((el) => {
+        const input = el as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement;
+        if (input.type === "checkbox")
+          (input as HTMLInputElement).checked = false;
+        else if (input.type === "hidden") return;
+        else input.value = "";
+      });
+    });
+
+  document.body.addEventListener("htmx:afterRequest", (e) => {
+    const status = e.detail.xhr.status;
+    if (status < 200 || status >= 300) return;
+
+    document
+      .querySelector("[data-clear-form]")
+      ?.dispatchEvent(new Event("click"));
+  });
+</script>
+
+<style define:vars={{ anchorName }}>
+  .action-cell {
+    anchor-name: var(--anchorName);
+  }
+</style>

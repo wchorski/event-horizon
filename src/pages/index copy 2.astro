@@ -1,0 +1,55 @@
+---
+import Welcome from "../components/Welcome.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
+// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+
+/**
+ * This is an htmx component, so it should always
+ * server-render, and should only return partials
+ * instead of full HTML documents
+ *
+ * https://docs.astro.build/en/basics/astro-pages/#page-partials
+ * https://docs.astro.build/en/guides/on-demand-rendering/#enabling-on-demand-rendering
+ */
+export const partial = true;
+export const prerender = false;
+const secret = import.meta.env.SUPER_DUPER_SECRET;
+---
+
+<head>
+  <script>
+    import htmx from "htmx.org";
+
+    if (import.meta.env.DEV === true) {
+      // https://htmx.org/docs/#debugging
+      htmx.logAll();
+    }
+
+    // https://htmx.org/docs/#view-transitions
+    htmx.config.globalViewTransitions = true;
+
+    // https://docs.astro.build/en/guides/view-transitions/#astroafter-swap
+    document.addEventListener("astro:after-swap", () => {
+      htmx.process(document.body);
+    });
+  </script>
+</head>
+
+<BaseLayout>
+  <h2>HEYYYY: {secret}</h2>
+  <form>
+    <label for="query">
+      <input
+        name="query"
+        type="text"
+        hx-get="/partials/users/results"
+        hx-trigger="keyup changed delay:500ms"
+		hx-target="#search-results"
+		placeholder="query..."
+      />
+    </label>
+  </form>
+  <Welcome />
+</BaseLayout>

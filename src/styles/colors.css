@@ -1,0 +1,203 @@
+@media (prefers-color-scheme: light) {
+  :root {
+    --c-bg: #dddddd;
+    --c-txt: #2e2b28;
+    --c-txt-rev: #fff7f0;
+    --c-txt-bg: #ffffff;
+    --c-input-bg: rgb(220, 220, 220);
+    --c-seperator: rgb(160, 160, 160);
+    --c-seperator-light: rgb(210, 210, 210);
+    --c-interactive: rgb(176, 171, 37);
+    --c-active: rgb(100, 160, 151);
+    --c-primary: rgb(79, 79, 196);
+    --c-primary-dark: rgb(65, 65, 129);
+    --c-accent: rgb(79, 196, 145);
+    --c-error: rgb(166, 25, 25);
+    --c-success: rgb(47, 141, 88);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #0e0e0d;
+    --c-txt: #ddccbb;
+    --c-txt-rev: #000000;
+    --c-txt-bg: #181818;
+    --c-input-bg: rgb(30, 30, 30);
+    --c-seperator: rgb(32, 32, 32);
+    --c-seperator-light: rgb(51, 51, 51);
+    --c-interactive: rgb(139, 139, 228);
+    --c-active: rgb(17, 69, 61);
+    --c-primary: rgb(130, 130, 226);
+    --c-primary-dark: rgb(99, 99, 185);
+    --c-accent: rgb(79, 196, 145);
+    --c-error: rgb(255 73 73);
+    --c-success: rgb(47, 181, 105);
+  }
+}
+
+:root {
+  --lg-primary: linear-gradient(
+    90deg,
+    var(--c-interactive) 0%,
+    var(--c-primary) 80%,
+    var(--c-interactive) 100%
+  );
+  --lg-disabled: repeating-linear-gradient(
+    45deg,
+    hsl(0, 0%, 10%) 3px,
+    hsl(0, 0%, 15%) 10px,
+    hsl(0, 0%, 16%) 20px
+  );
+  --lg-loading: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--c-interactive) 70%,
+    var(--c-accent) 90%,
+    transparent 100%
+  );
+
+  --c-disabled: gray;
+}
+
+.sub-text {
+  color: var(--c-seperator-light);
+}
+
+/* TODO bad bad not good */
+.highlight-green {
+  background-color: #3cb34e1d !important;
+}
+
+.border-left-create {
+  border-left: solid var(--c-success) 20px;
+}
+.background-success {
+  background-color: var(--c-success);
+}
+.card {
+  background-color: var(--c-txt-bg);
+}
+body {
+  background-color: var(--c-bg);
+  color: var(--c-txt);
+}
+
+table {
+  background-color: var(--c-txt-bg);
+}
+thead {
+  background-color: var(--c-txt-bg);
+  border-bottom-color: var(--c-seperator);
+}
+.pill {
+  padding-inline: 0.3rem;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 10px;
+  /* display: flex; */
+  /* align-items: center; */
+  /* justify-content: center; */
+  text-align: center;
+}
+.c-primary {
+  border-color: var(--c-primary);
+}
+
+a:link {
+  color: var(--c-interactive);
+  text-decoration: none;
+}
+a:visited {
+  color: var(--c-interactive);
+  filter: brightness(0.1);
+  text-decoration: none;
+}
+a:hover {
+  filter: brightness(1.2);
+  text-decoration: underline;
+}
+
+button,
+.btn,
+.btn:link {
+  background-color: var(--c-interactive);
+  color: var(--c-txt-rev);
+
+  &:visited {
+    color: var(--c-txt);
+  }
+
+  /* background: var(--lg-primary); */
+  background-position: 0 0;
+  border-bottom-style: solid;
+  border-right-style: solid;
+  border-bottom-width: 4px;
+  border-right-width: 3px;
+  /* border-color: var(--c-primary-dark); */
+  border-color: color-mix(in srgb, currentColor 50%, rgb(112, 112, 112));
+
+  &.delete {
+    color: red;
+    background-color: var(--c-txt-bg);
+    outline: solid 1px var(--c-error);
+    border-color: var(--c-error);
+  }
+}
+
+button:not(:disabled):hover,
+.btn:hover {
+  background-color: var(--c-primary);
+  background-position: 20px 20px;
+
+  &.delete {
+    color: var(--c-txt);
+    background-color: var(--c-error);
+  }
+}
+button:not(:disabled):active {
+  filter: brightness(0.5);
+
+  /* border-bottom-width: 0; */
+  /* border-right-width: 0; */
+}
+button:disabled {
+  background-color: var(--c-disabled);
+  background-position: 0 0;
+  background: var(--lg-disabled);
+}
+
+.field-error:not(:empty) {
+  color: var(--c-error);
+  border-bottom: dotted 2px var(--c-error);
+}
+
+hr {
+  border-color: var(--c-seperator);
+}
+
+.danger {
+  &:hover {
+    background-color: var(--c-error);
+  }
+}
+
+input,
+select,
+textarea {
+  background-color: var(--c-input-bg);
+  color: var(--c-txt);
+  border-color: var(--c-seperator-light);
+}
+
+form {
+  & label,
+  & legend {
+    color: grey;
+  }
+}
+label.form-field {
+  & .text {
+    opacity: 0.7;
+  }
+}

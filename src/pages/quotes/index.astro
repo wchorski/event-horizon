@@ -1,0 +1,131 @@
+---
+import RandomQuote from "../partials/random-quote.astro";
+
+const title = "ZenQuotes - Inspirational Quotes";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>✨ Inspirational Quotes ✨</h1>
+
+      <!-- <div class="controls">
+      <button 
+        hx-get="/partials/random-quote"
+        hx-target="#quote-display"
+        hx-swap="innerHTML">
+        New Quote
+      </button>
+    </div> -->
+
+      <div id="quote-display">
+        <RandomQuote />
+      </div>
+    </div>
+
+    <!-- <script>
+    const CACHE_KEY = 'zenquotes_cache';
+    const CACHE_DATE_KEY = 'zenquotes_cache_date';
+    
+    function shouldFetchQuotes() {
+      const cachedDate = localStorage.getItem(CACHE_DATE_KEY);
+      if (!cachedDate) return true;
+      
+      const today = new Date().toDateString();
+      return cachedDate !== today;
+    }
+    
+    function getRandomQuote() {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+      
+      try {
+        const quotes = JSON.parse(cached);
+        return quotes[Math.floor(Math.random() * quotes.length)];
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    window.addEventListener('DOMContentLoaded', function() {
+      if (shouldFetchQuotes()) {
+        // Fetch and cache new quotes
+        fetch('/api/quotes.json')
+          .then(response => response.json())
+          .then(quotes => {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(quotes));
+            localStorage.setItem(CACHE_DATE_KEY, new Date().toDateString());
+          })
+          .catch(error => console.error('Error caching quotes:', error));
+      }
+    });
+  </script> -->
+  </body>
+
+  <style is:global>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+  </style>
+</html>

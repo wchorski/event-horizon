@@ -1,0 +1,100 @@
+---
+// partials/events/create.astro
+import RowView from "@components/tables/RowView.astro";
+import RowCreateForm from "@components/tables/RowCreate.astro";
+import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { CourseSelect } from "@ty/Schema";
+import type { ZodError } from "astro:schema";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { handleResult } from "@lib/handleRenderResult";
+
+type ViewType = "table-row" | "card";
+
+const session = TEST_ADMIN_SESSION;
+
+let course: CourseSelect | null | undefined = null;
+let error = null;
+let view: ViewType = "table-row";
+const crudKey = "events" as const;
+const locations = await crud.locations.readMany(session);
+const config = courseConfigRequired(locations);
+const ctx = {
+  crud: crudKey,
+  config,
+  endpoint: "/attendance/events",
+  headers: Object.keys(config) as (keyof CourseSelect & string)[],
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    // const session = await requirePermission(Astro.request, "locations", "create");
+    // TODO
+    const session = TEST_ADMIN_SESSION;
+
+    const formData = await Astro.request.formData();
+
+    // TODO may remove later
+    view = (formData.get("_view") as ViewType) ?? "table-row"; // caller decides
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    course = await crud[crudKey].create(submitFields, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleResult<CourseSelect>({
+  error,
+  entity: course,
+  method: Astro.request.method,
+  emptyMessage: "No events available",
+});
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={"create"}
+      headers={ctx.headers}
+      errors={result.errors}
+      model={ctx.crud}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={"create"}
+      headers={ctx.headers}
+      crud={ctx.crud}
+      message={result.message}
+    />
+  ) : (
+    <FormSuccess
+      entity={result.entity}
+      method={result.method}
+      partialType={partialType}
+      ctx={ctx}
+    />
+  )
+}

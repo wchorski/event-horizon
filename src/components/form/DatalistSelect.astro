@@ -1,0 +1,659 @@
+---
+// TODO how am i gonna use this?
+// make it <datalist-select> web component
+/**
+ * SearchSelect.astro
+ * ─────────────────────────────────────────────────────────────────────────────
+ * A schema-agnostic searchable combobox. Works with any data shape via
+ * template strings and a configurable value key.
+ *
+ * ── Templates ──────────────────────────────────────────────────────────────
+ * All template props use {fieldName} tokens that map to keys in your data.
+ *
+ *   valueKey          — the field whose value goes into the hidden <input>.
+ *   inputTemplate     — what appears in the text box after a selection.
+ *                       defaults to primaryTemplate.
+ *   primaryTemplate   — bold top line inside each dropdown option.
+ *   secondaryTemplate — (optional) dimmer second line in the option row.
+ *   metaTemplate      — (optional) right-side pill, e.g. "#{id}" or "{code}".
+ *
+ * ── Search ──────────────────────────────────────────────────────────────────
+ *   searchKeys        — array of field names to match against the query.
+ *                       defaults to every key extracted from all templates.
+ *
+ * ── Usage Examples ────────────────────────────────────────────────────────────────
+ *
+ *  Users
+ *  -----
+ *  <SearchSelect
+ *    items={users}
+ *    valueKey="id"
+ *    primaryTemplate="{firstName} {lastName}"
+ *    secondaryTemplate="{email}"
+ *    inputTemplate="{firstName} {lastName} <{email}>"
+ *    metaTemplate="#{id}"
+ *  />
+ *
+ *  Events
+ *  -------
+ *  <SearchSelect
+ *    items={events}
+ *    valueKey="event_id"
+ *    primaryTemplate="{subject}"
+ *    secondaryTemplate="{date}"
+ *    inputTemplate="{subject} | {date}"
+ *    metaTemplate="{courseId}"
+ *    searchKeys={["subject", "date", "instructor"]}
+ *  />
+ *
+ *  Products
+ *  --------
+ *  <SearchSelect
+ *    items={products}
+ *    valueKey="sku"
+ *    primaryTemplate="{name}"
+ *    secondaryTemplate="{category} · {brand}"
+ *    inputTemplate="{name} ({sku})"
+ *    metaTemplate="${price}"
+ *  />
+ *
+ * ── Events ───────────────────────────────────────────────────────────────────
+ *  The root element emits a custom "ss:change" event when selection changes.
+ *    e.detail  →  the full original item object, or null when cleared.
+ *
+ * ── Other props ─────────────────────────────────────────────────────────────
+ *   name        — hidden <input> name for form submission   (default: "value")
+ *   label       — visible field label                       (default: "Select")
+ *   placeholder — input placeholder                         (default: "Search…")
+ *   value       — pre-selected value (matched against valueKey)
+ *   required    — marks the hidden input required           (default: false)
+ *   id          — base element id; MUST be unique per page  (default: "ss")
+ */
+
+type AnyRecord = Record<string, unknown>;
+
+interface Props {
+  items:             AnyRecord[];
+  valueKey:          string;
+  primaryTemplate:   string;
+  secondaryTemplate?: string;
+  inputTemplate?:    string;
+  metaTemplate?:     string;
+  searchKeys?:       string[];
+  name?:             string;
+  label?:            string;
+  placeholder?:      string;
+  value?:            string | number;
+  required?:         boolean;
+  id?:               string;
+}
+
+const {
+  items,
+  valueKey,
+  primaryTemplate,
+  secondaryTemplate,
+  inputTemplate,
+  metaTemplate,
+  searchKeys,
+  name        = 'value',
+  label       = 'Select',
+  placeholder = 'Search…',
+  value,
+  required    = false,
+  id          = 'ss',
+} = Astro.props;
+
+// ── Helpers (server-side) ──────────────────────────────────────────────────
+function extractKeys(tpl: string): string[] {
+  return [...tpl.matchAll(/\{(\w+)\}/g)].map(m => m[1]);
+}
+
+function applyTemplate(tpl: string, item: AnyRecord): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => String(item[k] ?? ''));
+}
+
+// Derive search keys from all templates if not provided
+const allTemplateKeys = [
+  ...extractKeys(primaryTemplate),
+  ...(secondaryTemplate ? extractKeys(secondaryTemplate) : []),
+  ...(inputTemplate     ? extractKeys(inputTemplate)     : []),
+].filter((k, i, a) => a.indexOf(k) === i); // unique
+
+const resolvedSearchKeys = searchKeys ?? allTemplateKeys;
+const resolvedInputTpl   = inputTemplate ?? primaryTemplate;
+
+// Build serialised item list for client
+const serialisedItems = JSON.stringify(
+  items.map(item => ({
+    _value:     String(item[valueKey] ?? ''),
+    _primary:   applyTemplate(primaryTemplate, item),
+    _secondary: secondaryTemplate ? applyTemplate(secondaryTemplate, item) : '',
+    _input:     applyTemplate(resolvedInputTpl, item),
+    _meta:      metaTemplate ? applyTemplate(metaTemplate, item) : '',
+    _search:    resolvedSearchKeys.map(k => String(item[k] ?? '')).join(' '),
+    _raw:       item,
+  }))
+);
+
+const preItem     = value !== undefined
+  ? items.find(i => String(i[valueKey]) === String(value))
+  : null;
+const preInput    = preItem ? applyTemplate(resolvedInputTpl, preItem) : '';
+const preValue    = preItem ? String(preItem[valueKey]) : '';
+---
+
+<div
+  class="ss-root"
+  id={id}
+  data-items={serialisedItems}
+  data-pre-value={preValue}
+>
+  <!-- Label row -->
+  <div class="ss-label-row">
+    <label class="ss-label" for={`${id}-input`}>{label}</label>
+    <span class="ss-badge" id={`${id}-badge`}>{items.length} {items.length === 1 ? 'option' : 'options'}</span>
+  </div>
+
+  <!-- Combobox -->
+  <div class="ss-combobox" id={`${id}-combobox`}>
+    <input type="hidden" id={`${id}-hidden`} name={name} value={preValue} required={required} />
+
+    <div class="ss-trigger">
+      <!-- Search icon -->
+      <svg class="ss-icon ss-search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+
+      <input
+        class="ss-input"
+        id={`${id}-input`}
+        type="text"
+        placeholder={placeholder}
+        autocomplete="off"
+        spellcheck="false"
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-controls={`${id}-listbox`}
+        value={preInput}
+      />
+
+      <button class="ss-clear" id={`${id}-clear`} type="button" aria-label="Clear" tabindex="-1">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+
+      <svg class="ss-chevron" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m6 9 6 6 6-6"/>
+      </svg>
+    </div>
+
+    <!-- Dropdown -->
+    <div class="ss-dropdown" id={`${id}-listbox`} role="listbox" aria-label={label}>
+      <div class="ss-drop-header" id={`${id}-drop-header`}></div>
+      <div class="ss-list" id={`${id}-list`}></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Client script ────────────────────────────────────────────────────── -->
+<script>
+  type SerialisedItem = {
+    _value:     string;
+    _primary:   string;
+    _secondary: string;
+    _input:     string;
+    _meta:      string;
+    _search:    string;
+    _raw:       Record<string, unknown>;
+  };
+
+  document.querySelectorAll<HTMLElement>('.ss-root').forEach(root => {
+    const rootId  = root.id;
+    const items   = JSON.parse(root.dataset.items ?? '[]') as SerialisedItem[];
+
+    const combobox = root.querySelector<HTMLElement>(`#${rootId}-combobox`)!;
+    const input    = root.querySelector<HTMLInputElement>(`#${rootId}-input`)!;
+    const hidden   = root.querySelector<HTMLInputElement>(`#${rootId}-hidden`)!;
+    const clearBtn = root.querySelector<HTMLButtonElement>(`#${rootId}-clear`)!;
+    const list     = root.querySelector<HTMLElement>(`#${rootId}-list`)!;
+    const header   = root.querySelector<HTMLElement>(`#${rootId}-drop-header`)!;
+    const badge    = root.querySelector<HTMLElement>(`#${rootId}-badge`)!;
+
+    let selectedValue = root.dataset.preValue ?? '';
+    let hlIdx         = -1;
+    let filtered      = [...items];
+
+    // ── Helpers ────────────────────────────────────────────────
+    function initials(text: string): string {
+      // take first char of up to 2 words
+      return text.trim().split(/\s+/).slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
+    }
+
+    function hlText(text: string, q: string): string {
+      if (!q) return text;
+      const idx = text.toLowerCase().indexOf(q.toLowerCase());
+      if (idx === -1) return text;
+      return (
+        text.slice(0, idx) +
+        `<mark>${text.slice(idx, idx + q.length)}</mark>` +
+        text.slice(idx + q.length)
+      );
+    }
+
+    // ── Render ─────────────────────────────────────────────────
+    function render() {
+      const q = input.value.trim();
+
+      filtered = items.filter(item =>
+        item._search.toLowerCase().includes(q.toLowerCase())
+      );
+
+      header.textContent = q
+        ? `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${q}"`
+        : `${items.length} option${items.length !== 1 ? 's' : ''}`;
+
+      badge.textContent = q
+        ? `${filtered.length} / ${items.length}`
+        : `${items.length} option${items.length !== 1 ? 's' : ''}`;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="ss-empty">
+            No matches found
+            <small>Try a different search term</small>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map((item, i) => {
+        const isSel   = item._value === selectedValue;
+        const isHl    = i === hlIdx;
+        const avatar  = initials(item._primary);
+        const hasSec  = item._secondary.length > 0;
+        const hasMeta = item._meta.length > 0;
+
+        return `
+          <div
+            class="ss-option${isSel ? ' sel' : ''}${isHl ? ' hl' : ''}${hasSec ? '' : ' no-secondary'}"
+            data-value="${item._value}"
+            data-idx="${i}"
+            role="option"
+            aria-selected="${isSel}"
+          >
+            <div class="ss-avatar">${avatar}</div>
+            <div class="ss-option-body">
+              <div class="ss-primary">${hlText(item._primary, q)}</div>
+              ${hasSec
+                ? `<div class="ss-secondary">${hlText(item._secondary, q)}</div>`
+                : ''}
+            </div>
+            ${hasMeta ? `<span class="ss-meta">${item._meta}</span>` : ''}
+          </div>`;
+      }).join('');
+
+      if (hlIdx >= 0) {
+        list.querySelector<HTMLElement>(`[data-idx="${hlIdx}"]`)
+            ?.scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    // ── Open / close ───────────────────────────────────────────
+    function open() {
+      combobox.classList.add('open');
+      input.setAttribute('aria-expanded', 'true');
+      hlIdx = selectedValue
+        ? filtered.findIndex(it => it._value === selectedValue)
+        : -1;
+      render();
+    }
+
+    function close() {
+      combobox.classList.remove('open');
+      input.setAttribute('aria-expanded', 'false');
+      hlIdx = -1;
+    }
+
+    // ── Select ─────────────────────────────────────────────────
+    function selectItem(value: string) {
+      const item = items.find(it => it._value === value);
+      if (!item) return;
+
+      selectedValue = value;
+      hidden.value  = value;
+      input.value   = item._input;
+      combobox.classList.add('has-value');
+      close();
+      render();
+
+      root.dispatchEvent(new CustomEvent('ss:change', {
+        bubbles: true,
+        detail: item._raw,
+      }));
+    }
+
+    // ── Clear ──────────────────────────────────────────────────
+    function clear() {
+      selectedValue = '';
+      hidden.value  = '';
+      input.value   = '';
+      combobox.classList.remove('has-value');
+      render();
+      input.focus();
+      root.dispatchEvent(new CustomEvent('ss:change', { bubbles: true, detail: null }));
+    }
+
+    // ── Events ─────────────────────────────────────────────────
+    input.addEventListener('focus', open);
+    input.addEventListener('click', open);
+
+    input.addEventListener('input', () => {
+      if (!combobox.classList.contains('open')) open();
+      // user is typing — unset the committed selection
+      selectedValue = '';
+      hidden.value  = '';
+      combobox.classList.toggle('has-value', input.value.length > 0);
+      hlIdx = -1;
+      render();
+    });
+
+    input.addEventListener('keydown', e => {
+      if (!combobox.classList.contains('open')) { open(); return; }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        hlIdx = Math.min(hlIdx + 1, filtered.length - 1);
+        render();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        hlIdx = Math.max(hlIdx - 1, 0);
+        render();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const target = hlIdx >= 0        ? filtered[hlIdx]
+                     : filtered.length === 1 ? filtered[0]
+                     : null;
+        if (target) selectItem(target._value);
+      } else if (e.key === 'Escape') {
+        // restore committed label, if any
+        const committed = items.find(it => it._value === selectedValue);
+        input.value = committed ? committed._input : '';
+        close();
+      } else if (e.key === 'Tab') {
+        close();
+      }
+    });
+
+    list.addEventListener('mousedown', e => {
+      const opt = (e.target as Element).closest<HTMLElement>('.ss-option');
+      if (opt) { e.preventDefault(); selectItem(opt.dataset.value!); }
+    });
+
+    list.addEventListener('mousemove', e => {
+      const opt = (e.target as Element).closest<HTMLElement>('.ss-option');
+      if (opt) { hlIdx = parseInt(opt.dataset.idx!); render(); }
+    });
+
+    clearBtn.addEventListener('mousedown', e => { e.preventDefault(); clear(); });
+
+    document.addEventListener('mousedown', e => {
+      if (!root.contains(e.target as Node)) close();
+    });
+
+    // ── Init ───────────────────────────────────────────────────
+    if (selectedValue) combobox.classList.add('has-value');
+    render();
+  });
+</script>
+
+<style>
+  .ss-root {
+    --bg:          #0d0d10;
+    --surface:     #141418;
+    --surface2:    #1c1c22;
+    --surface3:    #24242c;
+    --border:      #2a2a36;
+    --border-hi:   #5b54f0;
+    --text:        #ededf2;
+    --text-2:      #8888a0;
+    --text-3:      #3e3e52;
+    --accent:      #5b54f0;
+    --accent-soft: rgba(91,84,240,.13);
+    --accent-glow: rgba(91,84,240,.25);
+    --mono:        'DM Mono', 'Fira Mono', ui-monospace, monospace;
+    --sans:        'DM Sans', system-ui, sans-serif;
+    --r:           10px;
+
+    font-family: var(--sans);
+    color: var(--text);
+    width: 100%;
+  }
+
+  /* ── Label row ── */
+  .ss-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 7px;
+  }
+  .ss-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .ss-badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-3);
+  }
+
+  /* ── Combobox ── */
+  .ss-combobox { position: relative; }
+
+  .ss-trigger {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 11px 13px;
+    cursor: text;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .ss-combobox.open .ss-trigger,
+  .ss-trigger:focus-within {
+    border-color: var(--border-hi);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .ss-icon { flex-shrink: 0; color: var(--text-2); transition: color .18s; }
+  .ss-combobox.open .ss-search-icon { color: var(--accent); }
+
+  .ss-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    caret-color: var(--accent);
+  }
+  .ss-input::placeholder { color: var(--text-2); }
+
+  .ss-clear {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-2);
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s, color .15s, background .15s;
+  }
+  .ss-combobox.has-value .ss-clear { opacity: 1; pointer-events: auto; }
+  .ss-clear:hover { color: var(--text); background: var(--surface2); }
+
+  .ss-chevron {
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition: transform .2s, color .18s;
+  }
+  .ss-combobox.open .ss-chevron { transform: rotate(180deg); color: var(--accent); }
+
+  /* ── Dropdown ── */
+  .ss-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(91,84,240,.06);
+    overflow: hidden;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity .15s, transform .15s;
+  }
+  .ss-combobox.open .ss-dropdown {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .ss-drop-header {
+    padding: 7px 12px 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ss-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .ss-list::-webkit-scrollbar { width: 4px; }
+  .ss-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Option ── */
+  .ss-option {
+    display: grid;
+    /* avatar | text stack | meta pill */
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background .1s;
+    user-select: none;
+  }
+  /* no-secondary: single-line, vertically centred */
+  .ss-option.no-secondary {
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+  }
+
+  .ss-option:hover,
+  .ss-option.hl   { background: var(--surface2); }
+  .ss-option.sel  { background: var(--accent-soft); }
+
+  /* avatar bubble — initials from primary text words */
+  .ss-avatar {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10.5px; font-weight: 700;
+    color: var(--text-2);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-family: var(--mono);
+  }
+  .ss-option.sel .ss-avatar {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  /* text stack */
+  .ss-option-body { min-width: 0; }
+
+  .ss-primary {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-primary { color: var(--accent); }
+
+  .ss-secondary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-secondary { color: rgba(91,84,240,.65); }
+
+  mark { background: none; color: var(--accent); font-weight: 700; }
+
+  /* meta pill */
+  .ss-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .ss-option.sel .ss-meta {
+    background: rgba(91,84,240,.15);
+    border-color: rgba(91,84,240,.25);
+    color: rgba(91,84,240,.7);
+  }
+
+  /* empty state */
+  .ss-empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .ss-empty small {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+</style>

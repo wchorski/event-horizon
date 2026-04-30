@@ -1,0 +1,26 @@
+---
+interface Props {}
+const {} = Astro.props;
+// TODO add in configurable `after` in the browser. Or i could just run this url in the browser
+// hx-get="/api/events/import?after=2025-11-01T00:00:00"
+---
+
+<button
+  hx-get="/api/events/import"
+  hx-on::after-request="
+    if(event.detail.successful)
+      htmx.trigger('#events-list', 'refresh')
+  "
+  hx-target-error={`#events-list`}
+>
+  Sync Events from Wordpress
+</button>
+
+<div
+  id="events-list"
+  hx-get="/partials/events-import"
+  hx-trigger="refresh from:body"
+  hx-swap="innerHTML"
+>
+  <!-- populated on load -->
+</div>

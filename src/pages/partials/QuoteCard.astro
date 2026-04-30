@@ -1,0 +1,59 @@
+---
+// Partial component for displaying a single quote
+const { quote, author } = Astro.props;
+---
+
+<div class="quote-card">
+  <div class="quote-text">{quote}</div>
+  <div class="quote-author">— {author}</div>
+</div>
+
+<style>
+  .quote-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .quote-text {
+    font-size: 1.2em;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 15px;
+    font-style: italic;
+  }
+
+  .quote-text::before {
+    content: '"';
+    font-size: 2em;
+    color: #667eea;
+    margin-right: 5px;
+  }
+
+  .quote-text::after {
+    content: '"';
+    font-size: 2em;
+    color: #667eea;
+    margin-left: 5px;
+  }
+
+  .quote-author {
+    text-align: right;
+    color: #667eea;
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+</style>

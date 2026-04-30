@@ -1,0 +1,15 @@
+---
+// src/pages/api/increment.astro
+/**
+ * This is an htmx endpoint that increments a counter
+ * Reads current count from query parameter
+ */
+export const partial = true;
+export const prerender = false;
+
+const currentCount = parseInt(Astro.url.searchParams.get("count") || "0");
+const newCount = currentCount + 1;
+console.log({ currentCount, newCount });
+---
+
+{newCount}

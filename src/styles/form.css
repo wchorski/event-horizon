@@ -1,0 +1,196 @@
+input[type="text"],
+select,
+input[type="datetime-local"],
+input[type="date"],
+input[type="search"],
+input[type="tel"],
+input[type="number"],
+input[type="email"] {
+  padding: 0.5rem;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  font-size: 1rem;
+  width: 100%;
+  /* max-width: 300px; */
+  box-sizing: border-box;
+}
+
+label:has(input[type="search"]) {
+  width: 100%;
+}
+
+label:has(input:required) .text::after {
+  content: "*";
+}
+label {
+  display: grid;
+}
+
+label .text {
+  font-size: 0.7rem;
+}
+
+table {
+  & input[name="id"],
+  & input[name="user_id"],
+  & input[name="wpPostId"],
+  & input[name="middle_initial"],
+  & input[name="event_id"],
+  & input[name="location_id"],
+  & input[name="event_id"],
+  & input[name="grade"],
+  & input[name="location_id"] {
+    max-width: 10ch;
+  }
+
+  & td[data-key="user_id"] span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    width: 6ch;
+    direction: rtl;
+    align-self: center;
+  }
+}
+
+input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+form {
+  display: grid;
+  gap: 0.8rem;
+
+  & > legend:first-of-type {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  & fieldset {
+    border-color: var(--c-seperator);
+    display: grid;
+    gap: 0.8rem;
+  }
+
+  & .form-field {
+    display: grid;
+  }
+
+  /* button[type="submit"] {
+    margin-top: 1.5rem;
+  } */
+
+  label {
+    display: grid;
+
+    & .text {
+      align-self: end;
+    }
+  }
+
+  label.form-field:has(input[type="hidden"]) {
+    display: none;
+  }
+
+  fieldset.actions {
+    border: none;
+    padding: 0;
+    margin-top: 1.5rem;
+
+    & > button {
+      max-width: fit-content;
+      padding: 1rem 2rem;
+    }
+  }
+
+  select,
+  input[type="datetime-local"] {
+    width: fit-content;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+  }
+}
+
+#submit-button {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas: "label icon";
+
+  align-items: center;
+  gap: 0.5rem;
+
+  & > .text,
+  & > .submit-indicator {
+    grid-area: label;
+  }
+
+  & > .icon {
+    grid-area: icon;
+  }
+
+  &:has(.text.hide) {
+    grid-template-columns: 1fr;
+    grid-template-areas: "icon";
+    justify-items: center;
+  }
+
+  &:has(.text.hide) > .icon {
+    justify-self: center;
+  }
+}
+
+.submit-indicator {
+  visibility: hidden;
+  position: absolute;
+}
+
+.htmx-request {
+  background-color: var(--c-seperator);
+  border-bottom-color: var(--c-secondary);
+  & .submit-indicator {
+    visibility: visible;
+  }
+  & .text {
+    display: none;
+  }
+}
+
+form.edit-page {
+  & .error.top-level {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  & .error.top-level:has(.message span:empty) {
+    visibility: hidden;
+    opacity: 0.2;
+    transform: translateY(14px);
+    pointer-events: none;
+    height: 0;
+  }
+}
+
+form .message {
+  display: flex;
+}
+
+form .hide {
+  display: none;
+}
+
+.separator {
+  border: none;
+  border-top: 1px solid var(--c-seperator);
+  margin: 1.5rem 0;
+  padding: 0;
+}
+
+.separator legend {
+  padding: 0 0.75rem;
+  color: var(--c-seperator);
+  margin: 0 auto; /* ✅ CENTER IT */
+  width: max-content; /* ✅ prevent stretching */
+}

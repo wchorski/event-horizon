@@ -1,0 +1,86 @@
+---
+// Popover.astro
+import type { HTMLAttributes } from "astro/types";
+interface Props extends HTMLAttributes<"div"> {
+  id: string;
+  positionAnchor: string;
+  class?: string;
+  mode?: "auto" | "manual";
+}
+const { id, mode = "auto", positionAnchor, ...attrs } = Astro.props;
+---
+
+<div popover={mode} id={id} {...attrs}>
+  <slot />
+  <button
+    type="button"
+    title="close popover"
+    class="close"
+    popovertarget={id}
+    popovertargetaction="hide"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      aria-hidden="true"
+      role="img"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+    >
+      <defs>
+        <mask id="iconifyReact616">
+          <g fill="none" stroke-width="1.2">
+            <path
+              stroke="currentColor"
+              stroke-opacity=".25"
+              d="M12 20.4a8.4 8.4 0 1 1 0-16.801A8.4 8.4 0 0 1 12 20.4Z"></path>
+            <path stroke="#fff" stroke-linecap="round" d="m9 9l6 6m0-6l-6 6"
+            ></path>
+          </g>
+        </mask>
+      </defs>
+      <path fill="currentColor" d="M0 0h24v24H0z" mask="url(#iconifyReact616)"
+      ></path>
+    </svg>
+  </button>
+</div>
+
+<style define:vars={{ positionAnchor }}>
+  
+  div[popover] {
+    margin: 0;
+    padding: 1rem;
+    position-anchor: var(--positionAnchor);
+    top: anchor(bottom);
+    left: anchor(left);
+    transform: translateY(20px);
+    overflow: initial;
+
+    /* opacity: 0; */
+    transition:
+      transform 0.5s,
+      opacity 0.5s,
+      display 0.5s;
+    transition-behavior: allow-discrete;
+  }
+  div[popover]:popover-open {
+    transform: translateY(0);
+    opacity: 1;
+    display: flex;
+    align-items: center;
+
+    @starting-style {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+  }
+
+  button.close {
+    margin-left: auto;
+    padding: 0.2rem;
+    border: none;
+    background-color: transparent;
+    color: white;
+  }
+</style>

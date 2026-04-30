@@ -1,0 +1,1 @@
+export type FormFields<T> = Partial<Record<keyof T, string>>;

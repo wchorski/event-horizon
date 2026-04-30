@@ -1,0 +1,103 @@
+---
+import { db } from "@db/db";
+import { or, ilike, like, eq, getTableColumns } from "drizzle-orm";
+import { Event, Ticket, Location } from "@db/schema";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import type { LocationSelect } from "@ty/Schema";
+import { handleResult } from "@lib/handleRenderResult";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import { getUsersPage } from "@lib/getUsersPage";
+import { handleQueryResult } from "@lib/handleQueryResult";
+import { getCreditsPage } from "@lib/getCreditsPage";
+import { getLocationsPage } from "@lib/getLocationsPage";
+
+let locations: LocationSelect[] | null | undefined = null;
+let error = null;
+const config = tableConfigs.locations.required
+const ctx = {
+  crud: "locations" as CrudRegistryType,
+  config,
+  endpoint: "/locations",
+  headers: Object.keys(config),
+};
+
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const searchQuery = formData.get("search")?.toString()?.trim();
+
+    const url = new URL(Astro.request.url);
+    const page = Number(url.searchParams.get("page") ?? 1);
+
+    // if (!searchQuery) throw new BadRequestError("search query is blank");
+
+    const digitsOnly = searchQuery?.replace(/\D/g, "");
+
+    if (searchQuery) {
+      const conditions = [
+        ilike(Location.name, `%${searchQuery}%`),
+        ilike(Location.address, `%${searchQuery}%`),
+        ilike(Location.city, `%${searchQuery}%`),
+        ilike(Location.state, `%${searchQuery}%`),
+        ilike(Location.excerpt, `%${searchQuery}%`),
+      ];
+
+      if (digitsOnly && digitsOnly.length >= 3) {
+        conditions.push(like(Location.zip, `%${digitsOnly}%`));
+      }
+
+      locations = await db
+        .select()
+        .from(Location)
+        .where(or(...conditions))
+        .limit(10);
+    } else {
+      // Empty search - return no results (or all users if you prefer)
+      const result = await getLocationsPage({ page });
+      locations = result.locations;
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleQueryResult<LocationSelect>({
+  error,
+  rows: locations,
+  method: Astro.request.method,
+  emptyMessage: `No matching data found`,
+});
+---
+
+{
+  locations && locations.length > 0 ? (
+    locations.map((entity) => <RowView row={entity} {...ctx} />)
+  ) : (
+    <tr>
+      <td colspan="100%" class="callout">
+        no {ctx.crud} found
+      </td>
+    </tr>
+  )
+}

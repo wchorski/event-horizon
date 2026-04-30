@@ -1,0 +1,19 @@
+---
+import { formatPhonePrettyManual } from "@lib/formatters";
+import type { UserInsert } from "@ty/Schema";
+
+interface Props {
+  user: UserInsert;
+}
+const { user } = Astro.props;
+
+const { first_name, middle_initial, last_name, email, phone } = user;
+---
+
+<div class="card">
+  <h3>{`${first_name} ${middle_initial} ${last_name}`}</h3>
+  <ul>
+    <li>{email}</li>
+    <li>{formatPhonePrettyManual(phone)}</li>
+  </ul>
+</div>

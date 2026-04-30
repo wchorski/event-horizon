@@ -1,0 +1,134 @@
+---
+// components/tables/RowView.astro
+import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
+import CellViewElement from "./CellViewElement.astro";
+import type { AstroBuiltinAttributes } from "astro";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+import { slugify } from "@lib/formatters";
+import type { ZodError } from "astro/zod";
+import Popover from "@components/Popover.astro";
+import FormErrorMessage from "@components/mgmt/FormErrorMessage.astro";
+import AnchoredBox from "@components/AnchoredBox.astro";
+
+interface Props<TRow extends BaseRow = BaseRow> {
+  row: TRow;
+  headers: (keyof TRow & string)[];
+  config: FieldConfig<TRow>;
+  crud: CrudRegistryType;
+  endpoint: string;
+  classList?: AstroBuiltinAttributes["class:list"];
+  oob?: boolean;
+  oobSwap?: string;
+  disableEdit?: boolean;
+  error?: string | ReturnType<ZodError["flatten"]> | null;
+  editUrl?: string | ((id: string | number) => string);
+}
+// TODO Edit need to get away from 'partials/table/row-edit' for dedicated routes
+// TODO how to pass `actionUrl` to RowEdit component?
+const {
+  row,
+  headers,
+  config,
+  crud,
+  endpoint,
+  classList,
+  oob,
+  oobSwap,
+  error,
+  editUrl = `/partials/${slugify(crud)}/${row.id}/edit`,
+
+  disableEdit: isEditDisabled = false,
+} = Astro.props;
+if (!headers.includes("id")) throw new Error("header does not include ID");
+
+const topLevelError = typeof error === "string" ? error : null;
+const anchorName =
+  `--anchor-top-level-error-${crud}-${row.id}` || "--anchor-row";
+---
+
+<tr
+  id={`row-${crud}-${row.id}`}
+  hx-swap-oob={oobSwap ?? (oob ? "outerHTML" : undefined)}
+  data-row-id={row.id}
+  data-status="viewing"
+  class:list={classList}
+  style={`anchor-name: ${anchorName};`}
+>
+  {
+    headers.map((key) => {
+      const field = config[key] ?? {};
+      const { label, value: override, type, ...inputAttrs } = field;
+      const options =
+        type === "select" && "options" in field ? field.options : undefined;
+
+      return (
+        <td data-key={key} data-type={type} class="view-cell">
+          <CellViewElement
+            name={key}
+            type={type}
+            rawVal={row[key]}
+            options={options}
+            endpoint={endpoint}
+          />
+        </td>
+      );
+    })
+  }
+
+  {
+    !isEditDisabled ? (
+      <td class="action-cell">
+        <button
+          class="edit"
+          type="button"
+          hx-get={editUrl}
+          hx-target={`#row-${crud}-${row.id}`}
+          hx-target-error={`#top-level-error-${crud}-${row.id}`}
+          hx-swap="outerHTML"
+          hx-headers='{"X-Partial-Type": "table-row"}'
+        >
+          Edit
+        </button>
+        <button
+          title="delete"
+          type="button"
+          class="btn delete primary danger"
+          hx-delete={`/partials/${slugify(crud)}/${row.id}`}
+          hx-target={`#row-${crud}-${row.id}`}
+          hx-target-error={`#top-level-error-${crud}-${row.id}`}
+          hx-swap="outerHTML"
+          hx-confirm={`Delete this ${crud} ${row.name || row.first_name || row.subject || row.id}?`}
+          hx-headers='{"X-Partial-Type": "table-row"}'
+          title="delete item"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+            aria-hidden="true"
+            role="img"
+            width="18"
+            height="18"
+            viewBox="0 0 448 512"
+            class="icon"
+          >
+            <path
+              fill="currentColor"
+              d="M135.2 17.7C140.6 6.8 151.7 0 163.8 0h120.4c12.1 0 23.2 6.8 28.6 17.7L320 32h96c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 96 0 81.7 0 64s14.3-32 32-32h96zM32 128h384v320c0 35.3-28.7 64-64 64H96c-35.3 0-64-28.7-64-64zm96 64c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16m96 0c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16m96 0c-8.8 0-16 7.2-16 16v224c0 8.8 7.2 16 16 16s16-7.2 16-16V208c0-8.8-7.2-16-16-16"
+            />
+          </svg>
+        </button>
+      </td>
+    ) : (
+      <td />
+    )
+  }
+  <td class="error-cell">
+    <AnchoredBox
+      messageId={`top-level-error-${crud}-${row.id}`}
+      anchorName={anchorName}
+      class="row-error error top-level"
+    >
+      <span id={`top-level-error-${crud}-${row.id}`}>{topLevelError}</span>
+    </AnchoredBox>
+  </td>
+</tr>

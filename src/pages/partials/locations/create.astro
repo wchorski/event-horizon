@@ -1,0 +1,94 @@
+---
+// partials/users/create.astro
+import RowView from "@components/tables/RowView.astro";
+import RowCreateForm from "@components/tables/RowCreate.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { parseOutUndefinedFormData } from "@lib/sanatizers";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { CourseSelect, LocationSelect } from "@ty/Schema";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import type { ZodError } from "astro:schema";
+import { handleResult } from "@lib/handleRenderResult";
+
+type ViewType = "table-row" | "card";
+
+let location: LocationSelect | null | undefined = null;
+let error = null;
+const crudKey = "locations" as const;
+const config = tableConfigs[crudKey].required;
+const ctx = {
+  crud: crudKey,
+  config,
+  endpoint: "/attendance/locations",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    // const session = await requirePermission(Astro.request, "locations", "create");
+    // TODO
+    const session = TEST_ADMIN_SESSION;
+
+    const formData = await Astro.request.formData();
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    const entry = crud[crudKey];
+    location = await entry.create(submitFields, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleResult<LocationSelect>({
+  error,
+  entity: location,
+  method: Astro.request.method,
+  emptyMessage: "No locations available",
+});
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={"create"}
+      headers={ctx.headers}
+      errors={result.errors}
+      model={ctx.crud}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={"create"}
+      headers={ctx.headers}
+      crud={ctx.crud}
+      message={result.message}
+    />
+  ) : (
+    <FormSuccess
+      entity={result.entity}
+      method={result.method}
+      partialType={partialType}
+      ctx={ctx}
+    />
+  )
+}

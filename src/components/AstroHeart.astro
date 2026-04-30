@@ -1,0 +1,36 @@
+---
+interface Props {
+  count?: number;
+  multiplier?: number;
+}
+const { count = 0, multiplier = 1 } = Astro.props;
+---
+
+<!-- Wrap the component elements in our custom element “astro-heart”. -->
+<astro-heart data-count={count} data-multiplier={multiplier}>
+  <button aria-label="Heart">heart</button> x <span>{count}</span>
+</astro-heart>
+
+<script>
+  // Define the behaviour for our new type of HTML element.
+  class AstroHeart extends HTMLElement {
+    connectedCallback() {
+      let count = Number(this.dataset.count);
+      let multiplier = Number(this.dataset.multiplier);
+
+      const heartButton = this.querySelector("button");
+      if (!heartButton) throw new Error("no countSpan found");
+      const countSpan = this.querySelector("span");
+      if (!countSpan) throw new Error("no countSpan found");
+
+      // Each time the button is clicked, update the count.
+      heartButton.addEventListener("click", () => {
+        count = count + 1 * multiplier;
+        countSpan.textContent = count.toString();
+      });
+    }
+  }
+
+  // Tell the browser to use our AstroHeart class for <astro-heart> elements.
+  customElements.define("astro-heart", AstroHeart);
+</script>

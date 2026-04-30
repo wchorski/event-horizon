@@ -1,0 +1,232 @@
+---
+// components/tables/RowEdit.astro
+import AnchoredBox from "@components/AnchoredBox.astro";
+import InputField from "@components/form/InputField.astro";
+import SearchSelect from "@components/form/SearchSelect.astro";
+import SelectField from "@components/form/SelectField.astro";
+import TextareaField from "@components/form/TextareaField.astro";
+import Popover from "@components/Popover.astro";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+import { slugify } from "@lib/formatters";
+import type {
+  BaseRow,
+  FieldConfig,
+  FieldSlot,
+  InputFieldSlot,
+  SearchSelectFieldSlot,
+  SelectFieldSlot,
+} from "@ty/FieldConfig";
+import type { ZodError } from "astro/zod";
+
+interface Props<TRow extends BaseRow = BaseRow> {
+  row: TRow;
+  originalRow?: TRow; // fallback to row if not provided
+  headers: (keyof TRow & string)[];
+  config: FieldConfig<TRow>;
+  crud: CrudRegistryType;
+  endpoint: string;
+  submitUrl?: string | ((row: TRow) => string);
+  error?: string | ReturnType<ZodError["flatten"]> | null;
+}
+
+// TODO remove unused
+const {
+  row,
+  originalRow = row,
+  headers,
+  config,
+  endpoint,
+  crud,
+  submitUrl = `/partials/${slugify(crud)}/${row.id}`,
+  error,
+} = Astro.props;
+
+const topLevelError = typeof error === "string" ? error : null;
+
+const autofocusIndex = Object.values(config).findIndex(
+  (field) => field?.readonly !== true,
+);
+
+const anchorName =
+  `--anchor-top-level-error-${crud}-${row.id}` || "--anchor-row";
+---
+
+<tr id={`row-${crud}-${row.id}`} data-status="editing">
+  {
+    headers.map((key, i) => {
+      const field: FieldSlot = config[key] ?? {};
+      const resolvedValue =
+        field.value ?? (row[key] != null ? String(row[key]) : "");
+      const fieldError =
+        error && typeof error === "object" && "fieldErrors" in error
+          ? (error as any).fieldErrors[key]?.[0]
+          : null;
+      const autofocus = i === autofocusIndex;
+
+      switch (field.type) {
+        case "select": {
+          const {
+            type: _,
+            label,
+            value: _v,
+            options,
+            ...inputAttrs
+          } = field as SelectFieldSlot;
+          return (
+            <td data-key={key} data-type={field.type}>
+              <SelectField
+                {...inputAttrs}
+                value={resolvedValue}
+                autofocus={autofocus}
+                formId={`edit-form-${row.id}`}
+                errorId={`field-error-${crud}-${row.id}-${key}`}
+                name={key}
+                label={label}
+                options={options}
+              />
+            </td>
+          );
+        }
+
+        case "textarea": {
+          const { type: _, label: _l, value: _v, ...inputAttrs } = field;
+          return (
+            <td data-key={key} data-type={field.type}>
+              <TextareaField
+                {...inputAttrs}
+                name={key}
+                errorId={`field-error-${crud}-${row.id}-${key}`}
+                autofocus={autofocus}
+                value={resolvedValue}
+              />
+            </td>
+          );
+        }
+
+        case "searchSelect": {
+          const {
+            type: _,
+            label,
+            value: _v,
+            options,
+            ...ssProps
+          } = field as SearchSelectFieldSlot;
+          return (
+            <td data-key={key} data-type={field.type}>
+              <SearchSelect
+                {...ssProps}
+                id={`ss-row-edit-${crud}-${row.id}-${key}`}
+                name={key}
+                label={label ?? key}
+                value={resolvedValue}
+                options={options}
+              />
+            </td>
+          );
+        }
+
+        case "checkbox": {
+          const {
+            type: _,
+            label,
+            value: _v,
+            checked = Boolean(row[key]),
+            ...inputAttrs
+          } = field as InputFieldSlot;
+          return (
+            <td data-key={key} data-type={field.type}>
+              <InputField
+                {...inputAttrs}
+                autofocus={autofocus}
+                formId={`edit-form-${row.id}`}
+                model={crud}
+                id={row.id}
+                name={key}
+                label={label}
+                type="checkbox"
+                checked={checked}
+                fieldError={fieldError}
+              />
+            </td>
+          );
+        }
+
+        default: {
+          const {
+            type,
+            label,
+            value: _v,
+            datalist,
+            ...inputAttrs
+          } = field as InputFieldSlot;
+          return (
+            <td data-key={key} data-type={field.type}>
+              <InputField
+                {...inputAttrs}
+                autofocus={autofocus}
+                formId={`edit-form-${row.id}`}
+                model={crud}
+                id={row.id}
+                name={key}
+                label={label}
+                type={type}
+                value={resolvedValue}
+                fieldError={fieldError}
+                datalist={datalist}
+              />
+            </td>
+          );
+        }
+      }
+    })
+  }
+
+  <td class="action-cell">
+    <form
+      id={`edit-form-${row.id}`}
+      style="display:none"
+      hx-patch={submitUrl}
+      hx-headers='{"X-Partial-Type": "table-row"}'
+      hx-target={`#row-${crud}-${row.id}`}
+      hx-target-error={`#top-level-error-${crud}-${row.id}`}
+      hx-swap="outerHTML"
+    >
+    </form>
+
+    <button
+      title="save"
+      type="submit"
+      form={`edit-form-${row.id}`}
+      class="save"
+    >
+      💾
+    </button>
+    <button
+      type="reset"
+      title="cancel"
+      class="cancel"
+      hx-get={`/partials/${slugify(crud)}/${row.id}`}
+      hx-target={`#row-${crud}-${row.id}`}
+      hx-target-error={`#top-level-error-${crud}-${row.id}`}
+      hx-swap="innerHTML"
+      hx-headers='{"X-Partial-Type": "table-row"}'
+    >
+      ⌀
+    </button>
+  </td>
+  <td class="error-cell">
+    <AnchoredBox
+      messageId={`top-level-error-${crud}-${row.id}`}
+      anchorName={anchorName}
+      class="row-error error top-level"
+    >
+      <span id={`top-level-error-${crud}-${row.id}`}>{topLevelError}</span>
+    </AnchoredBox>
+  </td>
+</tr>
+
+<style define:vars={{ anchorName }}>
+  .action-cell {
+    anchor-name: var(--anchorName);
+  }
+</style>

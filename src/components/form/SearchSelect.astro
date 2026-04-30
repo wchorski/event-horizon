@@ -1,0 +1,1184 @@
+---
+/**
+ * SearchSelect.astro
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Schema-agnostic searchable combobox. Supports two modes:
+ *
+ *   STATIC  — pass `items` array; all filtering happens in the browser.
+ *             Best for < ~2,000 records.
+ *
+ *   ASYNC   — pass `endpoint`; component debounces keystrokes and fetches
+ *             filtered results from your API. Scales to any dataset size.
+ *
+ * ── Templates ────────────────────────────────────────────────────────────────
+ * All template props use {fieldName} tokens that map to keys in your data.
+ *
+ *   valueKey          — field whose value goes into the hidden <input>
+ *   primaryTemplate   — bold top line in each dropdown option
+ *   secondaryTemplate — (optional) dimmer subtitle line
+ *   inputTemplate     — text shown in the input after selection
+ *                       defaults to primaryTemplate
+ *   metaTemplate      — (optional) right-side pill  e.g. "#{id}" or "${price}"
+ *   searchKeys        — fields to match against in static mode
+ *                       defaults to all keys found across all templates
+ *
+ * ── Async props ──────────────────────────────────────────────────────────────
+ *   endpoint    — API URL. The component appends ?q=<query>&limit=<limit>
+ *                 Your endpoint must return: Array<Record<string, unknown>>
+ *                 (same shape as items in static mode)
+ *   limit       — max results to request per query       (default: 20)
+ *   minChars    — chars required before first fetch       (default: 2)
+ *   debounce    — ms to wait after last keystroke         (default: 300)
+ *   preloadItem — in async mode with a pre-selected value, pass the full
+ *                 item object here so the label can be shown on first render
+ *                 e.g. preloadItem={await db.users.findById(value)}
+ *
+ * ── Examples ─────────────────────────────────────────────────────────────────
+ *
+ *  Static — users
+ *  --------------
+ *  <SearchSelect
+ *    items={users}
+ *    valueKey="id"
+ *    primaryTemplate="{firstName} {lastName}"
+ *    secondaryTemplate="{email}"
+ *    inputTemplate="{firstName} {lastName} <{email}>"
+ *    metaTemplate="#{id}"
+ *  />
+ *
+ *  Async — users  (endpoint returns same shape)
+ *  --------------------------------------------
+ *  <SearchSelect
+ *    endpoint="/api/users/search"
+ *    valueKey="id"
+ *    primaryTemplate="{firstName} {lastName}"
+ *    secondaryTemplate="{email}"
+ *    inputTemplate="{firstName} {lastName} <{email}>"
+ *    metaTemplate="#{id}"
+ *    minChars={2}
+ *    debounce={300}
+ *    value={existingUserId}
+ *    preloadItem={existingUser}
+ *  />
+ *
+ *  Async — events
+ *  ---------------
+ *  <SearchSelect
+ *    endpoint="/api/events/search"
+ *    valueKey="event_id"
+ *    primaryTemplate="{subject}"
+ *    secondaryTemplate="{date}"
+ *    inputTemplate="{subject} | {date}"
+ *    metaTemplate="{courseId}"
+ *    searchKeys={["subject", "date", "instructor"]}
+ *  />
+ *
+ * ── API contract ─────────────────────────────────────────────────────────────
+ *  GET {endpoint}?q=<string>&limit=<number>
+ *  Response: JSON array  →  [{ id, firstName, ... }, ...]
+ *
+ * ── Events ───────────────────────────────────────────────────────────────────
+ *  root element emits  "ss:change"
+ *    e.detail  →  full raw item object on selection, or null when cleared
+ */
+
+import type { HTMLAttributes } from "astro/types";
+
+type AnyRecord = Record<string, unknown>;
+type FieldOption = { value: string; label: string };
+
+// Extend <input> — omit value/type since we control those ourselves
+type Props = {
+  // data — one of these three is required
+  options?: FieldOption[]; // pre-mapped { value, label } pairs
+  items?: AnyRecord[]; // raw records + templates (static mode)
+  endpoint?: string; // async API URL
+  // templates — required when using `items` or `endpoint`
+  valueKey?: string;
+  primaryTemplate?: string;
+  secondaryTemplate?: string;
+  inputTemplate?: string;
+  metaTemplate?: string;
+  searchKeys?: string[];
+  // async knobs
+  limit?: number;
+  minChars?: number;
+  debounce?: number;
+  preloadItem?: AnyRecord;
+  // display
+  label?: string;
+  value?: string | number;
+} & Omit<HTMLAttributes<"input">, "value" | "type">;
+
+const {
+  // SearchSelect-specific logic props
+  options,
+  items = [],
+  endpoint,
+  valueKey = "",
+  primaryTemplate = "",
+  secondaryTemplate,
+  inputTemplate,
+  metaTemplate,
+  searchKeys,
+  limit = 20,
+  minChars = 2,
+  debounce = 300,
+  preloadItem,
+  label = "Select",
+  value,
+  // Native attrs needed server-side (id builds element IDs; name/required split across inputs)
+  id = "ss",
+  name = "value",
+  required,
+  // Everything else (placeholder, disabled, data-*, aria-*, class…) spreads onto the visible input
+  ...inputAttrs
+} = Astro.props;
+
+const isAsync = Boolean(endpoint);
+
+// ── Server-side helpers ────────────────────────────────────────────────────
+function extractKeys(tpl: string): string[] {
+  return [...tpl.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+}
+function applyTemplate(tpl: string, item: AnyRecord): string {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => String(item[k] ?? ""));
+}
+
+const allTemplateKeys = [
+  ...extractKeys(primaryTemplate),
+  ...(secondaryTemplate ? extractKeys(secondaryTemplate) : []),
+  ...(inputTemplate ? extractKeys(inputTemplate) : []),
+].filter((k, i, a) => a.indexOf(k) === i);
+
+const resolvedSearchKeys = searchKeys ?? allTemplateKeys;
+const resolvedInputTpl = inputTemplate ?? primaryTemplate;
+
+// ── Build the serialised item list ────────────────────────────────────────
+const serialisedItems = isAsync
+  ? "[]"
+  : JSON.stringify(
+      options
+        ? options.map((o: { value: string; label: string }) => ({
+            _value: o.value,
+            _primary: o.label,
+            _secondary: "",
+            _input: o.label,
+            _meta: "",
+            _search: o.label,
+            _raw: o,
+          }))
+        : items.map((item: AnyRecord) => ({
+            _value: String(item[valueKey] ?? ""),
+            _primary: applyTemplate(primaryTemplate, item),
+            _secondary: secondaryTemplate
+              ? applyTemplate(secondaryTemplate, item)
+              : "",
+            _input: applyTemplate(resolvedInputTpl, item),
+            _meta: metaTemplate ? applyTemplate(metaTemplate, item) : "",
+            _search: resolvedSearchKeys
+              .map((k: string) => String(item[k] ?? ""))
+              .join(" "),
+            _raw: item,
+          })),
+    );
+
+// Resolve pre-selected display label
+const preItemSource = isAsync
+  ? preloadItem
+  : options
+    ? options.find(
+        (o: { value: string; label: string }) => o.value === String(value),
+      )
+    : items.find((item: AnyRecord) => String(item[valueKey]) === String(value));
+const preInput = preItemSource
+  ? options
+    ? (preItemSource as FieldOption).label
+    : applyTemplate(resolvedInputTpl, preItemSource as AnyRecord)
+  : "";
+const preValue = preItemSource
+  ? options
+    ? (preItemSource as FieldOption).value
+    : String((preItemSource as AnyRecord)[valueKey])
+  : value !== undefined
+    ? String(value)
+    : "";
+
+// Config passed to client
+const clientConfig = JSON.stringify({
+  isAsync,
+  endpoint: endpoint ?? "",
+  limit,
+  minChars,
+  debounce,
+  primaryTemplate,
+  secondaryTemplate: secondaryTemplate ?? "",
+  inputTemplate: resolvedInputTpl,
+  metaTemplate: metaTemplate ?? "",
+  searchKeys: resolvedSearchKeys,
+  valueKey,
+});
+
+const badgeCount = options?.length ?? items.length;
+// console.log({ options, items });
+---
+
+<search-select
+  class="ss-root"
+  id={id}
+  data-items={serialisedItems}
+  data-config={clientConfig}
+  data-pre-value={preValue}
+>
+  <div class="ss-label-row">
+    <label class="ss-label" for={`${id}-input`}>{label}</label>
+    <span class="ss-badge" id={`${id}-badge`}>
+      {
+        isAsync
+          ? "type to search"
+          : `${badgeCount} ${badgeCount === 1 ? "option" : "options"}`
+      }
+    </span>
+  </div>
+
+  <div class="ss-combobox" id={`${id}-combobox`}>
+    <!-- Hidden input carries the real value for form submission -->
+    <input
+      type="hidden"
+      id={`${id}-hidden`}
+      name={name}
+      value={preValue}
+      required={required}
+    />
+
+    <div class="ss-trigger">
+      <svg
+        class="ss-icon ss-search-icon"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"
+        ></path>
+      </svg>
+      <!-- spinner shown during fetch -->
+      <svg
+        class="ss-icon ss-spinner"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+        ></path>
+      </svg>
+
+      <!--
+        Visible combobox input — spreads all remaining native <input> attrs
+        (placeholder, disabled, data-*, aria-*, class overrides, etc.).
+        Explicit attrs after the spread win, so class/type/id/value are safe.
+      -->
+      <input
+        {...inputAttrs}
+        class="ss-input"
+        id={`${id}-input`}
+        type="text"
+        autocomplete="off"
+        spellcheck={false}
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-controls={`${id}-listbox`}
+        value={preInput}
+      />
+
+      <button
+        class="ss-clear"
+        id={`${id}-clear`}
+        type="button"
+        aria-label="Clear"
+        tabindex="-1"
+      >
+        <svg
+          width="13"
+          height="13"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <svg
+        class="ss-chevron"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    </div>
+
+    <div
+      class="ss-dropdown"
+      id={`${id}-listbox`}
+      role="listbox"
+      aria-label={label}
+    >
+      <div class="ss-drop-header" id={`${id}-drop-header`}></div>
+      <ul class="ss-list" id={`${id}-list`}></ul>
+    </div>
+  </div>
+
+  <template data-tpl="option">
+    <li class="ss-option" role="option">
+      <div class="ss-option-body">
+        <div class="ss-avatar pill"></div>
+        <div>
+          <div class="ss-primary"></div>
+          <div class="ss-secondary"></div>
+        </div>
+      </div>
+      <span class="ss-meta"></span>
+    </li>
+  </template>
+
+  <template data-tpl="empty">
+    <div class="ss-empty">
+      <div class="ss-empty-text"></div>
+      <small class="ss-empty-sub"></small>
+    </div>
+  </template>
+
+  <template data-tpl="skeleton">
+    <div class="ss-skeleton">
+      <div class="ss-skel-row">
+        <div class="ss-skel-avatar"></div>
+        <div class="ss-skel-lines">
+          <div class="ss-skel-line"></div>
+          <div class="ss-skel-line short"></div>
+        </div>
+        <div class="ss-skel-pill"></div>
+      </div>
+    </div>
+  </template>
+</search-select>
+
+<script>
+import { undefined } from "astro:schema";
+
+  type AnyRecord = Record<string, unknown>;
+
+  type SerialisedItem = {
+    _value: string;
+    _primary: string;
+    _secondary: string;
+    _input: string;
+    _meta: string;
+    _search: string;
+    _raw: AnyRecord;
+  };
+
+  type Config = {
+    isAsync: boolean;
+    endpoint: string;
+    limit: number;
+    minChars: number;
+    debounce: number;
+    primaryTemplate: string;
+    secondaryTemplate: string;
+    inputTemplate: string;
+    metaTemplate: string;
+    searchKeys: string[];
+    valueKey: string;
+  };
+
+  type State = {
+    results: SerialisedItem[];
+    pool: SerialisedItem[];
+    selVal: string;
+    hlIdx: number;
+    timer: ReturnType<typeof setTimeout> | null;
+    ctrl: AbortController | null;
+    cache: Map<string, SerialisedItem[]>;
+  };
+
+  class SearchSelect extends HTMLElement {
+    private cfg!: Config;
+    private state: State;
+
+    private cb!: HTMLElement;
+    private input!: HTMLInputElement;
+    private hidden!: HTMLInputElement;
+    private clearBtn!: HTMLButtonElement;
+    private list!: HTMLElement;
+    private hdr!: HTMLElement;
+    private badge!: HTMLElement;
+
+    private tpl!: {
+      option: HTMLTemplateElement;
+      empty: HTMLTemplateElement;
+      skeleton: HTMLTemplateElement;
+    };
+
+    constructor() {
+      super();
+
+      this.state = {
+        results: [],
+        pool: [],
+        selVal: "",
+        hlIdx: -1,
+        timer: null,
+        ctrl: null,
+        cache: new Map(),
+      };
+    }
+
+    connectedCallback() {
+      this.cfg = JSON.parse(this.dataset.config ?? "{}");
+      this.state.pool = JSON.parse(this.dataset.items ?? "[]");
+      this.state.selVal = this.dataset.preValue ?? "";
+
+      // ✅ scoped queries ONLY inside this component
+      this.cb = this.querySelector(".ss-combobox");
+      this.input = this.querySelector(".ss-input");
+      this.hidden = this.querySelector('input[type="hidden"]');
+      this.clearBtn = this.querySelector(".ss-clear");
+      this.list = this.querySelector(".ss-list");
+      this.hdr = this.querySelector(".ss-drop-header");
+      this.badge = this.querySelector(".ss-badge");
+
+      // templates
+      this.tpl = {
+        option: this.querySelector('template[data-tpl="option"]'),
+        empty: this.querySelector('template[data-tpl="empty"]'),
+        skeleton: this.querySelector('template[data-tpl="skeleton"]'),
+      };
+
+      if (!this.cfg.isAsync) {
+        this.state.results = [...this.state.pool];
+        this.renderStatic();
+      } else {
+        this.setHdr("Type to search");
+        this.renderEmpty("Type to search", "");
+      }
+
+      this.bindEvents();
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener("mousedown", this.handleClickOutside);
+    }
+
+    // ── helpers ─────────────────────────────────────
+    setHdr(text) {
+      this.hdr.textContent = text;
+    }
+
+    setBadge(text) {
+      this.badge.textContent = text;
+    }
+
+    initials(text) {
+      return text
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0] ?? "")
+        .join("")
+        .toUpperCase();
+    }
+
+    // ── render ──────────────────────────────────────
+    renderList(items, q = "") {
+      this.list.innerHTML = "";
+
+      if (!items.length) {
+        this.renderEmpty("No matches found", "Try a different search term");
+        return;
+      }
+
+      items.forEach((item, i) => {
+        const node = this.tpl.option.content.cloneNode(true);
+        const el = node.querySelector(".ss-option");
+
+        el.dataset.value = item._value;
+        el.dataset.idx = i;
+
+        if (item._value === this.state.selVal) el.classList.add("sel");
+        if (i === this.state.hlIdx) el.classList.add("hl");
+
+        node.querySelector(".ss-avatar").textContent = this.initials(
+          item._primary,
+        );
+
+        node.querySelector(".ss-primary").textContent = item._primary;
+
+        const sec = node.querySelector(".ss-secondary");
+        if (item._secondary) sec.textContent = item._secondary;
+        else sec.remove();
+
+        const meta = node.querySelector(".ss-meta");
+        if (item._meta) meta.textContent = item._meta;
+        else meta.remove();
+
+        this.list.appendChild(node);
+      });
+    }
+
+    renderEmpty(text, sub) {
+      this.list.innerHTML = "";
+      const node = this.tpl.empty.content.cloneNode(true);
+      node.querySelector(".ss-empty-text").textContent = text;
+      node.querySelector(".ss-empty-sub").textContent = sub;
+      this.list.appendChild(node);
+    }
+
+    renderSkeleton() {
+      this.list.innerHTML = "";
+      for (let i = 0; i < 5; i++) {
+        this.list.appendChild(this.tpl.skeleton.content.cloneNode(true));
+      }
+    }
+
+    renderStatic() {
+      const q = this.input.value.trim().toLowerCase();
+      this.state.results = this.state.pool.filter((it) =>
+        it._search.toLowerCase().includes(q),
+      );
+
+      this.setHdr(`${this.state.results.length} results`);
+      this.setBadge(`${this.state.results.length}`);
+
+      this.renderList(this.state.results, q);
+    }
+
+    async fetchAsync(q) {
+      if (this.state.cache.has(q)) {
+        this.state.results = this.state.cache.get(q);
+        this.renderList(this.state.results, q);
+        return;
+      }
+
+      this.state.ctrl?.abort();
+      this.state.ctrl = new AbortController();
+
+      this.renderSkeleton();
+
+      try {
+        const res = await fetch(
+          `${this.cfg.endpoint}?q=${encodeURIComponent(q)}&limit=${this.cfg.limit}`,
+          { signal: this.state.ctrl.signal },
+        );
+
+        const raw = await res.json();
+        this.state.results = raw.map((r) => this.toItem(r));
+        this.state.cache.set(q, this.state.results);
+
+        this.renderList(this.state.results, q);
+      } catch {
+        this.renderEmpty("Request failed", "");
+      }
+    }
+
+    toItem(raw) {
+      const cfg = this.cfg;
+
+      const apply = (tpl) => tpl.replace(/\{(\w+)\}/g, (_, k) => raw[k] ?? "");
+
+      return {
+        _value: String(raw[cfg.valueKey] ?? ""),
+        _primary: apply(cfg.primaryTemplate),
+        _secondary: cfg.secondaryTemplate ? apply(cfg.secondaryTemplate) : "",
+        _input: apply(cfg.inputTemplate),
+        _meta: cfg.metaTemplate ? apply(cfg.metaTemplate) : "",
+        _search: cfg.searchKeys.map((k) => raw[k] ?? "").join(" "),
+        _raw: raw,
+      };
+    }
+
+    // ── actions ─────────────────────────────────────
+    select(val) {
+      const item = this.state.results.find((i) => i._value === val);
+      if (!item) return;
+
+      this.state.selVal = val;
+      this.hidden.value = val;
+      this.input.value = item._input;
+
+      this.dispatchEvent(new CustomEvent("ss:change", { detail: item._raw }));
+    }
+
+    clear() {
+      this.state.selVal = "";
+      this.hidden.value = "";
+      this.input.value = "";
+      this.renderStatic();
+    }
+
+    private open() {
+      this.cb.classList.add("open");
+      this.input.setAttribute("aria-expanded", "true");
+
+      if (!this.cfg.isAsync) {
+        this.renderStatic();
+      } else {
+        const q = this.input.value.trim();
+        if (this.state.results.length) {
+          this.renderList(this.state.results);
+        } else {
+          this.renderEmpty("Type to search", "");
+        }
+      }
+    }
+
+    private close() {
+      this.cb.classList.remove("open");
+      this.input.setAttribute("aria-expanded", "false");
+      this.state.hlIdx = -1;
+    }
+
+    private handleClickOutside = (e: MouseEvent) => {
+      if (!this.contains(e.target as Node)) {
+        this.close();
+      }
+    };
+
+    // ── events ──────────────────────────────────────
+    private bindEvents() {
+      // ── open ─────────────────────────────
+      this.input.addEventListener("focus", () => {
+        if (this.input.hasAttribute("data-locked")) return;
+        this.open();
+      });
+
+      this.input.addEventListener("click", () => {
+        if (this.input.hasAttribute("data-locked")) return;
+        this.open();
+      });
+
+      // ── typing ───────────────────────────
+      this.input.addEventListener("input", () => {
+        if (!this.cb.classList.contains("open")) this.open();
+
+        this.state.selVal = "";
+        this.hidden.value = "";
+
+        if (this.cfg.isAsync) {
+          const q = this.input.value.trim();
+          if (q.length < this.cfg.minChars) {
+            this.renderEmpty("Type to search", "");
+            return;
+          }
+          this.fetchAsync(q);
+        } else {
+          this.renderStatic();
+        }
+      });
+
+      // ── keyboard ─────────────────────────
+      this.input.addEventListener("keydown", (e: KeyboardEvent) => {
+        if (!this.cb.classList.contains("open")) {
+          this.open();
+          return;
+        }
+
+        if (e.key === "Escape") {
+          const all = this.cfg.isAsync ? this.state.results : this.state.pool;
+
+          const hit = all.find((it) => it._value === this.state.selVal);
+
+          this.input.value = hit ? hit._input : "";
+          this.close();
+        }
+
+        if (e.key === "Tab") {
+          this.close();
+        }
+      });
+
+      // ── select ───────────────────────────
+      this.list.addEventListener("mousedown", (e) => {
+        const opt = (e.target as HTMLElement).closest(".ss-option");
+        if (opt) {
+          e.preventDefault();
+          this.select(opt.dataset.value!);
+          this.cb.classList.add("has-value");
+          this.input.dataset.locked = "true"
+          this.input.disabled = true
+          this.close();
+        }
+      });
+
+      // ── clear ────────────────────────────
+      this.clearBtn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        this.cb.classList.remove("has-value");
+        this.input.disabled = false
+        delete this.input.dataset.locked
+        this.clear();
+      });
+
+      // ── outside click (CRITICAL FIX) ─────
+      document.addEventListener("mousedown", this.handleClickOutside);
+    }
+  }
+
+  customElements.define("search-select", SearchSelect);
+</script>
+
+<style>
+  .ss-root {
+    --surface: #141418;
+    --surface2: #1c1c22;
+    --surface3: #24242c;
+    --border: #2a2a36;
+    --border-hi: #5b54f0;
+    --text: #ededf2;
+    --text-2: #8888a0;
+    --text-3: #74747a;
+    --accent: #5b54f0;
+    --accent-soft: rgba(91, 84, 240, 0.13);
+    --accent-glow: rgba(91, 84, 240, 0.25);
+    --warn: #e8a030;
+    --mono: "DM Mono", "Fira Mono", ui-monospace, monospace;
+    --sans: "DM Sans", system-ui, sans-serif;
+    --r: 10px;
+    font-family: var(--sans);
+    color: var(--text);
+    width: 100%;
+  }
+
+  /* label row */
+  .ss-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 7px;
+  }
+  .ss-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .ss-badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-3);
+    transition: color 0.2s;
+  }
+  .ss-badge.loading {
+    color: var(--accent);
+  }
+  .ss-badge.error {
+    color: var(--warn);
+  }
+
+  /* combobox */
+  .ss-combobox {
+    position: relative;
+  }
+  .ss-trigger {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 0.1rem 0.2rem;
+    cursor: text;
+    transition:
+      border-color 0.18s,
+      box-shadow 0.18s;
+  }
+  .ss-combobox.open .ss-trigger,
+  .ss-trigger:focus-within {
+    border-color: var(--border-hi);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .ss-combobox.err .ss-trigger {
+    border-color: var(--warn);
+    box-shadow: 0 0 0 3px rgba(232, 160, 48, 0.2);
+  }
+
+  .ss-icon {
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition: color 0.18s;
+  }
+  .ss-combobox.open .ss-search-icon {
+    color: var(--accent);
+  }
+
+  /* spinner */
+  .ss-spinner {
+    display: none;
+  }
+  .ss-combobox.fetching .ss-search-icon {
+    display: none;
+  }
+  .ss-combobox.fetching .ss-spinner {
+    display: block;
+    color: var(--accent);
+    animation: ss-spin 0.75s linear infinite;
+  }
+  @keyframes ss-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .ss-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    caret-color: var(--accent);
+    padding-right: 0;
+  }
+  .ss-input::placeholder {
+    color: var(--text-2);
+  }
+
+  .ss-clear {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-2);
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
+  }
+  .ss-combobox.has-value .ss-clear {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .ss-combobox.has-value .ss-trigger {
+    border-color: rgba(91, 84, 240, 0.4);
+  }
+  .ss-combobox:has(input[data-locked]) {
+    border: solid 1px var(--c-seperator);
+    border-radius: 10px;
+    & .ss-icon,
+    & .ss-chevron {
+      display: none;
+    }
+    & input {
+      cursor: not-allowed;
+    }
+  }
+  .ss-clear:hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+
+  .ss-chevron {
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition:
+      transform 0.2s,
+      color 0.18s;
+  }
+  .ss-combobox.open .ss-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+
+  /* dropdown */
+  .ss-dropdown {
+    /* width: auto; */
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(91, 84, 240, 0.06);
+    overflow: hidden;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+  }
+  .ss-combobox.open .ss-dropdown {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .ss-drop-header {
+    padding: 7px 12px 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* animated dots for "searching…" */
+  .ss-dots {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .ss-dots span {
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: ss-bounce 0.9s ease-in-out infinite;
+  }
+  .ss-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .ss-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes ss-bounce {
+    0%,
+    80%,
+    100% {
+      transform: scaleY(0.4);
+      opacity: 0.4;
+    }
+    40% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+
+  .ss-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    display: grid;
+    gap: 0.3rem;
+    list-style: none;
+  }
+  .ss-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .ss-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  /* option */
+  .ss-option {
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .ss-option:hover,
+  .ss-option.hl {
+    background: var(--surface2);
+  }
+  .ss-option.sel {
+    background: var(--accent-soft);
+  }
+
+  :global(.ss-avatar) {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-2);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-family: var(--mono);
+  }
+  .ss-option.sel .ss-avatar {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+
+  :global(.ss-option-body) {
+    min-width: 0;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .ss-primary {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-primary {
+    color: var(--accent);
+  }
+  .ss-secondary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-secondary {
+    color: rgba(91, 84, 240, 0.65);
+  }
+
+  mark {
+    background: none;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .ss-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .ss-option.sel .ss-meta {
+    background: rgba(91, 84, 240, 0.15);
+    border-color: rgba(91, 84, 240, 0.25);
+    color: rgba(91, 84, 240, 0.7);
+  }
+
+  /* skeleton shimmer */
+  .ss-skeleton {
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .ss-skel-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 48px;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 6px;
+    border-radius: 7px;
+  }
+  .ss-skel-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+  }
+  .ss-skel-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .ss-skel-line {
+    height: 9px;
+    border-radius: 4px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+  }
+  .ss-skel-line.short {
+    width: 55%;
+    animation-delay: 0.1s;
+  }
+  .ss-skel-pill {
+    height: 18px;
+    width: 44px;
+    border-radius: 5px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+    animation-delay: 0.05s;
+  }
+  @keyframes ss-shimmer {
+    0% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 0.35;
+    }
+  }
+
+  /* empty / error / prompt */
+  .ss-empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .ss-empty small {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .ss-empty.warn {
+    color: var(--warn);
+  }
+  .ss-empty.warn small {
+    color: rgba(232, 160, 48, 0.55);
+  }
+</style>

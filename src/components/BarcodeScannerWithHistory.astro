@@ -1,0 +1,540 @@
+---
+interface Props {}
+const {} = Astro.props;
+---
+
+<barcode-scanner class="container">
+  <div class="card">
+    <div class="header">
+      <h1>Barcode Scanner</h1>
+      <p>Scan barcodes and QR codes instantly</p>
+    </div>
+
+    <div class="content">
+      <div data-error class="error hidden"></div>
+
+      <div data-view="start">
+        <div data-camera-select style="margin-bottom: 15px">
+          <label> Select Camera: </label>
+          <select data-camera-list>
+            <option value="">Loading cameras...</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" data-action="start">
+          Start Scanning
+        </button>
+      </div>
+
+      <div data-view="scan" class="hidden">
+        <div class="video-container">
+          <video data-video playsinline></video>
+          <div class="scanner-overlay">
+            <div class="scanner-frame"></div>
+          </div>
+          <button class="btn-close" data-action="stop">×</button>
+        </div>
+      </div>
+
+      <div data-view="result" class="hidden">
+        <div class="result-box">
+          <div class="result-header">✓ Barcode Detected!</div>
+          <div class="result-format" data-result-format></div>
+          <div class="result-value" data-result-value></div>
+        </div>
+        <div class="button-group">
+          <button class="btn btn-primary" data-action="start">
+            Scan Again
+          </button>
+          <button class="btn btn-secondary" data-action="clear">Clear</button>
+        </div>
+      </div>
+
+      <div data-history class="history hidden">
+        <h2>Scan History</h2>
+        <div data-history-list></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    Point your camera at a barcode or QR code to scan
+  </footer>
+</barcode-scanner>
+
+<script>
+  interface ScanResult {
+    value: string;
+    format: string;
+    timestamp: Date;
+  }
+
+  interface Elements {
+    error: HTMLElement;
+    startView: HTMLElement;
+    scanView: HTMLElement;
+    resultView: HTMLElement;
+    cameraList: HTMLSelectElement;
+    cameraSelect: HTMLElement;
+    video: HTMLVideoElement;
+    resultFormat: HTMLElement;
+    resultValue: HTMLElement;
+    history: HTMLElement;
+    historyList: HTMLElement;
+  }
+
+  class BarcodeScanner extends HTMLElement {
+    private stream: MediaStream | null = null;
+    private scanInterval: number | null = null;
+    private history: ScanResult[] = [];
+    private selectedCamera: string | null = null;
+    private elements!: Elements; // Add the ! to tell TypeScript we'll initialize it
+
+    connectedCallback() {
+      // Initialize all DOM references with type safety
+      this.elements = this.getElements();
+
+      // Load cameras when component is ready
+      this.initializeCameras();
+
+      // Set up event delegation
+      this.setupEventListeners();
+    }
+
+    disconnectedCallback() {
+      // Cleanup when component is removed
+      this.stopScanning();
+    }
+
+    private getElements(): Elements {
+      const query = <T extends HTMLElement>(selector: string): T => {
+        const el = this.querySelector<T>(selector);
+        if (!el) throw new Error(`Element not found: ${selector}`);
+        return el;
+      };
+
+      return {
+        error: query("[data-error]"),
+        startView: query("[data-view='start']"),
+        scanView: query("[data-view='scan']"),
+        resultView: query("[data-view='result']"),
+        cameraList: query("[data-camera-list]"),
+        cameraSelect: query("[data-camera-select]"),
+        video: query("[data-video]"),
+        resultFormat: query("[data-result-format]"),
+        resultValue: query("[data-result-value]"),
+        history: query("[data-history]"),
+        historyList: query("[data-history-list]"),
+      };
+    }
+
+    private setupEventListeners(): void {
+      this.addEventListener("click", (e) => {
+        const target = e.target as HTMLElement;
+        const action =
+          target.closest<HTMLElement>("[data-action]")?.dataset.action;
+
+        switch (action) {
+          case "start":
+            this.startScanning();
+            break;
+          case "stop":
+            this.stopScanning();
+            break;
+          case "clear":
+            this.clearResult();
+            break;
+        }
+      });
+    }
+
+    private async initializeCameras(): Promise<void> {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(
+          (device) => device.kind === "videoinput",
+        );
+
+        if (videoDevices.length > 0) {
+          this.elements.cameraSelect.classList.remove("hidden");
+          this.elements.cameraList.innerHTML = videoDevices
+            .map((device, index) => {
+              const label = device.label || `Camera ${index + 1}`;
+              return `<option value="${device.deviceId}">${label}</option>`;
+            })
+            .join("");
+
+          this.selectedCamera = videoDevices[0].deviceId;
+        }
+      } catch (err) {
+        console.error("Error loading cameras:", err);
+      }
+    }
+
+    private async startScanning(): Promise<void> {
+      try {
+        this.hideError();
+        this.clearResult();
+
+        // Get selected camera
+        this.selectedCamera =
+          this.elements.cameraList.value || this.selectedCamera;
+
+        const constraints: MediaStreamConstraints = {
+          video: this.selectedCamera
+            ? { deviceId: { exact: this.selectedCamera } }
+            : { facingMode: "environment" },
+        };
+
+        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        this.elements.video.srcObject = this.stream;
+
+        this.elements.startView.classList.add("hidden");
+        this.elements.scanView.classList.remove("hidden");
+
+        this.elements.video.onloadedmetadata = () => {
+          this.elements.video.play();
+          this.startDetection();
+        };
+
+        // Reload cameras after permission granted (labels will now be available)
+        await this.initializeCameras();
+      } catch (err) {
+        this.showError("Camera access denied or not available");
+        console.error(err);
+      }
+    }
+
+    private startDetection(): void {
+      if (!("BarcodeDetector" in window)) {
+        this.showError(
+          "Barcode detection not supported on this browser. Try Chrome on Android.",
+        );
+        this.stopScanning();
+        return;
+      }
+
+      // @ts-ignore - BarcodeDetector not in TypeScript lib yet
+      const detector = new BarcodeDetector({
+        formats: [
+          "code_128",
+          "code_39",
+          "ean_13",
+          "ean_8",
+          "upc_a",
+          "upc_e",
+          "qr_code",
+        ],
+      });
+
+      this.scanInterval = window.setInterval(async () => {
+        if (
+          this.elements.video.readyState ===
+          this.elements.video.HAVE_ENOUGH_DATA
+        ) {
+          try {
+            const barcodes = await detector.detect(this.elements.video);
+            if (barcodes.length > 0) {
+              this.handleDetection(barcodes[0]);
+            }
+          } catch (err) {
+            console.error("Detection error:", err);
+          }
+        }
+      }, 300);
+    }
+
+    private handleDetection(barcode: any): void {
+      const result: ScanResult = {
+        value: barcode.rawValue,
+        format: barcode.format,
+        timestamp: new Date(),
+      };
+
+      this.displayResult(result);
+      this.addToHistory(result);
+
+      if (navigator.vibrate) {
+        navigator.vibrate(200);
+      }
+
+      this.stopScanning();
+    }
+
+    private stopScanning(): void {
+      if (this.scanInterval !== null) {
+        clearInterval(this.scanInterval);
+        this.scanInterval = null;
+      }
+
+      if (this.stream) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+      }
+
+      this.elements.video.srcObject = null;
+      this.elements.scanView.classList.add("hidden");
+      this.elements.startView.classList.remove("hidden");
+    }
+
+    private displayResult(result: ScanResult): void {
+      this.elements.resultFormat.textContent = `Format: ${result.format.toUpperCase()}`;
+      this.elements.resultValue.textContent = result.value;
+      this.elements.resultView.classList.remove("hidden");
+      this.elements.startView.classList.add("hidden");
+    }
+
+    private clearResult(): void {
+      this.elements.resultView.classList.add("hidden");
+      this.elements.startView.classList.remove("hidden");
+    }
+
+    private addToHistory(result: ScanResult): void {
+      this.history.unshift(result);
+      if (this.history.length > 10) {
+        this.history = this.history.slice(0, 10);
+      }
+      this.updateHistoryDisplay();
+    }
+
+    private updateHistoryDisplay(): void {
+      if (this.history.length === 0) {
+        this.elements.history.classList.add("hidden");
+        return;
+      }
+
+      this.elements.history.classList.remove("hidden");
+      this.elements.historyList.innerHTML = this.history
+        .map(
+          (item) => `
+          <div class="history-item">
+            <div class="history-meta">
+              <span>${item.format.toUpperCase()}</span>
+              <span>${item.timestamp.toLocaleTimeString()}</span>
+            </div>
+            <div class="history-value">${item.value}</div>
+          </div>
+        `,
+        )
+        .join("");
+    }
+
+    private showError(message: string): void {
+      this.elements.error.textContent = message;
+      this.elements.error.classList.remove("hidden");
+    }
+
+    private hideError(): void {
+      this.elements.error.classList.add("hidden");
+    }
+  }
+
+  customElements.define("barcode-scanner", BarcodeScanner);
+</script>
+
+<style>
+  video {
+    transform: scaleX(-1);
+  }
+
+  .container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    opacity: 0.9;
+    font-size: 14px;
+  }
+
+  .content {
+    padding: 30px;
+  }
+
+  .error {
+    background: #fee;
+    border: 2px solid #fcc;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    color: #c33;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+
+  .video-container {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  [data-video] {
+    width: 100%;
+    display: block;
+  }
+
+  .scanner-overlay {
+    position: absolute;
+    inset: 0;
+    /* pointer-events: none; */
+  }
+
+  .scanner-frame {
+    position: absolute;
+    left: 50px;
+    right: 50px;
+    top: 30%;
+    bottom: 30%;
+    border: 3px solid #667eea;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  }
+
+  .btn-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #e53e3e;
+    color: white;
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+  }
+
+  .result-box {
+    background: #f0fdf4;
+    border: 2px solid #86efac;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+  }
+
+  .result-header {
+    font-size: 18px;
+    font-weight: 600;
+    color: #166534;
+    margin-bottom: 5px;
+  }
+
+  .result-format {
+    font-size: 13px;
+    color: #15803d;
+    margin-bottom: 15px;
+  }
+
+  .result-value {
+    background: white;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    padding: 15px;
+    font-family: "Courier New", monospace;
+    font-size: 16px;
+    word-break: break-all;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+
+  .history {
+    margin-top: 30px;
+  }
+
+  .history h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #374151;
+  }
+
+  .history-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .history-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 5px;
+  }
+
+  .history-value {
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+    word-break: break-all;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 20px;
+    color: white;
+    font-size: 14px;
+    opacity: 0.9;
+  }
+</style>

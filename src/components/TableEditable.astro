@@ -1,0 +1,246 @@
+---
+// components/TableEditable.astro
+interface Props<TRow extends BaseRow = BaseRow> {
+  rows: TRow[];
+  config: FieldConfig<TRow>;
+  crud: CrudRegistryType;
+  endpoint?: string;
+  createUrl?: string;
+  editUrl?: (id: string | number) => string;
+  // TODO passed down from page
+  // headers: string[]
+}
+// EditableTable.astro
+import ViewRow from "@components/tables/RowView.astro";
+import RowCreate from "./tables/RowCreate.astro";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
+
+const {
+  rows,
+  config,
+  crud,
+  endpoint = `/${crud}`,
+  editUrl,
+  createUrl,
+} = Astro.props;
+
+const headers = Object.keys(config);
+
+// Helper: resolve the display label for a key
+function label(key: string) {
+  return config[key]?.label ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
+---
+
+<div class="table-scroll">
+  <table data-crud={crud}>
+    <thead>
+      <tr>
+        {
+          headers.map((h) => (
+            <th data-key={h} data-type={config[h]?.type} aria-sort="none">
+              <span>{label(h)}</span>
+              <button
+                type="button"
+                class="sort-btn"
+                data-sort-key={h}
+                aria-label={`Sort by ${label(h)}`}
+              >
+                <span class="sort-indicator" aria-hidden="true" />
+              </button>
+            </th>
+          ))
+        }
+        <th aria-label="Actions"></th>
+      </tr>
+    </thead>
+    <tbody id={`${crud}-table-body`}>
+      {
+        rows.map((row) => (
+          <ViewRow
+            row={row}
+            headers={headers}
+            config={config}
+            endpoint={endpoint}
+            crud={crud}
+            editUrl={editUrl}
+          />
+        ))
+      }
+    </tbody>
+    <tfoot>
+      <RowCreate
+        config={config}
+        crud={crud}
+        headers={headers}
+        actionUrl={createUrl}
+      />
+    </tfoot>
+  </table>
+</div>
+<script>
+  (() => {
+    const table = document.querySelector("table[data-crud]");
+    if (!table) return;
+
+    const tbody = table.querySelector("tbody");
+    if (!tbody) return;
+
+    // Cache original order once
+    if (!tbody.dataset.originalOrder) {
+      [...tbody.rows].forEach((row, i) => {
+        row.dataset.originalIndex = String(i);
+      });
+      tbody.dataset.originalOrder = "true";
+    }
+  })();
+
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+
+    const btn = target.closest<HTMLButtonElement>(".sort-btn");
+    if (!btn) return;
+
+    const th = btn.closest("th");
+    const table = th?.closest("table");
+    const tbody = table?.querySelector("tbody");
+    if (!th || !table || !tbody) return;
+
+    // const key = btn.dataset.sortKey!;
+    const type = th.dataset.type ?? "string";
+
+    // Reset all other headers
+    table.querySelectorAll("th[aria-sort]").forEach((other) => {
+      if (other !== th) other.setAttribute("aria-sort", "none");
+    });
+
+    // Cycle state
+    const current = th.getAttribute("aria-sort") ?? "none";
+    const next =
+      current === "none"
+        ? "ascending"
+        : current === "ascending"
+          ? "descending"
+          : "none";
+
+    th.setAttribute("aria-sort", next);
+
+    const rows = [...tbody.querySelectorAll("tr")];
+
+    if (next === "none") {
+      // Restore original order
+      rows
+        .sort(
+          (a, b) =>
+            Number(a.dataset.originalIndex) - Number(b.dataset.originalIndex),
+        )
+        .forEach((r) => tbody.appendChild(r));
+      return;
+    }
+
+    const colIndex = [...th.parentElement!.children].indexOf(th);
+
+    rows
+      .sort((a, b) => {
+        const aCell = a.children[colIndex]?.textContent?.trim() ?? "";
+        const bCell = b.children[colIndex]?.textContent?.trim() ?? "";
+
+        let cmp = 0;
+
+        if (type === "number") {
+          cmp = Number(aCell) - Number(bCell);
+        } else if (type === "date") {
+          cmp = new Date(aCell).getTime() - new Date(bCell).getTime();
+        } else {
+          cmp = aCell.localeCompare(bCell, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          });
+        }
+
+        return next === "ascending" ? cmp : -cmp;
+      })
+      .forEach((r) => tbody.appendChild(r));
+  });
+</script>
+
+<style>
+  .sort-btn {
+    all: unset;
+    display: inline-flex;
+    gap: 0.25rem;
+    align-items: center;
+    cursor: pointer;
+    &:hover {
+      background-color: transparent;
+      & .sort-indicator {
+        opacity: 0.8;
+      }
+    }
+  }
+
+  th[aria-sort="none"] .sort-indicator {
+    opacity: 0.2;
+  }
+  th[aria-sort="ascending"],
+  th[aria-sort="descending"] {
+    & .sort-indicator {
+      opacity: 0.6;
+    }
+  }
+  th[aria-sort="ascending"] .sort-indicator::after {
+    content: "↑-";
+  }
+
+  th[aria-sort="descending"] .sort-indicator::after {
+    content: "-↓";
+  }
+
+  th[aria-sort="none"] .sort-indicator::after {
+    content: "↑↓";
+  }
+
+  .table-scroll {
+    width: 100%;
+    /* TODO WHY DOES THIS ALSO make Y scroll????? */
+    /* overflow-x: auto; */
+    position: relative;
+  }
+
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    /* min-width: max-content;  */
+    width: 100%;
+    anchor-scope: --anchor-row;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    border-bottom-width: 3px;
+    border-bottom-style: solid;
+  }
+
+  table th,
+  table td {
+    white-space: nowrap;
+  }
+
+  table tr th:last-child,
+  table tr td:last-child,
+  table th[aria-label="Actions"],
+  :global(.action-cell) {
+    /* outline: red dotted 3px; */
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background-color: inherit;
+    box-shadow: -6px 0 8px rgba(0, 0, 0, 0.08);
+  }
+</style>

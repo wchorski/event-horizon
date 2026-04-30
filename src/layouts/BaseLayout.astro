@@ -1,0 +1,46 @@
+---
+interface Props {
+  title?: string;
+  excerpt?: string;
+  classNames?: string;
+}
+import "@styles/global.css";
+import "@styles/colors.css";
+import "@styles/form.css";
+import "@styles/table.css";
+import "@styles/animation.css";
+import styles from "@styles/layout_reading.module.css";
+import DialogConfirm from "@components/DialogConfirm.astro";
+import { ClientRouter } from "astro:transitions";
+
+const {
+  title = "Astro + HTMX",
+  excerpt = "Astro for SSR. HTMX for user interactions",
+  classNames = styles.layout_reading,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <ClientRouter />
+    <title>{title}</title>
+    <meta name="excerpt" content={excerpt} />
+    <slot name="head" />
+
+    <script>
+      import "@client/htmx";
+    </script>
+  </head>
+  <body hx-ext="response-targets" class={classNames}>
+    <slot name="header" />
+    <slot name="nav" />
+    <slot />
+    <slot name="footer" />
+    <DialogConfirm />
+  </body>
+</html>

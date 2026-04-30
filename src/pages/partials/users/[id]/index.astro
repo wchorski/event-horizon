@@ -1,0 +1,147 @@
+---
+// partials/users/[id].astro
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import type { UserSelect } from "@ty/Schema";
+import type { ZodError } from "astro/zod";
+import type { BaseRow } from "@ty/FieldConfig";
+import type { TableRow } from "@ty/Table";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+type ZodErrorFlattened = ReturnType<ZodError<UserSelect>["flatten"]>;
+interface Params {
+  id: string | undefined;
+}
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("course ID missing in request");
+let user: UserSelect | null | undefined = null;
+let error: string | ReturnType<ZodError["flatten"]> | null = null;
+const config = tableConfigs.users.required;
+const ctx = {
+  crud: "users" as CrudRegistryType,
+  config,
+  endpoint: "/users",
+  headers: Object.keys(config),
+};
+
+const session = TEST_ADMIN_SESSION;
+
+if (Astro.request.method === "GET") {
+  try {
+    user = await crud.users.read(id, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+  }
+}
+
+if (Astro.request.method === "PATCH") {
+  try {
+    const formData = await Astro.request.formData();
+    if (!formData) return new Response("Bad Request", { status: 400 });
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    const payload = {
+      ...submitFields,
+      id,
+    };
+
+    user = await crud.users.update(payload, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    // console.log(JSON.stringify(err, null, 2));
+  }
+}
+
+if (Astro.request.method === "DELETE") {
+  try {
+    user = await crud.users.delete(id);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+  }
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+type RenderResult =
+  | {
+      kind: "field-error";
+      errors: ZodErrorFlattened;
+    }
+  | {
+      kind: "top-error";
+      message: string;
+    }
+  | {
+      kind: "success";
+      user: UserSelect;
+      method: "GET" | "POST" | "PATCH" | "DELETE";
+    };
+
+let result: RenderResult;
+
+if (error && typeof error === "object" && "fieldErrors" in error) {
+  result = { kind: "field-error", errors: error };
+} else if (error) {
+  result = {
+    kind: "top-error",
+    message: typeof error === "string" ? error : JSON.stringify(error),
+  };
+} else if (user) {
+  result = {
+    kind: "success",
+    user,
+    method: Astro.request.method as any,
+  };
+} else {
+  result = {
+    kind: "top-error",
+    message: "No course data available",
+  };
+}
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={id}
+      model={ctx.crud}
+      headers={ctx.headers}
+      errors={result.errors}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={id}
+      headers={ctx.headers}
+      crud={ctx.crud}
+      message={result.message}
+    />
+  ) : (
+    <FormSuccess
+      entity={result.user}
+      method={result.method}
+      partialType={partialType}
+      ctx={ctx}
+    />
+  )
+}

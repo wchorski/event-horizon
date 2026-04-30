@@ -1,0 +1,111 @@
+---
+// partials/course-tickets/:id/user/:userId/course/:courseId
+import RowView from "@components/tables/RowView.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { parseOutUndefinedFormData } from "@lib/sanatizers";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { UserCreditFlat } from "@ty/Schema";
+import type { ZodError } from "astro/zod";
+import type { FormFields } from "@ty/Form";
+
+type ViewType = "table-row" | "card";
+
+const { creditId, userId, courseId } = Astro.params;
+if (!creditId) throw new BadRequestError("ticket ID missing in request");
+if (!userId) throw new BadRequestError("user ID missing in request");
+if (!courseId) throw new BadRequestError("course ID missing in request");
+
+let rowId = creditId;
+let row: UserCreditFlat | null = null;
+let error: string | ReturnType<ZodError["flatten"]> | null = null;
+
+const config = tableConfigs.courseCredits.required;
+const ctx = {
+  crud: "courseCredits" as CrudRegistryType,
+  config,
+  endpoint: "/attendance/course-tickets",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "PATCH") {
+  try {
+    // const session = await requirePermission(Astro.request, "users", "create");
+    // TODO
+
+    const session = TEST_ADMIN_SESSION;
+
+    const formData = await Astro.request.formData();
+
+    // TODO shouldn't need to filter out _
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    const payload = {
+      ...submitFields,
+      id: creditId,
+      userId,
+      courseId,
+    };
+
+    row = await crud.courseCredits.update(payload, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---
+
+{
+  error && typeof error === "object" && "fieldErrors" in error ? (
+    <>
+      {error.formErrors.length ? (
+        <td class="callout error top-level" colspan={ctx.headers.length}>
+          {error.formErrors[0]}
+        </td>
+      ) : (
+        <tr id={`top-level-error-${rowId}`} hx-swap-oob="outerHTML" />
+      )}
+      {ctx.headers.map((fieldName) => {
+        const messages = error.fieldErrors[fieldName];
+        return (
+          <span
+            id={`field-error-${rowId}-${fieldName}`}
+            hx-swap-oob="outerHTML"
+            class="anim-vibrate field-error"
+          >
+            {messages?.[0] ?? ""}
+          </span>
+        );
+      })}
+    </>
+  ) : error ? (
+    <>
+      <tr id={`top-level-error-${rowId}`}>
+        <td class="callout error top-level" colspan={ctx.headers.length}>
+          {typeof error === "string" ? error : JSON.stringify(error)}
+        </td>
+      </tr>
+      {ctx.headers.map((fieldName) => (
+        <span
+          id={`field-error-${rowId}-${fieldName}`}
+          hx-swap-oob="outerHTML"
+          class="field-error"
+        />
+      ))}
+    </>
+  ) : row && view === "table-row" ? (
+    <>
+      <RowView row={row} {...ctx} classList={["updated-row"]} />
+      <tr id={`top-level-error-${rowId}`} hx-swap-oob="outerHTML" />
+    </>
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

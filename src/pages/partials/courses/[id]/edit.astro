@@ -1,0 +1,59 @@
+---
+// partials/events/:id/edit
+import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { CourseSelect } from "@ty/Schema";
+import RowEdit from "@components/tables/RowEdit.astro";
+
+type ViewType = "table-row" | "card";
+
+let course: CourseSelect | null | undefined = null;
+let error = null;
+let view: ViewType = "table-row";
+
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("course ID missing in request");
+const session = TEST_ADMIN_SESSION;
+const locations = await crud.locations.readMany(session);
+const crudKey = "events" as const;
+const config = courseConfigRequired(locations);
+const ctx = {
+  crud: crudKey,
+  config,
+  endpoint: "/attendance/events",
+  headers: Object.keys(config) as (keyof CourseSelect & string)[],
+};
+
+if (Astro.request.method === "GET") {
+  try {
+    // const session = await requirePermission(Astro.request, "events", "create");
+    // TODO
+
+    course = await crud[crudKey].read(id, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---
+
+{
+  error ? (
+    <div
+      id={`top-level-error-${ctx.crud}-${id}`}
+      class="row-error callout error top-level"
+    >
+      {typeof error === "string" ? error : JSON.stringify(error)}
+    </div>
+  ) : course && view === "table-row" ? (
+    <RowEdit {...ctx} row={course} error={error} />
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

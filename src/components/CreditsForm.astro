@@ -1,0 +1,49 @@
+---
+import { User } from "@db/schema";
+import type { UserSelect } from "@ty/Schema";
+import InputField from "./form/InputField.astro";
+import SubmitButton from "./form/SubmitButton.astro";
+import type { HTMLAttributes } from "astro/types";
+import { formatPhonePrettyManual } from "@lib/formatters";
+
+interface Props extends HTMLAttributes<"form"> {
+  event_id: string;
+  user: UserSelect;
+  formId?: string;
+}
+const {
+  event_id,
+  user,
+  formId = "check_in_credits",
+  class: classList,
+  ...attr
+} = Astro.props;
+const model = "tickets";
+const errorTargetId = `top-level-error-${model}-${formId}`;
+---
+
+<form
+  id={formId}
+  class:list={[classList, "tickets-form"]}
+  hx-ext="response-targets"
+  hx-post={`/partials/check-in/${event_id}/${user.id}`}
+  hx-target={`#${formId}`}
+  hx-target-error={`#${errorTargetId}`}
+  hx-swap="outerHTML"
+>
+  <legend>Confirm Ticket For</legend>
+  <ul>
+    <li>{user.first_name} {user.middle_initial} {user.last_name}</li>
+    <li>{formatPhonePrettyManual(user.phone)}</li>
+    <li>{user.email}</li>
+  </ul>
+
+  <fieldset class="actions">
+    <div class="row-error error top-level">
+      <p class="message">
+        <span id={errorTargetId}></span>
+      </p>
+    </div>
+    <SubmitButton text="Confirm Ticket" />
+  </fieldset>
+</form>

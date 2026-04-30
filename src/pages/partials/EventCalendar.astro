@@ -1,0 +1,256 @@
+---
+type CalendarEvent = {
+  subject: string;
+  start: {
+    dateTime: string;
+    timeZone: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone: string;
+  };
+  isAllDay: boolean;
+  isCancelled: boolean;
+  isDraft: boolean;
+  showAs: string;
+  type: string;
+};
+
+type Props = {
+  events: CalendarEvent[];
+  selectedtimestamp: Date;
+};
+
+const { events, selectedDate } = Astro.props;
+
+const dateTopOfMonth = new Date(
+  selectedDate.getFullYear(),
+  selectedDate.getMonth(),
+  1,
+);
+const yearSelected = dateTopOfMonth.getFullYear();
+const monthSelected = dateTopOfMonth.getMonth();
+const now = new Date();
+const nowToday = now.getDate();
+const nowMonth = now.getMonth();
+
+const firstDay = new Date(yearSelected, monthSelected, 1);
+const lastDay = new Date(yearSelected, monthSelected + 1, 0);
+const daysInMonth = lastDay.getDate();
+const startingDayOfWeek = firstDay.getDay();
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Group events by date
+const eventsByDate = new Map<string, CalendarEvent[]>();
+
+events.forEach((event) => {
+  const eventDate = new Date(event.start.dateTime);
+  const dateKey = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+
+  if (!eventsByDate.has(dateKey)) {
+    eventsByDate.set(dateKey, []);
+  }
+  eventsByDate.get(dateKey)!.push(event);
+});
+
+// Create calendar grid
+const calendarDays: (number | null)[] = [];
+for (let i = 0; i < startingDayOfWeek; i++) {
+  calendarDays.push(null);
+}
+for (let day = 1; day <= daysInMonth; day++) {
+  calendarDays.push(day);
+}
+---
+
+<div class="calendar-container">
+  <div class="calendar-header">
+    <h2>{monthNames[monthSelected]} {yearSelected}</h2>
+  </div>
+
+  <div class="calendar-grid">
+    {dayNames.map((day) => <div class="day-name">{day}</div>)}
+
+    {
+      calendarDays.map((day) => {
+        if (day === null) {
+          return <div class="calendar-day empty" />;
+        }
+
+        const dateKey = `${yearSelected}-${monthSelected}-${day}`;
+        const dayEvents = eventsByDate.get(dateKey) || [];
+        const isToday = day === nowToday && monthSelected === nowMonth;
+
+        return (
+          <div class={`calendar-day ${isToday ? "today" : ""}`}>
+            <div class="day-number">{day}</div>
+            <div class="events">
+              {dayEvents.map((event) => (
+                <div class="event" title={event.subject}>
+                  <span class="event-text">
+                    {event.isCancelled ? (
+                      <s class="canceled-event">
+                        {event.type === "occurrence" && (
+                          <span class="recurrence-icon">↻ </span>
+                        )}
+                        {event.subject}
+                      </s>
+                    ) : (
+                      <>
+                        {event.type === "occurrence" && (
+                          <span class="recurrence-icon">↻ </span>
+                        )}
+                        {event.subject}
+                      </>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })
+    }
+  </div>
+</div>
+
+<style>
+  .calendar-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+      Cantarell, sans-serif;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+  }
+
+  .calendar-header {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .calendar-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #e0e0e0;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: #333;
+    border: 1px solid #333;
+  }
+
+  .day-name {
+    background-color: #2a2a2a;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #999;
+  }
+
+  .calendar-day {
+    background-color: #1f1f1f;
+    min-height: 100px;
+    padding: 8px;
+    position: relative;
+    max-width: 9rem;
+    /* height: clamp(10px, 150px, 1000px); */
+  }
+
+  .calendar-day.empty {
+    background-color: #151515;
+  }
+
+  .calendar-day.today {
+    background-color: #1e3a5f;
+  }
+
+  .day-number {
+    font-weight: 600;
+    font-size: 14px;
+    color: #b0b0b0;
+    margin-bottom: 4px;
+  }
+
+  .calendar-day.today .day-number {
+    color: white;
+    background-color: #2196f3;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .events {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .event {
+    background-color: hsl(210, 79%, 46%);
+    color: white;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+  }
+
+  .event:has(s.canceled-event) {
+    background-color: hsl(210, 19%, 26%);
+  }
+
+  .event-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .recurrence-icon {
+    opacity: 0.9;
+  }
+
+  @media (max-width: 768px) {
+    .calendar-day {
+      min-height: 80px;
+      padding: 4px;
+    }
+
+    .event {
+      font-size: 9px;
+      padding: 2px 4px;
+    }
+
+    .day-number {
+      font-size: 12px;
+    }
+  }
+</style>

@@ -1,0 +1,115 @@
+---
+import CoursesEditableTable from "@components/CoursesEditableTable.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getCoursesPage } from "@lib/getCoursesPage";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import ButtonCoursesImport from "@components/ButtonCoursesImport.astro";
+import TableMenu from "@components/tables/TableMenu.astro";
+import SelectField from "@components/form/SelectField.astro";
+import FilterSelect from "@components/form/FilterSelect.astro";
+const { WORDPRESS_ENDPOINT } = import.meta.env;
+const page = Number(Astro.params.page);
+
+const params = Astro.url.searchParams;
+const rawLocation = params.get("location_id");
+
+if (params.has("location_id") && rawLocation === "") {
+  return Astro.redirect(Astro.url.pathname);
+}
+
+const location_id = rawLocation ?? undefined;
+
+const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
+const DEFAULT_PER_PAGE = 25;
+
+let perPageParam = DEFAULT_PER_PAGE;
+const rawPerPage = params.get("perPage");
+
+if (rawPerPage !== null) {
+  const n = Number(rawPerPage);
+
+  if (ALLOWED_PER_PAGE.includes(n)) {
+    perPageParam = n;
+  } else {
+    params.delete("perPage");
+    return Astro.redirect(`${Astro.url.pathname}?${params.toString()}`);
+  }
+}
+
+const result = await getCoursesPage({
+  page,
+  perPage: perPageParam,
+  location_id,
+});
+
+if ("redirect" in result) {
+  return Astro.redirect("/attendance/admin/events");
+}
+
+const { events, locations, perPage, totalCount, totalPages } = result;
+---
+
+<BaseLayout>
+  <script type="module" src="/src/client/tablePerPage.ts"></script>
+  <AdminNav />
+  <main>
+    <header class="flex space-between">
+      <h1>Events - Page {page}</h1>
+      <div>
+        <ButtonCoursesImport />
+        <a href={WORDPRESS_ENDPOINT + "/events"}>View Wordpress Events</a>
+      </div>
+    </header>
+    <div data-layout="content" class="content">
+      <div class="callout warning">
+        <p>
+          Created/Updated Events here will create/update an accompanying
+          Wordpress event set as DRAFT. To become viewable on the <a
+            href={WORDPRESS_ENDPOINT + "/wp-admin/edit.php?post_type=event"}
+            >Wordpress site</a
+          >, it must be set to PUBLISH.
+        </p>
+      </div>
+      <hr />
+      <TableMenu
+        page={page}
+        perPage={perPage}
+        model="events"
+        placeholder={"Search by subject, excerpt, or numerical date..."}
+      >
+        <fieldset slot="filters-fieldset">
+          <FilterSelect
+            name="location_id"
+            options={locations.map((loc) => ({
+              value: loc.id,
+              label: loc.name,
+            }))}
+            value={location_id}
+            model="locations"
+          />
+        </fieldset>
+      </TableMenu>
+      {
+        locations.length === 0 ? (
+          <p>
+            No locations set. First create a location on the{" "}
+            <a href="/attendance/admin/locations">locations page</a>
+          </p>
+        ) : (
+          <CoursesEditableTable events={events} locations={locations} />
+        )
+      }
+      {
+        events ? (
+          <PaginationNav
+            path="/attendance/admin/events"
+            page={Number(page)}
+            perPage={perPage}
+            totalCount={totalCount}
+          />
+        ) : null
+      }
+    </div>
+  </main>
+</BaseLayout>

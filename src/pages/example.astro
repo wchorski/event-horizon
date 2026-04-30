@@ -1,0 +1,104 @@
+---
+import AstroHeart from "@components/AstroHeart.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+// src/pages/index.astro
+// This page demonstrates Astro + HTMX
+---
+
+<style>
+  .error {
+    position: absolute;
+    /* position-anchor: --my-anchor; */
+    top: anchor(bottom);
+    right: anchor(right);
+  }
+  .row {
+    border: dashed yellow 1px;
+    width: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+  #pop-button {
+    margin-inline: auto;
+    position-anchor: --my-anchor;
+    top: anchor(bottom);
+    left: anchor(right);
+  }
+</style>
+<BaseLayout>
+  <a href="/attendance/admin/events" class="btn">Attendance Admin Dashboard</a>
+  <AstroHeart />
+  <div class="row" style="anchor-name: --my-anchor;">
+    <button id="pop-button" popovertarget="my-popover">toggle popover</button>
+    <div
+      id={`top-level-error-${"mycrud"}-${"myid"}`}
+      style={"position-anchor: --my-anchor"}
+      class="row-error error top-level"
+    >
+      <p class="message">this is the message</p>
+    </div>
+  </div>
+</BaseLayout>
+<h1>Astro + HTMX Demo</h1>
+<p class="subtitle">Interactive examples without writing JavaScript</p>
+
+<div class="card">
+  <h2>Counter Example</h2>
+  <p>Click the button to increment the counter using HTMX:</p>
+  <div class="counter-display" id="counter">0</div>
+  <button
+    hx-get="/api/increment"
+    hx-target="#counter"
+    hx-swap="innerHTML"
+    hx-vals='js:{count: document.getElementById("counter").textContent}'
+    hx-push-url="true"
+  >
+    Increment
+  </button>
+  <button hx-get="/api/reset" hx-target="#counter" hx-swap="innerHTML">
+    Reset
+  </button>
+</div>
+
+<div class="card">
+  <h2>Text Transformation</h2>
+  <p>Enter text to transform it on the server:</p>
+  <form
+    hx-post="/api/transform"
+    hx-target="#transform-result"
+    hx-indicator="#transform-indicator"
+  >
+    <input type="text" name="text" placeholder="Enter text here..." required />
+    <button type="submit">
+      Transform
+      <span id="transform-indicator" class="htmx-indicator">⏳</span>
+    </button>
+  </form>
+  <div id="transform-result"></div>
+</div>
+
+<div class="card">
+  <h2>Load Content</h2>
+  <p>Click to load dynamic content from the server:</p>
+  <button hx-get="/api/quote" hx-target="#quote-container" hx-swap="innerHTML">
+    Get Random Quote
+  </button>
+  <div id="quote-container"></div>
+</div>
+
+<div class="card">
+  <h2>How It Works</h2>
+  <p>This page uses HTMX attributes like:</p>
+  <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+    <li>
+      <code>hx-post</code> and <code>hx-get</code> - Make HTTP requests
+    </li>
+    <li><code>hx-target</code> - Specify where to insert the response</li>
+    <li><code>hx-swap</code> - Control how content is swapped</li>
+  </ul>
+  <p style="margin-top: 1rem;">
+    All interactions happen without page reloads or writing JavaScript!
+  </p>
+</div>

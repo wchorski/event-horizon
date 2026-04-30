@@ -1,0 +1,95 @@
+---
+// partials/users/create.astro
+import RowView from "@components/tables/RowView.astro";
+import UserCard from "@components/UserCard.astro";
+import RowCreate from "@components/tables/RowCreate.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { parseOutUndefinedFormData } from "@lib/sanatizers";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { UserSelect } from "@ty/Schema";
+import type { ZodError } from "astro:schema";
+import { view } from "drizzle-orm/sqlite-core";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { handleResult } from "@lib/handleRenderResult";
+
+type ZodErrorFlattened = ReturnType<ZodError<UserSelect>["flatten"]>;
+
+let user: UserSelect | null | undefined = null;
+let error = null;
+const config = tableConfigs.users.required;
+const ctx = {
+  crud: "users" as CrudRegistryType,
+  config,
+  endpoint: "/users",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    // const session = await requirePermission(Astro.request, "users", "create");
+    // TODO
+    const session = TEST_ADMIN_SESSION;
+
+    const formData = await Astro.request.formData();
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    user = await crud.users.create(submitFields, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleResult<UserSelect>({
+  error,
+  entity: user,
+  method: Astro.request.method,
+  emptyMessage: "No data available",
+});
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={"create"}
+      headers={ctx.headers}
+      errors={result.errors}
+      model={ctx.crud}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={"create"}
+      headers={ctx.headers}
+      crud={ctx.crud}
+      message={result.message}
+    />
+  ) : (
+    <FormSuccess
+      entity={result.entity}
+      method={result.method}
+      partialType={partialType}
+      ctx={ctx}
+    />
+  )
+}

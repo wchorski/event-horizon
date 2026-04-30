@@ -1,0 +1,39 @@
+---
+interface Props {
+  id: string;
+  title: string;
+  class?: string;
+}
+
+const { id, title, class: className } = Astro.props;
+---
+
+<dialog id={id} class:list={["dialog", className]}>
+  <div class="dialog-header">
+    <h2>{title}</h2>
+    <button class="dialog-close" aria-label="Close">✕</button>
+  </div>
+  <div class="dialog-body">
+    <slot />
+  </div>
+</dialog>
+
+<script>
+  // Runs once — handles ALL dialogs on the page
+  document.querySelectorAll("dialog").forEach((dialog) => {
+    // Close button
+    dialog.querySelector(".dialog-close")?.addEventListener("click", () => {
+      dialog.close();
+    });
+
+    // Backdrop click to close
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+
+    // After HTMX swaps content into dialog, re-open it
+    dialog.addEventListener("htmx:afterSwap", () => {
+      dialog.showModal();
+    });
+  });
+</script>

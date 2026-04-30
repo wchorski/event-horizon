@@ -1,0 +1,46 @@
+{
+  "name": "calendar-moeits-staff",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "dev:host": "astro dev --host",
+    "build": "astro build --remote",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "vitest",
+    "test:e2e": "npm run build && playwright test",
+    "db:dev:create": "tsx src/db/create-collection.ts",
+    "db:push": "npx drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts --seed",
+    "db:seed:truncate": "tsx src/db/seed.ts -- --seed --truncate",
+    "start": "node ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^10.0.3",
+    "@azure/msal-node": "^5.0.3",
+    "@js-temporal/polyfill": "^0.5.1",
+    "astro": "^6.0.7",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "fast-xml-parser": "^5.3.3",
+    "htmx-ext-response-targets": "^2.0.4",
+    "htmx.org": "^2.0.8",
+    "pg": "^8.20.0",
+    "postgres": "^3.4.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.0.10",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-seed": "^0.3.1",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
+    "typescript-plugin-css-modules": "^5.2.0",
+    "vitest": "^4.1.0"
+  }
+}

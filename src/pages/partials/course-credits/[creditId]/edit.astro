@@ -1,0 +1,65 @@
+---
+// partials/course-tickets/[courseId].astro
+import RowView from "@components/tables/RowView.astro";
+// import UserCard from "@components/UserCard.astro";
+import RowCreateForm from "@components/tables/RowCreate.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { parseOutUndefinedFormData } from "@lib/sanatizers";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { UserCreditFlat } from "@ty/Schema";
+import RowEditComponent from "@components/tables/RowEdit.astro";
+
+type ViewType = "table-row" | "card";
+
+let row: UserCreditFlat | null | undefined = null;
+let error = null;
+let view: ViewType = "table-row";
+
+const { creditId } = Astro.params;
+if (!creditId) throw new BadRequestError("ticket ID missing in request");
+const config = tableConfigs.courseCredits.required;
+const ctx = {
+  crud: "courseCredits" as CrudRegistryType,
+  config,
+  endpoint: "/attendance/course-tickets",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "GET") {
+  try {
+
+    const session = TEST_ADMIN_SESSION;
+
+    row = await crud.courseCredits.read(creditId, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---
+
+{
+  error ? (
+    <div
+      id={`row-create-error-${ctx.crud}`}
+      class="row-error callout error top-level"
+    >
+      {typeof error === "string" ? error : JSON.stringify(error)}
+    </div>
+  ) : row && view === "table-row" ? (
+    <RowEditComponent
+      {...ctx}
+      row={row}
+      error={error}
+      submitUrl={`/partials/course-tickets/${creditId}/user/${row.userId}/course/${row.courseId}`}
+    />
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

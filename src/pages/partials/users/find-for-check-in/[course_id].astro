@@ -1,0 +1,155 @@
+---
+// pages/partials/users-search-submit.astro
+import { db } from "@db/db";
+import { User } from "@db/schema";
+import { eq, asc } from "drizzle-orm";
+import { normalizePhoneToE164Manual } from "@lib/formatters";
+import { z, ZodError } from "astro/zod";
+import { formatPhonePrettyManual } from "@lib/formatters";
+import CreditsForm from "@components/CreditsForm.astro";
+import type { UserSelect } from "@ty/Schema";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
+import { handleResult } from "@lib/handleRenderResult";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import type { errors } from "@playwright/test";
+import { userCreditCheckInConfig } from "@lib/tableConfigs";
+import type { HttpMethod } from "@ty/Results";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+
+interface Props {
+  event_id: string;
+}
+const { event_id } = Astro.params;
+if (!event_id) throw new BadRequestError("course ID missing in request");
+const config = userCreditCheckInConfig;
+const ctx = {
+  config,
+  model: "users" as CrudRegistryType,
+  headers: Object.keys(config),
+};
+let error = null;
+let formId = "check-in-form"; // must match form
+let user: UserSelect | null = null;
+
+export const partial = true;
+export const prerender = false;
+
+const formSchema = z
+  .object({
+    user_id: z.string().trim().optional(),
+    email: z.email({ message: "Invalid email address" }).trim().optional(),
+    phone: z
+      .string()
+      .trim()
+      .transform((val) => normalizePhoneToE164Manual(val))
+      .refine((val) => val !== null, "Phone must be 10 digits or E.164 format")
+      .optional(),
+  })
+  .refine(
+    (values) => {
+      // At least one of user_id, email, or phone must be present
+      return (
+        Boolean(values.user_id) ||
+        Boolean(values.email) ||
+        Boolean(values.phone)
+      );
+    },
+    {
+      message:
+        "At least one of 'user_id', 'email', or 'phone' must be provided",
+      path: [], // Error at root level
+    },
+  );
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    if (!formData) return new Response("Bad Request", { status: 400 });
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()]
+        .filter(([key]) => !key.startsWith("_"))
+        .map(([key, value]) => [key, value === "" ? undefined : value]),
+    );
+
+    const validated = formSchema.parse(submitFields);
+
+    const [foundUser] = validated.user_id
+      ? await db
+          .select()
+          .from(User)
+          .where(eq(User.id, validated.user_id))
+          .limit(1)
+      : validated.phone
+        ? await db
+            .select()
+            .from(User)
+            .where(eq(User.phone, validated.phone))
+            .limit(1)
+        : validated.email
+          ? await db
+              .select()
+              .from(User)
+              .where(eq(User.email, validated.email))
+              .limit(1)
+          : [];
+
+    user = foundUser;
+
+    if (!user) {
+      // TODO how to fill in other form if member is found?
+      throw new NotFoundError(
+        "User was not found with matching phone or email",
+      );
+    }
+
+    Astro.response.status = 200;
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+}
+
+const result = handleResult<UserSelect>({
+  error,
+  entity: user,
+  method: Astro.request.method as HttpMethod,
+  emptyMessage: "No data available",
+});
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={formId}
+      model={ctx.model}
+      headers={ctx.headers}
+      errors={result.errors}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={formId}
+      headers={ctx.headers}
+      crud={ctx.model}
+      message={result.message}
+    />
+  ) : event_id && user ? (
+    <>
+      <CreditsForm
+        class={"success-state status"}
+        event_id={event_id}
+        user={user}
+      />
+    </>
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

@@ -1,0 +1,63 @@
+---
+import CreditsEditableTable from "@components/CreditsEditableTable.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
+import TableMenu from "@components/tables/TableMenu.astro";
+import { getCreditsPage } from "@lib/getCreditsPage";
+const page = Number(Astro.params.page);
+const params = Astro.url.searchParams;
+
+const ALLOWED_PER_PAGE = [5, 10, 15, 25, 50, 100];
+const DEFAULT_PER_PAGE = 25;
+
+let perPageParam = DEFAULT_PER_PAGE;
+const rawPerPage = params.get("perPage");
+
+if (rawPerPage !== null) {
+  const n = Number(rawPerPage);
+
+  if (ALLOWED_PER_PAGE.includes(n)) {
+    perPageParam = n;
+  } else {
+    params.delete("perPage");
+    return Astro.redirect(`${Astro.url.pathname}?${params.toString()}`);
+  }
+}
+const result = await getCreditsPage(1, perPageParam);
+
+if ("redirect" in result) {
+  return Astro.redirect("/attendance/admin/tickets");
+}
+
+const { tickets, events, users, perPage, totalCount, totalPages } = result;
+---
+
+<BaseLayout>
+  <AdminNav />
+  <main>
+    <header class="flex space-between">
+      <h1>Tickets - Page {page}</h1>
+    </header>
+    <div data-layout="content" class="content">
+      <TableMenu
+        page={page}
+        perPage={perPage}
+        model="tickets"
+        placeholder={"Search tickets by user:NAME, course:SUBJECT"}
+      />
+      <CreditsEditableTable tickets={tickets} events={events} users={users} />
+
+      {
+        users ? (
+          <PaginationNav
+            path="/attendance/admin/users"
+            page={Number(page)}
+            perPage={perPage}
+            totalCount={totalCount}
+          />
+        ) : null
+      }
+    </div>
+  </main>
+</BaseLayout>

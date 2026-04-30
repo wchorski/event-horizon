@@ -1,0 +1,26 @@
+
+# /Volumes/edata/vscode/moeits_staff-astro-htmx/.rsyncignore
+
+# VCS & editor cruft
+.DS_Store
+Thumbs.db
+
+# Node / tooling
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts (pick what's right for your stack)
+dist/
+build/
+.cache/
+.tmp/
+.astro
+
+# repo
+.git
+
+# OS / misc
+Icon?
+*.swp

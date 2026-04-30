@@ -1,0 +1,101 @@
+---
+import { db } from "@db/db";
+import { or, ilike, like } from "drizzle-orm";
+import { Event, Location } from "@db/schema";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import type { CourseSelect } from "@ty/Schema";
+import { handleResult } from "@lib/handleRenderResult";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import { getUsersPage } from "@lib/getUsersPage";
+import { getCoursesPage } from "@lib/getCoursesPage";
+import { handleQueryResult } from "@lib/handleQueryResult";
+
+const locations = await db.select().from(Location);
+
+let events: CourseSelect[] | null | undefined = null;
+let error = null;
+const config = courseConfigRequired(locations);
+const ctx = {
+  crud: "events" as CrudRegistryType,
+  config,
+  endpoint: "/events",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const searchQuery = formData.get("search")?.toString()?.trim();
+
+    const url = new URL(Astro.request.url);
+    const page = Number(url.searchParams.get("page") ?? 1);
+
+    // if (!searchQuery) throw new BadRequestError("search query is blank");
+
+    const digitsOnly = searchQuery?.replace(/\D/g, "");
+
+    if (searchQuery) {
+      const conditions = [
+        ilike(Event.subject, `%${searchQuery}%`),
+        ilike(Event.excerpt, `%${searchQuery}%`),
+        ilike(Event.date_civil, `%${searchQuery}%`),
+      ];
+
+      //   if (digitsOnly && digitsOnly.length >= 3) {
+      //     conditions.push(like(Event.phone, `%${digitsOnly}%`));
+      //   }
+
+      events = await db
+        .select()
+        .from(Event)
+        .where(or(...conditions))
+        .limit(10);
+    } else {
+      // Empty search - return no results (or all events if you prefer)
+      const result = await getCoursesPage({ page });
+      events = result.events;
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleQueryResult<CourseSelect>({
+  error,
+  rows: events,
+  method: Astro.request.method,
+  emptyMessage: "No user data available",
+});
+---
+
+{
+  events && events.length > 0 ? (
+    events.map((entity) => <RowView row={entity} {...ctx} />)
+  ) : (
+    <tr>
+      <td colspan="100%" class="callout">
+        no {ctx.crud} found
+      </td>
+    </tr>
+  )
+}

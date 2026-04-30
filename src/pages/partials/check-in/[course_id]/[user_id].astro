@@ -1,0 +1,166 @@
+---
+import { db } from "@db/db";
+import { User, Ticket } from "@db/schema";
+import { eq, and } from "drizzle-orm";
+import { normalizePhoneToE164Manual } from "@lib/formatters";
+import { config, z } from "astro/zod";
+import { formatPhonePrettyManual } from "@lib/formatters";
+import {
+  BadRequestError,
+  ConflictError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
+import type { CreditSelect, UserSelect } from "@ty/Schema";
+import { handleResult } from "@lib/handleRenderResult";
+import CreditsForm from "@components/CreditsForm.astro";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import type { errors } from "@playwright/test";
+import type { HttpMethod } from "@ty/Results";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+
+export const partial = true;
+export const prerender = false;
+
+interface Props {
+  event_id: string;
+  user_id: string;
+}
+const { event_id, user_id } = Astro.params;
+if (!event_id) throw new BadRequestError("course ID missing in request");
+if (!user_id) throw new BadRequestError("user ID missing in request");
+const ctx = {
+  config: {},
+  model: "tickets" as CrudRegistryType,
+  headers: Object.keys(config),
+};
+// const formSchema = z.object({
+//   email: z.email({ message: "Invalid email address" }),
+//   phone: z.string().refine(val => !!normalizePhoneToE164Manual(val), {
+//       message: "Invalid phone number",
+//     })
+//     .transform(val => normalizePhoneToE164Manual(val)),
+//   first_name: z.string(),
+//   last_name: z.string(),
+//   middle_initial: z.string().optional(),
+//   address_1: z.string(),
+//   address_2: z.string().optional(),
+//   city: z.string(),
+//   state: z.string(),
+//   zip: z.preprocess((val) => Number(val), z.number())
+//         .refine(n => Number.isInteger(n) && n.toString().length === 5, {
+//           message: "ZIP must be 5 digits"
+//         }),
+// });
+
+let error = null;
+let formData = null;
+let user: UserSelect | null = null;
+let ticket = null;
+let formId = "check_in_credits"; // default
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    if (!formData) return new Response("Bad Request", { status: 400 });
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()]
+        .filter(([key]) => !key.startsWith("_"))
+        .map(([key, value]) => [key, value === "" ? undefined : value]),
+    );
+
+    // const validated = formSchema.parse(submitFields);
+    const [foundUser] = await db
+      .select()
+      .from(User)
+      .where(eq(User.id, user_id))
+      .limit(1);
+    if (!foundUser) {
+      throw new NotFoundError("User was not found with matching id");
+    }
+    user = foundUser;
+
+    const [creditSaved] = await db
+      .insert(Ticket)
+      .values({
+        user_id,
+        event_id,
+        timestamp: new Date(),
+        attended: true,
+      })
+      .onConflictDoUpdate({
+        target: [Ticket.user_id, Ticket.event_id],
+        set: {
+          timestamp: new Date(),
+          attended: true,
+        },
+      })
+      .returning();
+
+    ticket = creditSaved;
+
+    Astro.response.status = 200;
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+}
+
+const result = handleResult<CreditSelect>({
+  error,
+  entity: ticket,
+  method: Astro.request.method as HttpMethod,
+  emptyMessage: "No data available",
+});
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={formId}
+      model={ctx.model}
+      headers={ctx.headers}
+      errors={result.errors}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={formId}
+      headers={ctx.headers}
+      crud={ctx.model}
+      message={result.message}
+    />
+  ) : event_id && user && ticket ? (
+    <>
+      <div
+        class="success-state card status"
+        data-status="success"
+        role="status"
+      >
+        <h2>✓ Event Ticket Confirmed!</h2>
+        <p>
+          Thank you{" "}
+          {user.first_name + " " + user.middle_initial
+            ? user.middle_initial
+            : "" + " " + user.last_name}{" "}
+          for confirming your attendance
+        </p>
+        <dl class="kv submitted-data">
+          <dt>Event ID: </dt>
+          <dd>{event_id}</dd>
+          <dt>Ticket ID:</dt>
+          <dd>{ticket.id}</dd>
+          <dt>Email:</dt>
+          <dd>{user.email}</dd>
+          <dt>Phone:</dt>
+          <dd>{user.phone}</dd>
+        </dl>
+      </div>
+    </>
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

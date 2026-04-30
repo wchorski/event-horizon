@@ -1,0 +1,64 @@
+---
+// components/form/TableSearchForm.astro
+import InputField from "./InputField.astro";
+import SubmitButton from "./SubmitButton.astro";
+interface Props {
+  errorTargetId?: string;
+  page: number;
+  model: string;
+  placeholder?: string;
+}
+
+const {
+  model,
+  errorTargetId = `${model}-table-field-search-error`,
+  page,
+  placeholder = `Search for ${model}`,
+} = Astro.props;
+---
+
+<form
+  id={`${model}-search-form`}
+  class="flex"
+  hx-post={`/partials/${model}/search?page=${page}`}
+  hx-target={`#${model}-table-body`}
+  hx-target-error={`#${errorTargetId}`}
+  hx-trigger="submit, input changed delay:500ms, reset delay:1ms"
+  hx-swap={"innerHTML"}
+  hx-headers='{"X-Partial-Type":"table-row"}'
+  data-status="idle"
+>
+  <InputField
+    name="search"
+    type={"search"}
+    label={""}
+    placeholder={placeholder}
+    id={"search"}
+    model={model}
+  />
+  <SubmitButton text="Search" indicatorText="Searching..." hideText={true}>
+    <svg
+      slot="icon"
+      class="icon"
+      xmlns="http://www.w3.org/2000/svg"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      aria-hidden="true"
+      role="img"
+      style="color: rgb(74, 85, 101);"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      ><path
+        fill="currentColor"
+        fill-rule="evenodd"
+        d="m16.325 14.899l5.38 5.38a1.008 1.008 0 0 1-1.427 1.426l-5.38-5.38a8 8 0 1 1 1.426-1.426M10 16a6 6 0 1 0 0-12a6 6 0 0 0 0 12"
+      ></path></svg
+    >
+  </SubmitButton>
+  <button type="reset">reset</button>
+</form>
+<style>
+  form {
+    width: 100% !important;
+  }
+</style>

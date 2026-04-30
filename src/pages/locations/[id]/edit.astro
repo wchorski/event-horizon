@@ -1,0 +1,250 @@
+---
+interface Params {
+  id: string;
+}
+import { db } from "@db/db";
+import { Event, Location } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import InputField from "@components/form/InputField.astro";
+import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import type {
+  FieldConfig,
+  BaseRow,
+  InputFieldSlot,
+  FieldSlot,
+  SearchSelectFieldSlot,
+  SelectFieldSlot,
+} from "@ty/FieldConfig";
+import SearchSelect from "@components/form/SearchSelect.astro";
+import SelectField from "@components/form/SelectField.astro";
+import TextareaField from "@components/form/TextareaField.astro";
+import { crud } from "@lib/crudRegistry";
+import PageEditorWithSidebarLayout from "@layouts/PageEditorWithSidebarLayout.astro";
+import { slugify } from "@lib/formatters";
+import SubmitButton from "@components/form/SubmitButton.astro";
+
+const { id } = Astro.params;
+if (!id) throw new Error("no id found. throw 404");
+const [row] = await db
+  .select()
+  .from(Location)
+  .where(eq(Location.id, id))
+  .limit(1);
+
+if (!row) return Astro.redirect("/404");
+
+// const locations = await db.select().from(Location);
+
+const { DATALIST_CITIES, DATALIST_STATES, DATALIST_TIMEZONES } = import.meta
+  .env;
+
+// const {} = row;
+
+// const config = courseConfigRequired(locations);
+const config = tableConfigs.locations.required;
+
+const headers = Object.keys(config) as (keyof typeof row & string)[];
+const error = null;
+const submitUrl = `/partials/locations/${row.id}`;
+const model = "locations";
+---
+
+<PageEditorWithSidebarLayout>
+  <nav>
+    <a href="#" onclick="history.back(); return false;"
+      >← Return to previous page</a
+    >
+  </nav>
+  <main>
+    <header>
+      <h1>Edit Location:</h1>
+    </header>
+
+    <div data-layout="content">
+      <form
+        id={`edit-form-${row.id}`}
+        class="edit-page"
+        hx-patch={submitUrl}
+        hx-headers='{"X-Partial-Type": "single-page"}'
+        hx-target="#submit-button"
+        hx-target-error={`#top-level-error-${"locations"}-${row.id}`}
+        hx-swap="outerHTML"
+        hx-disabled-elt="button, form"
+        hx-indicator="#submit-button"
+      >
+        {
+          headers.map((key, i) => {
+            const field: FieldSlot = config[key] ?? {};
+            const resolvedValue =
+              field.value ?? (row[key] != null ? String(row[key]) : "");
+            const fieldError =
+              error && typeof error === "object" && "fieldErrors" in error
+                ? (error as any).fieldErrors[key]?.[0]
+                : null;
+            const autofocus = i === 0;
+            const fieldErrorId = `field-error-${"users"}-${row.id}-${key}`;
+
+            switch (field.type) {
+              case "select": {
+                const {
+                  type: _,
+                  label,
+                  value: _v,
+                  options,
+                  ...inputAttrs
+                } = field as SelectFieldSlot;
+                return (
+                  <SelectField
+                    {...inputAttrs}
+                    value={resolvedValue}
+                    autofocus={autofocus}
+                    formId={`edit-form-${row.id}`}
+                    errorId={fieldErrorId}
+                    name={key}
+                    label={label}
+                    options={options}
+                  />
+                );
+              }
+
+              case "textarea": {
+                const { type: _, label: _l, value: _v, ...inputAttrs } = field;
+                return (
+                  <TextareaField
+                    {...inputAttrs}
+                    errorId={fieldErrorId}
+                    autofocus={autofocus}
+                    value={resolvedValue}
+                    name={key}
+                  />
+                );
+              }
+
+              case "searchSelect": {
+                const {
+                  type: _,
+                  label,
+                  value: _v,
+                  options,
+                  ...ssProps
+                } = field as SearchSelectFieldSlot;
+                return (
+                  <SearchSelect
+                    {...ssProps}
+                    id={`ss-row-edit-${crud}-${row.id}-${key}`}
+                    name={key}
+                    label={label ?? key}
+                    value={resolvedValue}
+                    options={options}
+                  />
+                );
+              }
+
+              case "checkbox": {
+                const {
+                  type: _,
+                  label,
+                  value: _v,
+                  checked = Boolean(row[key]),
+                  ...inputAttrs
+                } = field as InputFieldSlot;
+                return (
+                  <InputField
+                    {...inputAttrs}
+                    autofocus={autofocus}
+                    formId={`edit-form-${row.id}`}
+                    model={model}
+                    id={id}
+                    name={key}
+                    label={label}
+                    type="checkbox"
+                    checked={checked}
+                    fieldError={fieldError}
+                  />
+                );
+              }
+
+              default: {
+                const {
+                  type,
+                  label,
+                  value: _v,
+                  datalist,
+                  ...inputAttrs
+                } = field as InputFieldSlot;
+                return (
+                  <InputField
+                    {...inputAttrs}
+                    autofocus={autofocus}
+                    formId={`edit-form-${row.id}`}
+                    model={model}
+                    id={id}
+                    name={key}
+                    label={label}
+                    type={type}
+                    value={resolvedValue}
+                    fieldError={fieldError}
+                    datalist={datalist}
+                  />
+                );
+              }
+            }
+          })
+        }
+
+        <fieldset class="actions">
+          <div class="row-error error top-level">
+            <p class="message">
+              <span id={`top-level-error-${"locations"}-${row.id}`}></span>
+            </p>
+          </div>
+          <SubmitButton
+            id="submit-button"
+            class="anim-success"
+            text="Update"
+            indicatorText="Updating..."
+          />
+        </fieldset>
+      </form>
+    </div>
+
+    <aside>
+      <div class="metadata">
+        <h2>Metadata</h2>
+        <dl class="kv">
+          <dt>Link</dt>
+          <dd>
+            <a href={`/locations/${row.id}`} target="_blank"
+              >{`/locations/:id`}
+              <svg
+                width="20px"
+                height="20px"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                class="icon"
+              >
+                <g id="Interface / External_Link">
+                  <path
+                    id="Vector"
+                    d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path>
+                </g>
+              </svg></a
+            >
+          </dd>
+
+          <!-- <dt>Status</dt>
+          <dd>TODO: Public / Private</dd>
+
+          <dt>created</dt>
+          <dd>TODO: dateCreated</dd> -->
+        </dl>
+      </div>
+    </aside>
+  </main>
+</PageEditorWithSidebarLayout>

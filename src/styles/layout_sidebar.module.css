@@ -1,0 +1,33 @@
+body.layout_sidebar {
+  & > main {
+    display: grid;
+    gap: 1rem;
+    grid-template-areas:
+      "header  header  header"
+      "content content aside";
+    grid-template-columns: 1fr 1fr 300px;
+
+    & > header {
+      grid-area: header;
+    }
+
+    & > [data-layout="content"] {
+      grid-area: content;
+    }
+
+    & > aside {
+      grid-area: aside;
+      display: grid;
+      gap: 1rem;
+
+      & > div:first-child {
+        padding: 1rem;
+        border-radius: 1rem;
+        background-color: var(--c-txt-bg);
+      }
+      & h2 {
+        margin-top: 0;
+      }
+    }
+  }
+}

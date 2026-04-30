@@ -1,0 +1,20 @@
+---
+import { getCoursesPage } from "@lib/getCoursesPage";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CoursesList from "../partials/events-list.astro";
+const result = await getCoursesPage({page: 1});
+
+if ("redirect" in result) {
+  return Astro.redirect("/attendance");
+}
+
+const { events = [], page, perPage, totalCount, totalPages } = result;
+---
+
+<BaseLayout>
+  <main>
+    <h1>Attendance</h1>
+    <h2>Event List</h2>
+    {events ? <CoursesList events={events} /> : <p>no events found</p>}
+  </main>
+</BaseLayout>

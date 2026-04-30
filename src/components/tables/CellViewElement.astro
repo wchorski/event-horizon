@@ -1,0 +1,65 @@
+---
+// components/tables/CellViewElement.astro
+import {
+  formatPhonePrettyManual,
+  prettyPlainCivilDateFull,
+} from "@lib/formatters";
+import type {
+  BaseRow,
+  FieldOption,
+  FieldType,
+  FieldValue,
+} from "@ty/FieldConfig";
+
+interface Props {
+  name: string;
+  options: FieldOption[] | undefined;
+  type: FieldType;
+  //   prettyVal: string;
+  rawVal: BaseRow[string];
+  endpoint: string;
+  //   row: Record<string, any> & { id: number };
+}
+const { name, endpoint, rawVal, type, options } = Astro.props;
+
+const prettyVal = (() => {
+  switch (true) {
+    case name === "id":
+      return rawVal;
+    case type === "date":
+    case type === "datetime-local":
+      return name === "date_civil"
+        ? prettyPlainCivilDateFull(rawVal as string)
+        : String(rawVal);
+    case type === "tel":
+      return formatPhonePrettyManual(rawVal as string);
+    case type === "select":
+      return options?.find((opt) => String(opt.value) === rawVal)?.label || "";
+
+    default:
+      return rawVal;
+  }
+})();
+---
+
+{
+  name === "id" && endpoint ? (
+    <a href={`${endpoint}/${rawVal}`} title={String(rawVal)}>
+      {prettyVal}
+    </a>
+  ) : type === "datetime-local" ? (
+    <time datetime={String(rawVal)}>{prettyVal}</time>
+  ) : type === "number" ? (
+    <data value={String(rawVal)}>{prettyVal}</data>
+  ) : type === "select" ? (
+    <span data-id={rawVal}>{prettyVal}</span>
+  ) : type === "checkbox" && !rawVal ? (
+    <span class="false">false</span>
+  ) : type === "checkbox" && Boolean(rawVal) === true ? (
+    <span class="true">true</span>
+  ) : prettyVal ? (
+    <span>{prettyVal}</span>
+  ) : (
+    <span class="sub-text">—</span>
+  )
+}

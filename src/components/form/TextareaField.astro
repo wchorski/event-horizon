@@ -1,0 +1,36 @@
+---
+import type { FieldSlot, FieldOption } from "@ty/FieldConfig";
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends Omit<
+  HTMLAttributes<"textarea">,
+  "type" | "value" | "checked" | "name"
+> {
+  formId?: string;
+  errorId: string;
+  name: string;
+  label?: string;
+  value?: string | number;
+  fieldError?: string | null;
+  inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
+//   options: FieldOption[] | undefined;
+}
+const {
+  formId,
+  errorId,
+  inputAttrs,
+  name,
+  label,
+  value,
+  fieldError,
+//   options,
+  autofocus,
+} = Astro.props;
+---
+
+<label>
+  <span>{label || name}</span>
+  <textarea {...inputAttrs} name={name } autofocus={autofocus}
+    >TODO textarea component</textarea
+  >
+</label>

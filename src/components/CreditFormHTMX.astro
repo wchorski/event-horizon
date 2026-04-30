@@ -1,0 +1,117 @@
+---
+const { error, success } = Astro.props;
+---
+
+<form
+  hx-post="/api/confirm-ticket"
+  hx-target="#form-container"
+  hx-target-error="#form-container"
+  hx-swap="outerHTML"
+  hx-indicator="#loading"
+  id="form-container"
+  style="display: grid"
+>
+  <legend>Event Ticket & Attendance</legend>
+
+  {error && <div class="error-banner">{error}</div>}
+
+  {success && <div class="success-banner">{success}</div>}
+
+  <div id="loading" class="htmx-indicator">Submitting...</div>
+
+  <fieldset>
+    <label for="user_id">
+      <span>TEST: userId</span>
+      <input type="number" name="user_id" value="1" required />
+    </label>
+    <label for="event_id">
+      <span>TEST: courseId</span>
+      <input type="number" name="event_id" value="1" required />
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <label for="asipId">
+      <span>ASIP ID</span>
+      <input type="number" name="asipId" value="002020" required />
+    </label>
+    <label for="regNum">
+      <span>Registration Number</span>
+      <input type="number" name="regNum" value="002020" required />
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <label for="first_name">
+      <span>first name</span>
+      <input type="text" name="first_name" value="bob" required />
+    </label>
+    <label for="last_name">
+      <span>last name</span>
+      <input type="text" name="last_name" value="bobberson" required />
+    </label>
+    <label for="middle_initial">
+      <span>middle initial</span>
+      <input type="text" name="middle_initial" value="B" />
+    </label>
+    <label for="phone">
+      <span>phone</span>
+      <input type="text" name="phone" value="9233453456" required />
+    </label>
+    <label for="email">
+      <span>email</span>
+      <input type="email" name="email" value="bobby@bob.com" required />
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <label for="address_1">
+      <span>Address</span>
+      <input type="text" name="address_1" value="808 Bob Boulavard" required />
+    </label>
+    <label for="address_2">
+      <span>P.O. Box</span>
+      <input type="text" name="address_2" />
+    </label>
+    <label for="city">
+      <span>city</span>
+      <input type="text" name="city" value="Bobville" required />
+    </label>
+    <label for="state">
+      <span>state</span>
+      <input list="states" name="state" id="state" value="Illinois" />
+      <datalist id="states">
+        <option value="Illinois">Illinois</option>
+        <option value="Indiana">Indiana</option>
+        <option value="Iowa">Iowa</option>
+      </datalist>
+    </label>
+    <label for="zip">
+      <span>zip</span>
+      <input type="number" name="zip" value="80808" required />
+    </label>
+  </fieldset>
+
+  <p>TODO: Event: ??? - timestamp: ???</p>
+  <button type="submit">Confirm Ticket</button>
+</form>
+
+<style>
+  .htmx-indicator {
+    display: none;
+    padding: 0.5rem;
+    background: #e3f2fd;
+    border-radius: 4px;
+  }
+  .htmx-request .htmx-indicator {
+    display: block;
+  }
+  .success-banner {
+    background-color: #efe;
+    border: 1px solid #cfc;
+    padding: 1rem;
+    border-radius: 4px;
+    color: #0a0;
+    margin-bottom: 1rem;
+  }
+</style>

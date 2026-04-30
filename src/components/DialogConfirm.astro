@@ -1,0 +1,105 @@
+---
+// components/DialogConfirm.astro
+interface Props {
+  id?: string;
+}
+const { id = "confirm-dialog" } = Astro.props;
+---
+
+<dialog id={id} class="dialog dialog--confirm" aria-labelledby="dialog-title">
+  <header class="dialog-header">
+    <h2 id="dialog-title">Confirm</h2>
+  </header>
+  <div class="dialog-body">
+    <p id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button type="button" id="dialog-confirm" class="btn danger"
+        >Confirm</button
+      >
+      <button type="button" id="dialog-cancel" class="btn secondary"
+        >Cancel</button
+      >
+    </div>
+    <p id="confirm-dialog-error"></p>
+  </div>
+</dialog>
+
+<script>
+  const dialog = document.getElementById("confirm-dialog") as HTMLDialogElement;
+  const message = document.getElementById("dialog-message")!;
+  const confirmBtn = document.getElementById("dialog-confirm")!;
+  const cancelBtn = document.getElementById("dialog-cancel")!;
+
+  function closeDialog(dialog: HTMLDialogElement) {
+    // Guard: don't stack if already animating out
+    if (dialog.classList.contains("closing")) return;
+
+    dialog.addEventListener(
+      "animationend",
+      () => {
+        dialog.classList.remove("closing");
+        dialog.close();
+      },
+      { once: true },
+    );
+
+    dialog.classList.add("closing");
+  }
+
+  document.addEventListener("htmx:confirm", (e: any) => {
+    console.log("DialogConfirm");
+    console.log({ e });
+    if (!e.detail.question) return;
+    e.preventDefault();
+
+    message.textContent = e.detail.question;
+    dialog.showModal();
+
+    const onConfirm = () => {
+      // cleanup();
+      // popovertarget={"top-level-error-events-59746"}
+      e.detail.issueRequest(true);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      document.removeEventListener("htmx:afterRequest", onAfterRequest);
+      closeDialog(dialog);
+    };
+
+    const onAfterRequest = (e: any) => {
+      if (e.detail?.elt !== e.target) return;
+      console.log(e.detail.successful);
+      if (e.detail.successful) {
+        cleanup();
+        closeDialog(dialog);
+      }
+    };
+
+    const cleanup = () => {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+    };
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    document.addEventListener("htmx:afterRequest", onAfterRequest);
+  });
+
+  // Backdrop — also guarded via closeDialog
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) closeDialog(dialog);
+  });
+
+  // Escape key: browser closes dialog natively before we can animate
+  // so just clean up the class if it somehow gets stuck
+  dialog.addEventListener("close", () => {
+    dialog.classList.remove("closing");
+  });
+</script>
+
+<style>
+  header h2:first-child {
+    margin-top: 0;
+  }
+</style>

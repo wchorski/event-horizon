@@ -1,0 +1,17 @@
+---
+// over engineering
+import type { CrudRegistryType } from "@lib/crudRegistry";
+
+interface Props {
+  id: string;
+  crud: CrudRegistryType;
+  message?: string;
+  name: string;
+}
+const { id, crud, name, message } = Astro.props;
+const fieldId = `field-error-${crud}-${id}-${name}`;
+---
+
+<span id={fieldId} hx-swap-oob="outerHTML" class="anim-vibrate field-error">
+  {message}
+</span>

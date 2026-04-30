@@ -1,0 +1,143 @@
+---
+interface Params {
+  id: string;
+}
+import { db } from "@db/db";
+import { User, Ticket, Event, Location } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import TableEditable from "@components/TableEditable.astro";
+import { crud } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import { formatPhonePrettyManual, prettyDateToLocale } from "@lib/formatters";
+import CourseCreditsEditableTable from "@components/CourseCreditsEditableTable.astro";
+export const prerender = false; // Not needed in 'server' mode
+const { MS_SHAREPOINT_KYU_FOLDER_URL } = import.meta.env;
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/404");
+const [course] = await db
+  .select()
+  .from(Event)
+  .where(eq(Event.id, id))
+  .limit(1);
+
+if (!course) return Astro.redirect("/404");
+
+const [location] = await db
+  .select()
+  .from(Location)
+  .where(eq(Location.id, course.location_id))
+  .limit(1);
+
+const courseCredits = await db
+  .select({
+    ticket: Ticket,
+    user: User,
+  })
+  .from(Ticket)
+  .innerJoin(User, eq(Ticket.user_id, User.id))
+  .where(eq(Ticket.event_id, id));
+
+const { subject, excerpt, date_civil, wp_post_id } = course;
+const { address, city, zip, state } = location;
+// const locations = await crud.locations.readMany(session);
+---
+
+<BaseLayout>
+  <AdminNav />
+  <main>
+    <header>
+      <h1>
+        {subject}
+      </h1>
+      <time datetime={date_civil}>
+        {prettyDateToLocale(new Date(date_civil))}
+      </time>
+      <br />
+      <br />
+      <div class="location">
+        <address>
+          <strong class="name">
+            <a href={`/locations/${location.id}`}>{location.name}</a>
+          </strong>
+          <br />
+          {address}
+          <br />
+          {city}, {state}
+          {zip}
+          USA
+        </address>
+      </div>
+
+      <a href={`./${id}/edit`} class="edit-tab">
+        <svg
+          width="30px"
+          height="30px"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path opacity="0.15" d="M8 16H12L18 10L14 6L8 12V16Z" fill="#000000"
+          ></path>
+          <path
+            d="M14 6L8 12V16H12L18 10M14 6L17 3L21 7L18 10M14 6L18 10M10 4L4 4L4 20L20 20V14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        <span> Edit </span>
+      </a>
+      <br />
+      <a href={`/attendance/check-in/${id}`} class="btn">Check-In</a>
+    </header>
+    <hr />
+    <div data-layout="content">
+      <p class="excerpt">
+        {excerpt}
+      </p>
+      <hr />
+
+      <div class="flex space-between">
+        <h2>Event Tickets</h2>
+        <div>
+          <button hx-put={`/api/tickets/export/${id}`} hx-swap="outerHTML">
+            Export CSV to Sharepoint
+          </button>
+          <br />
+          <a href={MS_SHAREPOINT_KYU_FOLDER_URL}>View Sharepoint Folder</a>
+        </div>
+      </div>
+
+      <CourseCreditsEditableTable
+        courseCredits={courseCredits}
+        event_id={id}
+      />
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    padding: 1rem;
+  }
+
+  h1 {
+    anchor-name: --heading;
+    width: fit-content;
+  }
+
+  .user-info {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .edit-tab {
+    position: absolute;
+    position-anchor: --heading;
+    top: anchor(top); /* aligns to h1's top edge */
+    right: anchor(right); /* aligns to h1's right edge */
+    transform: translate(100%, 0%); /* nudge outside the corner */
+  }
+</style>

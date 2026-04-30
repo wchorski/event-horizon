@@ -1,0 +1,174 @@
+---
+import { db } from "@db/db";
+import { or, ilike, like, eq, getTableColumns } from "drizzle-orm";
+import { Event, Ticket, User } from "@db/schema";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import type { CreditSelect } from "@ty/Schema";
+import { handleResult } from "@lib/handleRenderResult";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import { getUsersPage } from "@lib/getUsersPage";
+import { handleQueryResult } from "@lib/handleQueryResult";
+import { getCreditsPage } from "@lib/getCreditsPage";
+
+const users = await db.select().from(User);
+const events = await db.select().from(Event);
+
+let tickets: CreditSelect[] | null | undefined = null;
+let error = null;
+const config = ticketsConfigRequired(users, events);
+const ctx = {
+  crud: "tickets" as CrudRegistryType,
+  config,
+  endpoint: "/tickets",
+  headers: Object.keys(config),
+};
+
+type ParsedQuery =
+  | { kind: "user"; value: string }
+  | { kind: "course"; value: string }
+  | { kind: "id"; value: string } // optional, can omit if you don't want it
+  | { kind: "all"; value: string };
+
+/**
+ * Returns a Drizzle "where" expression (or undefined if no filter should be applied).
+ * - No partial UUID search
+ * - No user_id:/event_id: required
+ */
+export function buildCreditWhereClause(rawSearch: string) {
+  function parseQuery(raw: string): ParsedQuery {
+    const input = raw.trim();
+    const m = input.match(/^(user|course|id)\s*:\s*(.+)$/i);
+    if (!m) return { kind: "all", value: input };
+    return { kind: m[1].toLowerCase() as any, value: m[2].trim() };
+  }
+
+  const { kind, value } = parseQuery(rawSearch);
+  const q = value.trim();
+
+  if (!q) return undefined;
+
+  function isUuid(s: string) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      s,
+    );
+  }
+
+  // If it looks like a UUID, search ONLY by exact id matches
+  if (isUuid(q)) {
+    return or(
+      eq(Ticket.id, q as any),
+      eq(Ticket.user_id, q as any),
+      eq(Ticket.event_id, q as any),
+    );
+  }
+
+  const likeQ = `%${q}%`;
+
+  if (kind === "user") {
+    return or(
+      ilike(User.first_name, likeQ),
+      ilike(User.last_name, likeQ),
+      ilike(User.email, likeQ),
+    );
+  }
+
+  if (kind === "course") {
+    return ilike(Event.subject, likeQ); // rename if your field differs
+  }
+
+  if (kind === "id") {
+    // Since you don't want partial id search, a non-UUID "id:" can't match.
+    // Return undefined (or throw BadRequestError if you prefer).
+    return undefined;
+  }
+
+  // kind === "all": plain text searches across user + course fields
+  return or(
+    ilike(User.first_name, likeQ),
+    ilike(User.last_name, likeQ),
+    ilike(User.email, likeQ),
+    ilike(Event.subject, likeQ),
+  );
+}
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const searchQuery = formData.get("search")?.toString()?.trim();
+
+    const url = new URL(Astro.request.url);
+    const page = Number(url.searchParams.get("page") ?? 1);
+
+    // if (!searchQuery) throw new BadRequestError("search query is blank");
+
+    if (searchQuery) {
+      //   const conditions = [
+      //     ilike(Ticket.attended, `%${searchQuery}%`),
+      //     ilike(Ticket.user_id, `%${searchQuery}%`),
+      //     ilike(Ticket.event_id, `%${searchQuery}%`),
+      //     ilike(Ticket.timestamp, `%${searchQuery}%`),
+      //   ];
+
+      //   tickets = await searchCredits(searchQuery, 10);
+
+      const whereClause = buildCreditWhereClause(searchQuery ?? "");
+
+      const baseQuery = db
+        .select(getTableColumns(Ticket)) // ✅ tickets only
+        .from(Ticket)
+        .leftJoin(User, eq(Ticket.user_id, User.id)) // join only for WHERE filters
+        .leftJoin(Event, eq(Ticket.event_id, Event.id)) // join only for WHERE filters
+        .limit(10);
+
+      tickets = whereClause
+        ? await baseQuery.where(whereClause)
+        : await baseQuery;
+    } else {
+      // Empty search - return no results (or all tickets if you prefer)
+      const result = await getCreditsPage(page);
+      tickets = result.tickets;
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleQueryResult<CreditSelect>({
+  error,
+  rows: tickets,
+  method: Astro.request.method,
+  emptyMessage: `No matching data found`,
+});
+---
+
+{
+  tickets && tickets.length > 0 ? (
+    tickets.map((entity) => <RowView row={entity} {...ctx} />)
+  ) : (
+    <tr>
+      <td colspan="100%" class="callout">
+        no {ctx.crud} found
+      </td>
+    </tr>
+  )
+}

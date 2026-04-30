@@ -1,0 +1,73 @@
+---
+// components/FormErrorMessage.astro
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"div"> {
+  id: string;
+  positionAnchor: string;
+}
+
+const { id, positionAnchor, ...attrs } = Astro.props;
+---
+
+<div {...attrs} data-error-message>
+  <p class="message" id={id}><slot /></p>
+
+  <button
+    type="button"
+    class="error-close"
+    onclick="this.previousElementSibling.textContent = ''"
+  >
+    ✕
+  </button>
+</div>
+
+<style define:vars={{ positionAnchor }}>
+  [data-error-message] {
+    position: absolute;
+    position-anchor: var(--positionAnchor);
+
+    top: calc(anchor(bottom) + 8px);
+    left: anchor(left);
+
+    background: var(--color-background-danger, #fee);
+    border: 0.5px solid var(--color-border-danger, #c00);
+    border-radius: var(--border-radius-md, 8px);
+    padding: 12px 16px;
+    color: var(--color-text-danger, #900);
+    min-width: 200px;
+    max-width: 400px;
+    z-index: 100;
+
+    display: none;
+  }
+
+  /* Show when error-content has content */
+  [data-error-message]:has(.message:not(:empty)) {
+    display: block;
+  }
+
+  .error-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 16px;
+    color: var(--color-text-danger);
+    display: none;
+  }
+
+  @media (scripting: enabled) {
+    .error-close {
+      display: block;
+    }
+  }
+
+  .error-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+  }
+</style>

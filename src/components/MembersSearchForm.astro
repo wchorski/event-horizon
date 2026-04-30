@@ -1,0 +1,162 @@
+---
+// components/MemberSearchForm.astro
+import BarcodeScanner from "./BarcodeScanner.astro";
+import type { CourseSelect, UserSelect } from "@ty/Schema";
+import InputField from "./form/InputField.astro";
+import SubmitButton from "./form/SubmitButton.astro";
+import { userCreditCheckInConfig } from "@lib/tableConfigs";
+interface Props {
+  course: CourseSelect;
+  formId?: string;
+  user?: UserSelect;
+}
+const { course, user, formId = "check-in-form" } = Astro.props;
+const responseTargetId = `${formId}-response`;
+const model = "users";
+const errorTargetId = `top-level-error-${model}-${formId}`;
+const config = userCreditCheckInConfig;
+---
+
+<form
+  id={responseTargetId}
+  class="card edit-page"
+  hx-ext="response-targets"
+  hx-post={`/partials/users/find-for-check-in/${course.id}`}
+  hx-target={`#${responseTargetId}`}
+  hx-target-error={`#${errorTargetId}`}
+  hx-swap="outerHTML"
+  data-status="idle"
+>
+  <legend>Find A User</legend>
+
+  <fieldset>
+    <legend>by ID</legend>
+    <div class="flex gap-m">
+      <InputField
+        label="User ID"
+        name="user_id"
+        type={"text"}
+        value={user ? user.id : undefined}
+        model={model}
+        id={formId}
+      />
+
+      <BarcodeScanner />
+    </div>
+  </fieldset>
+
+  <fieldset class="separator">
+    <legend>OR</legend>
+  </fieldset>
+
+  <fieldset>
+    <legend>by Phone Number</legend>
+    <InputField
+      label={"Phone | example: 123-456-7890"}
+      name="phone"
+      value={user ? user.phone : undefined}
+      model={model}
+      type={"tel"}
+      id={formId}
+    />
+  </fieldset>
+
+  <fieldset class="separator">
+    <legend>OR</legend>
+  </fieldset>
+
+  <fieldset>
+    <legend>by Email</legend>
+    <InputField
+      name="email"
+      value={user ? user.email : undefined}
+      model={model}
+      type={"email"}
+      id={formId}
+    />
+  </fieldset>
+
+  <fieldset class="actions">
+    <div class="row-error error top-level">
+      <p class="message">
+        <span id={errorTargetId}></span>
+      </p>
+    </div>
+    <SubmitButton text="Search for User" indicatorText="Searching..." />
+  </fieldset>
+</form>
+
+<script>
+  // TODO do i even need this below?
+  document.addEventListener("htmx:afterRequest", (evt) => {
+    // const form = evt.detail.elt;
+    // @ts-ignore
+    const { form, successful } = evt.detail;
+
+    // if (!form.classList.contains("users-search-form")) return;
+
+    if (successful) {
+      const formId = form.id;
+
+      // Clear field errors scoped to this form
+      form.querySelectorAll(".field-error").forEach((el: Element) => {
+        (el as HTMLElement).textContent = "";
+      });
+
+      // Clear form errors div for this specific form
+      const errorTargetId = `${formId}-errors`;
+      const formErrors = document.getElementById(errorTargetId);
+      if (formErrors) formErrors.innerHTML = "";
+
+      // Reset the form
+      (form as HTMLFormElement).reset();
+    }
+  });
+
+  document.addEventListener("barcode-scanned", ((evt: CustomEvent) => {
+    const scannedValue = evt.detail.value;
+    const formId = "check-in-form"; // or get dynamically
+    const userIdInput = document.querySelector(
+      `input[name="user_id"]`,
+    ) as HTMLInputElement;
+
+    if (userIdInput) {
+      userIdInput.value = scannedValue;
+      // Optionally trigger input event for any listeners
+      userIdInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+      // Optionally auto-submit the form
+      (userIdInput.closest("form") as HTMLFormElement)?.requestSubmit();
+    }
+  }) as EventListener);
+
+  // Source - https://stackoverflow.com/a/24432131
+  // Posted by Andy, modified by community. See post 'Timeline' for change history
+  // Retrieved 2026-02-10, License - CC BY-SA 4.0
+
+  // document.addEventListener("DOMContentLoaded", function () {
+  //   const inputs: HTMLInputElement[] = Array.from(
+  //     document.querySelectorAll("input[name=phone], input[name=email]"),
+  //   );
+
+  //   const inputListener = (e: Event) => {
+  //     inputs
+  //       .filter((input) => input !== e.target)
+  //       // @ts-ignore
+  //       .forEach((input) => (input.required = !e.target?.value.length));
+  //   };
+
+  //   inputs.forEach((i) => i.addEventListener("input", inputListener));
+  // });
+</script>
+
+<style>
+  fieldset:not(.separator) {
+    border: none;
+    padding: 0;
+
+    & > legend {
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>

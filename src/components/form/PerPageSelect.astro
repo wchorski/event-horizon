@@ -1,0 +1,20 @@
+---
+interface Props {
+  perPage: number;
+  options?: number[];
+}
+
+const { perPage, options = [5, 10, 25, 50, 100] } = Astro.props;
+---
+
+<label title="items per page">
+  <select name="perPage" onchange="this.form.submit()">
+    {
+      options.map((n) => (
+        <option value={n} selected={n === perPage}>
+          {n}
+        </option>
+      ))
+    }
+  </select>
+</label>

@@ -1,0 +1,98 @@
+---
+import { db } from "@db/db";
+import { or, ilike, like } from "drizzle-orm";
+import { User } from "@db/schema";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import type { UserSelect } from "@ty/Schema";
+import { handleResult } from "@lib/handleRenderResult";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import { getUsersPage } from "@lib/getUsersPage";
+import { handleQueryResult } from "@lib/handleQueryResult";
+
+let users: UserSelect[] | null | undefined = null;
+let error = null;
+const config = tableConfigs.users.required;
+const ctx = {
+  crud: "users" as CrudRegistryType,
+  config,
+  endpoint: "/users",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    const searchQuery = formData.get("search")?.toString()?.trim();
+
+    const url = new URL(Astro.request.url);
+    const page = Number(url.searchParams.get("page") ?? 1);
+
+    // if (!searchQuery) throw new BadRequestError("search query is blank");
+
+    const digitsOnly = searchQuery?.replace(/\D/g, "");
+
+    if (searchQuery) {
+      const conditions = [
+        ilike(User.first_name, `%${searchQuery}%`),
+        ilike(User.last_name, `%${searchQuery}%`),
+        ilike(User.email, `%${searchQuery}%`),
+      ];
+
+      if (digitsOnly && digitsOnly.length >= 3) {
+        conditions.push(like(User.phone, `%${digitsOnly}%`));
+      }
+
+      users = await db
+        .select()
+        .from(User)
+        .where(or(...conditions))
+        .limit(10);
+    } else {
+      // Empty search - return no results (or all users if you prefer)
+      const result = await getUsersPage({ page });
+      users = result.users;
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+const result = handleQueryResult<UserSelect>({
+  error,
+  rows: users,
+  method: Astro.request.method,
+  emptyMessage: `No matching data found`,
+});
+---
+
+{
+  users && users.length > 0 ? (
+    users.map((entity) => <RowView row={entity} {...ctx} />)
+  ) : (
+    <tr>
+      <td colspan="100%" class="callout">
+        no {ctx.crud} found
+      </td>
+    </tr>
+  )
+}

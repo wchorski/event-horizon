@@ -1,0 +1,95 @@
+---
+import fs from "node:fs/promises";
+import path from "node:path";
+import { XMLParser } from "fast-xml-parser";
+import QuoteCard from "./QuoteCard.astro";
+
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: "@_",
+});
+
+const BASE_DIR = path.resolve("public/data");
+const filename = "comics";
+let comic = null;
+let xml = null;
+let quote = null;
+let author = null;
+const hoursThreshold = 72 * 60 * 60 * 1000; // 72 hours
+
+try {
+  const date = await fs.readFile(
+    path.join(BASE_DIR, `${filename}-last-pull-timestamp.txt`),
+    "utf-8",
+  );
+
+  const savedDate = new Date(date);
+  const now = new Date();
+  console.log({ savedDate, now });
+
+  const timeDifference = now.getTime() - savedDate.getTime();
+
+  if (timeDifference >= hoursThreshold) {
+    console.log(
+      "fetching fresh data | timeDifference is older than hoursThreshold",
+    );
+
+    const res = await fetch("https://xkcd.com/atom.xml");
+    xml = await res.text();
+    console.log({ xml });
+    await fs.writeFile(path.join(BASE_DIR, `${filename}.xml`), xml, "utf-8");
+
+    await fs.writeFile(
+      path.join(BASE_DIR, `${filename}-last-pull-timestamp.txt`),
+      now.toISOString(),
+      "utf-8",
+    );
+  } else {
+    console.log(
+      "fetching cached data | timeDifference is younger than hoursThreshold",
+    );
+    xml = await fs.readFile(path.join(BASE_DIR, `${filename}.xml`), "utf-8");
+  }
+} catch (error) {
+  console.log(error);
+  comic = {
+    title: "error",
+    link: "error",
+    updated: "error",
+    image: "error",
+  };
+}
+
+function extractImage(html = "") {
+  const match = html.match(/<img[^>]+src="([^"]+)"/i);
+  return match?.[1] ?? null;
+}
+
+if (xml) {
+  const feed = parser.parse(xml);
+  // Atom feeds may return a single object or array depending on size
+  const entries = Array.isArray(feed.feed.entry)
+    ? feed.feed.entry
+    : [feed.feed.entry];
+
+  const randomEntry = entries[Math.floor(Math.random() * entries.length)];
+  const imgSrc = randomEntry.summary?.img?.["@_src"] || extractImage(randomEntry.summary?.["#text"])
+
+  comic = {
+    id: randomEntry.id,
+    title: randomEntry.title,
+    link: randomEntry.link["@_href"],
+    updated: randomEntry.updated,
+    image: imgSrc,
+  };
+} else {
+  console.log("NO XML FOUND");
+}
+---
+
+<article>
+  <figure>
+    <img src={comic?.image} alt="comic strip" />
+    <figcaption>{comic?.id}</figcaption>
+  </figure>
+</article>

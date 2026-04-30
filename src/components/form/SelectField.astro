@@ -1,0 +1,48 @@
+---
+// components/form/SelectField
+import type { FieldOption, FieldSlot, SelectFieldType } from "@ty/FieldConfig";
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends Omit<
+  HTMLAttributes<"select">,
+  "type" | "value" | "checked" | "name"
+> {
+  formId?: string;
+  errorId: string;
+  name: string;
+  label?: string;
+  value?: string | number;
+  fieldError?: string | null;
+  inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
+  options: FieldOption[] | undefined;
+}
+const {
+  formId,
+  errorId,
+  name,
+  label,
+  value,
+  fieldError,
+  options,
+  autofocus,
+  ...inputAttrs
+} = Astro.props;
+---
+
+<label class="form-field">
+  <span class="text">{label ?? name}</span>
+  <select {...inputAttrs} form={formId} name={name} autofocus={autofocus}>
+    <slot name="first-option"/>
+    {
+      options?.map((opt) => (
+        <option
+          value={opt.value}
+          selected={value && opt.value === value ? true : undefined}
+        >
+          {opt.label}
+        </option>
+      ))
+    }
+  </select>
+  <span id={errorId} class="anim-vibrate field-error">{fieldError ?? ""}</span>
+</label>

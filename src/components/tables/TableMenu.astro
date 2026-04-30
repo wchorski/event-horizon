@@ -1,0 +1,44 @@
+---
+// components/tables/TableMenu.astro
+import PerPageSelect from "@components/form/PerPageSelect.astro";
+import TableSearchForm from "@components/form/TableSearchForm.astro";
+
+interface Props {
+  model: string;
+  page: number;
+  perPage: number;
+  placeholder?: string;
+}
+
+const { model, page, perPage, placeholder } = Astro.props;
+---
+
+<menu class="table-menu">
+  <TableSearchForm model={model} page={page} placeholder={placeholder} />
+  <form method="get">
+    <slot name="filters-fieldset" />
+    <PerPageSelect perPage={perPage} />
+  </form>
+</menu>
+
+<style>
+  menu,
+  form {
+    width: 100%;
+    padding: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    fieldset {
+      border: none;
+      padding: 0;
+    }
+
+    & label {
+      outline: yellow dashed 2px;
+      margin-left: auto;
+    }
+  }
+</style>

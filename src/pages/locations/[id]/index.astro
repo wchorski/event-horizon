@@ -1,0 +1,140 @@
+---
+interface Params {
+  id: string;
+}
+import { db } from "@db/db";
+import { User, Ticket, Event, Location } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import TableEditable from "@components/TableEditable.astro";
+import { crud } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import { formatPhonePrettyManual, prettyDateToLocale } from "@lib/formatters";
+export const prerender = false; // Not needed in 'server' mode
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/404");
+const [location] = await db
+  .select()
+  .from(Location)
+  .where(eq(Location.id, id))
+  .limit(1);
+
+if (!location) return Astro.redirect("/404");
+
+const { name, address, city, state, zip, timezone, excerpt } = location;
+
+// const ownedCourses = await db
+//   .select({
+//     ticket: Ticket,
+//     course: Event,
+//     location: Location,
+//   })
+//   .from(Event)
+//   .innerJoin(Event, eq(Ticket.event_id, Event.id))
+//   .innerJoin(Location, eq(Event.location_id, Location.id))
+//   .where(eq(Ticket.user_id, id));
+
+const events = await db
+  .select()
+  .from(Event)
+  .where(eq(Event.location_id, location.id));
+
+// const tableRows = events.map((course) => ({
+//   id: course.id,
+//   location_id: location.id,
+//   attended: ticket.attended,
+// }));
+---
+
+<BaseLayout>
+  <AdminNav />
+  <main>
+    <header>
+      <h1>
+        {name}
+      </h1>
+      <div class="user-info">
+        <address>
+          {address}
+          <br />
+          {city}, {state}
+          {zip}
+          USA
+        </address>
+      </div>
+
+      <a href={`./${id}/edit`} class="edit-tab">
+        <svg
+          width="30px"
+          height="30px"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path opacity="0.15" d="M8 16H12L18 10L14 6L8 12V16Z" fill="#000000"
+          ></path>
+          <path
+            d="M14 6L8 12V16H12L18 10M14 6L17 3L21 7L18 10M14 6L18 10M10 4L4 4L4 20L20 20V14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        <span> Edit </span>
+      </a>
+    </header>
+    <hr />
+
+    <h2>Events at This Location</h2>
+    {
+      events.length === 0 ? (
+        <p class="callout not-found">no tickets found</p>
+      ) : (
+        <TableEditable
+          crud={"events"}
+          rows={events}
+          config={{
+            id: {
+              label: "ID",
+              type: "number",
+              required: true,
+              readonly: true,
+            },
+            subject: {
+              required: true,
+            },
+            excerpt: {},
+            date_civil: {
+                type: 'datetime-local'
+            }
+          }}
+        />
+      )
+    }
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    padding: 1rem;
+  }
+
+  h1 {
+    anchor-name: --heading;
+    width: fit-content;
+  }
+
+  .user-info {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .edit-tab {
+    position: absolute;
+    position-anchor: --heading;
+    top: anchor(top); /* aligns to h1's top edge */
+    right: anchor(right); /* aligns to h1's right edge */
+    transform: translate(100%, 0%); /* nudge outside the corner */
+  }
+</style>

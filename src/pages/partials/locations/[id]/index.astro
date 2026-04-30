@@ -1,0 +1,146 @@
+---
+// partials/users/[id].astro
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { tableConfigs } from "@lib/tableConfigs";
+import RowView from "@components/tables/RowView.astro";
+import type { LocationSelect } from "@ty/Schema";
+import type { ZodError } from "astro/zod";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
+import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+type ZodErrorFlattened = ReturnType<ZodError<LocationSelect>["flatten"]>;
+interface Params {
+  id: string | undefined;
+}
+
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("Missing required parameter: id");
+let location: LocationSelect | null | undefined = null;
+let error: string | ReturnType<ZodError["flatten"]> | null = null;
+const config = tableConfigs.locations.required;
+const ctx = {
+  crud: "locations" as CrudRegistryType,
+  config,
+  endpoint: "/attendance/locations",
+  headers: Object.keys(config),
+};
+
+const session = TEST_ADMIN_SESSION;
+
+if (Astro.request.method === "GET") {
+  try {
+    location = await crud.locations.read(id, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+  }
+}
+
+if (Astro.request.method === "PATCH") {
+  try {
+    const formData = await Astro.request.formData();
+    if (!formData) return new Response("Bad Request", { status: 400 });
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    const payload = {
+      ...submitFields,
+      id,
+    };
+
+    location = await crud.locations.update(payload, session);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+}
+
+if (Astro.request.method === "DELETE") {
+  try {
+    location = await crud.locations.delete(id);
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+  }
+}
+
+enum PartialType {
+  TableRow = "table-row",
+  SinglePage = "single-page",
+}
+
+const partialType = Astro.request.headers.get("X-Partial-Type") as
+  | PartialType
+  | undefined;
+if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
+
+type RenderResult =
+  | {
+      kind: "field-error";
+      errors: ZodErrorFlattened;
+    }
+  | {
+      kind: "top-error";
+      message: string;
+    }
+  | {
+      kind: "success";
+      location: LocationSelect;
+      method: "GET" | "POST" | "PATCH" | "DELETE";
+    };
+
+let result: RenderResult;
+
+if (error && typeof error === "object" && "fieldErrors" in error) {
+  result = { kind: "field-error", errors: error };
+} else if (error) {
+  result = {
+    kind: "top-error",
+    message: typeof error === "string" ? error : JSON.stringify(error),
+  };
+} else if (location) {
+  result = {
+    kind: "success",
+    location,
+    method: Astro.request.method as any,
+  };
+} else {
+  result = {
+    kind: "top-error",
+    message: "No course data available",
+  };
+}
+---
+
+{
+  result.kind === "field-error" ? (
+    <FieldErrors
+      id={id}
+      model={ctx.crud}
+      headers={ctx.headers}
+      errors={result.errors}
+    />
+  ) : result.kind === "top-error" ? (
+    <TopLevelError
+      id={id}
+      headers={ctx.headers}
+      crud={ctx.crud}
+      message={result.message}
+    />
+  ) : (
+    <FormSuccess
+      entity={result.location}
+      method={result.method}
+      partialType={partialType}
+      ctx={ctx}
+    />
+  )
+}

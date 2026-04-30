@@ -1,0 +1,36 @@
+---
+interface Props {
+  locations: LocationSelect[];
+}
+import type { LocationSelect } from "@ty/Schema";
+import TableEditable from "./TableEditable.astro";
+import RowCreate from "./tables/RowCreate.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+const { DATALIST_STATES, DATALIST_CITIES, DATALIST_TIMEZONES } = import.meta
+  .env;
+const { locations } = Astro.props;
+const config = tableConfigs.locations.required
+const ctx = {
+  crud: "locations" as const,
+  // endpoint: "/attendance/admin/locations/id",
+  config,
+  headers: Object.keys(config)
+}
+---
+{
+  locations.length === 0 ? (
+    <p class="callout not-found">no locations found</p>
+    <table>
+    <tr class="highlight-green">
+      <RowCreate {...ctx} />
+    </tr>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={locations}
+      config={ctx.config}
+    />
+  )
+}
+

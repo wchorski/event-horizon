@@ -1,0 +1,138 @@
+---
+interface Props {
+  page: number;
+  perPage: number;
+  totalCount: number;
+  path: string;
+  // how many pages to show on each side of current page
+  siblingCount?: number;
+}
+const params = new URLSearchParams(Astro.url.searchParams);
+const { page, perPage, totalCount, path, siblingCount = 10 } = Astro.props;
+
+const totalPages = Math.ceil(totalCount / perPage);
+
+const start = (page - 1) * perPage + 1;
+const end = Math.min(page * perPage, totalCount);
+
+function href(p: number) {
+  const query = params.toString();
+  return query ? `${path}/${p}?${query}` : `${path}/${p}`;
+}
+
+function getPageRange() {
+  const pages: (number | "dots")[] = [];
+
+  const left = Math.max(1, page - siblingCount);
+  const right = Math.min(totalPages, page + siblingCount);
+
+  // Always show first page
+  if (left > 1) {
+    pages.push(1);
+    if (left > 2) pages.push("dots");
+  }
+
+  // Middle range
+  for (let i = left; i <= right; i++) {
+    pages.push(i);
+  }
+
+  // Always show last page
+  if (right < totalPages) {
+    if (right < totalPages - 1) pages.push("dots");
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
+
+const visiblePages = getPageRange();
+---
+
+<nav class="pagination">
+  <!-- Previous -->
+  <a
+    href={href(page - 1)}
+    class="btn"
+    aria-disabled={page === 1 ? "true" : "false"}
+  >
+    Previous
+  </a>
+
+  <!-- Page numbers -->
+  <ul class="sub-nav">
+    {
+      visiblePages.map((p) =>
+        p === "dots" ? (
+          <li>
+            <span class="dots">…</span>
+          </li>
+        ) : (
+          <li>
+            <a
+              href={href(p)}
+              class="btn"
+              aria-current={p === page ? "page" : undefined}
+            >
+              {p}
+            </a>
+          </li>
+        ),
+      )
+    }
+  </ul>
+
+  <!-- Next -->
+  <a
+    href={href(page + 1)}
+    class="btn"
+    aria-disabled={page === totalPages ? "true" : "false"}
+  >
+    Next
+  </a>
+</nav>
+
+<p class="nav-caption sub-text">
+  {start} to {end}
+  <br />
+  {totalCount} total
+</p>
+
+<style>
+  .pagination {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pagination ul {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    text-decoration: none;
+  }
+
+  .dots {
+    padding: 6px 8px;
+    opacity: 0.6;
+  }
+
+  a[aria-disabled="true"],
+  .btn[aria-current="page"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .nav-caption {
+    text-align: center;
+  }
+</style>

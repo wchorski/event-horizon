@@ -1,0 +1,188 @@
+---
+interface Params {
+  id: string;
+}
+import { db } from "@db/db";
+import { User, Ticket, Event, Location } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import TableEditable from "@components/TableEditable.astro";
+import { crud } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import { formatPhonePrettyManual, prettyDateToLocale } from "@lib/formatters";
+export const prerender = false; // Not needed in 'server' mode
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/404");
+const [user] = await db.select().from(User).where(eq(User.id, id)).limit(1);
+
+if (!user) return Astro.redirect("/404");
+
+const {
+  first_name,
+  last_name,
+  middle_initial,
+  address_1,
+  city,
+  state,
+  zip,
+  phone,
+  email,
+} = user;
+
+const ownedCredits = await db
+  .select({
+    ticket: Ticket,
+    course: Event,
+    location: Location,
+  })
+  .from(Ticket)
+  .innerJoin(Event, eq(Ticket.event_id, Event.id))
+  .innerJoin(Location, eq(Event.location_id, Location.id))
+  .where(eq(Ticket.user_id, id));
+
+const tableRows = ownedCredits.map(({ ticket, course, location }) => ({
+  id: ticket.id,
+  event_id: course.id,
+  location_id: location.id,
+  attended: ticket.attended,
+}));
+
+const session = TEST_ADMIN_SESSION;
+
+const events = await crud.events.readMany(session);
+const locations = await crud.locations.readMany(session);
+---
+
+<BaseLayout>
+  <AdminNav />
+  <main>
+    <header>
+      <h1>
+        {first_name}
+        {last_name}
+        {middle_initial ? `(, ${middle_initial})` : ""}
+      </h1>
+      <div class="user-info">
+        <address>
+          {address_1}
+          <br />
+          {city}, {state}
+          {zip}
+          USA
+        </address>
+
+        <div>
+          <a href={`mailto:${email}`}>{email}</a>
+          <br />
+          <a href={`tel:${phone}`}>{formatPhonePrettyManual(phone)}</a>
+        </div>
+      </div>
+
+      <a href={`./${id}/edit`} class="edit-tab">
+        <svg
+          width="30px"
+          height="30px"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path opacity="0.15" d="M8 16H12L18 10L14 6L8 12V16Z" fill="#000000"
+          ></path>
+          <path
+            d="M14 6L8 12V16H12L18 10M14 6L17 3L21 7L18 10M14 6L18 10M10 4L4 4L4 20L20 20V14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </svg>
+        <span> Edit </span>
+      </a>
+    </header>
+    <hr />
+
+    <h2>Event Tickets</h2>
+    {
+      tableRows.length === 0 ? (
+        <p class="callout not-found">no tickets found</p>
+      ) : (
+        <TableEditable
+          crud="tickets"
+          rows={tableRows}
+          endpoint="ownedCredits"
+          config={{
+            id: {
+              label: "ID",
+              type: "number",
+              required: true,
+              readonly: true,
+            },
+            event_id: {
+              label: "Event",
+              type: "select",
+              required: true,
+              options: events.map((item) => ({
+                value: String(item.id),
+                label:
+                  item.subject +
+                  " | " +
+                  prettyDateToLocale(new Date(item.date_civil)),
+              })),
+            },
+            location_id: {
+              type: "select",
+              required: true,
+              options: locations.map((item) => ({
+                value: String(item.id),
+                label: item.name + " | " + item.address,
+              })),
+            },
+            // city: {
+            //   label: "city",
+            //   type: "text",
+            //   required: true,
+            // },
+            // state: {
+            //   label: "state",
+            //   type: "text",
+            //   required: true,
+            // },
+            // zip: {
+            //   label: "zip",
+            //   type: "number",
+            //   required: true,
+            // },
+            attended: {
+              label: "attended",
+              type: "checkbox",
+            },
+          }}
+        />
+      )
+    }
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    padding: 1rem;
+  }
+
+  h1 {
+    anchor-name: --heading;
+    width: fit-content;
+  }
+
+  .user-info {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .edit-tab {
+    position: absolute;
+    position-anchor: --heading;
+    top: anchor(top); /* aligns to h1's top edge */
+    right: anchor(right); /* aligns to h1's right edge */
+    transform: translate(100%, 0%); /* nudge outside the corner */
+  }
+</style>

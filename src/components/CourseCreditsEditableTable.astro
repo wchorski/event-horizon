@@ -1,0 +1,47 @@
+---
+interface Props {
+  event_id: string,
+  courseCredits: {
+    user: UserSelect;
+    ticket: CreditSelect;
+  }[];
+}
+
+import TableEditable from "@components/TableEditable.astro";
+import type { CreditSelect, UserSelect } from "@ty/Schema";
+import RowCreate from "./tables/RowCreate.astro";
+import { tableConfigs, userCreditMap } from "@lib/tableConfigs";
+const { courseCredits, event_id } = Astro.props;
+
+const tableRows = courseCredits.map(({ ticket, user }) => userCreditMap(ticket, user));
+
+const config = tableConfigs.courseCredits.required;
+
+const ctx = {
+  crud: "courseCredits" as const,
+  endpoint: "/attendance/admin/tickets/id",
+  config,
+  headers: Object.keys(config)
+}
+---
+
+{
+  tableRows.length === 0 ? (
+    <p class="callout not-found">no member tickets found</p>
+    <table>
+      <tbody>
+        <RowCreate {...ctx} class:list={'highlight-green'}/>
+      </tbody>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={tableRows}
+      endpoint={ctx.endpoint}
+      config={ctx.config}
+      createUrl={`/partials/course-tickets/course/${event_id}`}
+    />
+  )
+}
+
+

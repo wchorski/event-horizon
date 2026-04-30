@@ -1,0 +1,42 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getCoursesPage } from "@lib/getCoursesPage";
+import CoursesList from "@partials/events-list.astro";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
+
+const page = Number(Astro.params.page);
+
+// Redirect /events/1 → /events
+// h
+// if (page === 1) {
+//   return Astro.redirect("/attendance/events", 301);
+// }
+
+const result = await getCoursesPage({ page, perPage: 12 });
+
+// if ("redirect" in result) {
+//   return Astro.redirect("/attendance/events");
+// }
+
+const { events, totalPages, totalCount, perPage } = result;
+---
+
+<BaseLayout>
+  <main>
+    <div class="card">
+      <h1>Events - Page {page}</h1>
+
+      {events ? <CoursesList events={events} /> : <p>no events found</p>}
+    </div>
+    {
+      events ? (
+        <PaginationNav
+          path="/attendance/events"
+          page={Number(page)}
+          perPage={perPage}
+          totalCount={totalCount}
+        />
+      ) : null
+    }
+  </main>
+</BaseLayout>

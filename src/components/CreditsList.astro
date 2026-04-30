@@ -1,0 +1,17 @@
+---
+import { db } from "@db/db";
+import { Ticket } from "@db/schema";
+
+
+const tickets = await db.select().from(Ticket);
+---
+
+<ul id="tickets-list">
+  {
+    tickets.length > 0 ? (
+      tickets.map((ticket) => <li>ticket.id: {ticket.id}</li>)
+    ) : (
+      <p>No tickets found</p>
+    )
+  }
+</ul>

@@ -1,0 +1,207 @@
+---
+import InputField from "@components/form/InputField.astro";
+import SelectField from "@components/form/SelectField.astro";
+import TextareaField from "@components/form/TextareaField.astro";
+import type { CrudRegistryType } from "@lib/crudRegistry";
+import type {
+  FieldConfig,
+  FieldSlot,
+  InputFieldSlot,
+  SelectFieldSlot,
+} from "@ty/FieldConfig";
+
+interface Props {
+  crud: CrudRegistryType;
+  config: FieldConfig;
+  headers: string[];
+  endpoint: string;
+  error?: string | Record<string, any>;
+  values?: Record<string, any>;
+}
+const { config, values, headers, crud, endpoint, error } = Astro.props;
+
+const topLevelError =
+  typeof error === "string"
+    ? error
+    : typeof error === "object" && error?.formErrors?.length
+      ? error.formErrors[0]
+      : null;
+---
+
+<div id="row-search-form">
+  <form
+    id="table-search-form"
+    class="card"
+    hx-post="/partials/table/row-search"
+    hx-target="#row-search-form"
+    hx-target-error="#row-search-form"
+    hx-trigger="submit"
+    hx-swap="innerHTML"
+    hx-indicator="#loading"
+    hx-push-url="false"
+    hx-vals={JSON.stringify({
+      _config: JSON.stringify(config),
+      _endpoint: endpoint,
+      _crud: crud,
+    })}
+  >
+    <legend>search for member</legend>
+    <div class="flex gap-m space-between">
+      <fieldset>
+        {
+          headers.map((key) => {
+            const field = config[key] ?? {};
+            const {
+              label,
+              value: override,
+              type,
+              ...inputAttrs
+            } = field as FieldSlot;
+            delete (inputAttrs as any).options;
+            const { options } = field as SelectFieldSlot;
+            delete (inputAttrs as any).datalist;
+            const { datalist } = field as InputFieldSlot;
+            // const { label, value: override, type, datalist, options, ...inputAttrs } = field as any
+
+            // const options =
+            //   type === "select" && "options" in field ? field.options : undefined;
+            // const datalist =
+            //   type && !["select", "textarea"].includes(type) && "datalist" in field
+            //     ? field.datalist
+            //     : undefined;
+
+            const submittedValue = values?.[key];
+
+            // TODO whata mess, i feel like i shouldn't have to do all this crap just to render some <input>
+            // const resolvedValue = override ?? (row[key] != null ? String(row[key]) : "");
+            const resolvedValue =
+              submittedValue !== undefined
+                ? submittedValue
+                : typeof override !== "boolean"
+                  ? override
+                  : undefined;
+
+            const resolvedCheckbox =
+              submittedValue !== undefined
+                ? submittedValue === "true" || submittedValue === true
+                : !!(override ?? false);
+
+            const fieldError =
+              typeof error === "object" ? error?.fieldErrors[key]?.[0] : null;
+
+            // if (key === "id") {
+            //   return <td data-type={type} />;
+            // }
+            if (type === "select")
+              return (
+                <SelectField
+                  errorId={`field-error-search-${key}`}
+                  name={key}
+                  label={label}
+                  value={resolvedValue}
+                  fieldError={fieldError}
+                  inputAttrs={inputAttrs}
+                  options={options}
+                />
+              );
+            if (type === "textarea") return <TextareaField />;
+            return (
+              <InputField
+                errorId={`field-error-search-${key}`}
+                name={key}
+                label={label}
+                value={type === "checkbox" ? undefined : resolvedValue}
+                checked={type === "checkbox" ? resolvedCheckbox : undefined}
+                type={type}
+                datalist={datalist}
+                fieldError={fieldError}
+                inputAttrs={inputAttrs}
+              />
+            );
+          })
+        }
+      </fieldset>
+      <fieldset>
+        <button type="submit">search</button>
+        <button
+          title="clear fields"
+          type="button"
+          class="cancel"
+          data-clear-form="table-search-form"
+        >
+          <img
+            class="icon"
+            src="/icons/delete.svg"
+            alt="delete icon"
+            width="30"
+            height="30"
+          />
+        </button>
+      </fieldset>
+    </div>
+    <div id={`row-error-search`} class="row-error">
+      {
+        topLevelError ? (
+          <p class="callout error top-level">{topLevelError}</p>
+        ) : null
+      }
+    </div>
+  </form>
+
+  <div id="loading" class="htmx-indicator">Searching…</div>
+</div>
+
+<script>
+  document
+    .querySelector("[data-clear-form]")
+    ?.addEventListener("click", (e) => {
+      console.log("clickyy");
+      const formId = (e.currentTarget as HTMLElement).dataset.clearForm;
+      const form = document.getElementById(formId!) as HTMLFormElement;
+      console.log({ form });
+      [...form.elements].forEach((el) => {
+        const input = el as
+          | HTMLInputElement
+          | HTMLSelectElement
+          | HTMLTextAreaElement;
+        if (input.type === "checkbox")
+          (input as HTMLInputElement).checked = false;
+        else if (input.type === "hidden") return;
+        else input.value = "";
+      });
+
+      const errorRow = document.getElementById("row-create-error");
+      if (errorRow) errorRow.innerHTML = "";
+    });
+</script>
+
+<style>
+  #row-search-results {
+    min-height: 5rem;
+    &:empty {
+      border: dashed 2px var(--c-seperator);
+    }
+  }
+  form {
+    background-color: var(--c-txt-bg);
+    position: relative;
+    margin-top: 1.3rem;
+  }
+  legend {
+    position: absolute;
+    background-color: var(--c-txt-bg);
+    padding-inline: 0.5rem;
+    border-radius: 10px;
+    top: -1.3rem;
+    left: 0rem;
+  }
+
+  fieldset {
+    display: flex;
+
+    gap: 0.5rem;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+</style>

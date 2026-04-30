@@ -1,0 +1,37 @@
+---
+// components/CoursesEditableTable.astro
+interface Props {
+  events: CourseSelect[];
+  locations: LocationSelect[];
+}
+import type { CourseSelect, LocationSelect } from "@ty/Schema";
+import TableEditable from "./TableEditable.astro";
+import RowCreate from "./tables/RowCreate.astro";
+import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+const { events, locations } = Astro.props;
+
+const config = courseConfigRequired(locations)
+const ctx = {
+  crud: "events" as const,
+  // endpoint: "/attendance/admin/events/id",
+  config,
+  headers: Object.keys(config)
+}
+---
+
+{
+  events.length === 0 ? (
+    <p class="callout not-found">no events found</p>
+    <table>
+    <tr class="highlight-green">
+      <RowCreate {...ctx} />
+    </tr>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={events}
+      config={ctx.config}
+    />
+  )
+}

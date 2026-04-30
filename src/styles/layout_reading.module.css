@@ -1,0 +1,8 @@
+body.layout_reading {
+  /* width: 800px; */
+  /* margin-inline: auto; */
+  
+  & > main {
+    padding-block: var(--space-m, 1rem);
+  }
+}

@@ -1,0 +1,98 @@
+---
+// partials/course-tickets/[courseId]/[userId].astro
+// TODO keeping around in case I want a simple API for inline user ticket creation (without form)
+import RowView from "@components/tables/RowView.astro";
+import UserCard from "@components/UserCard.astro";
+import RowCreateForm from "@components/tables/RowCreate.astro";
+import { tableConfigs } from "@lib/tableConfigs";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { parseOutUndefinedFormData } from "@lib/sanatizers";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { UserCreditFlat } from "@ty/Schema";
+
+type ViewType = "table-row" | "card";
+
+let newUserCredit: UserCreditFlat | null | undefined = null;
+let error = null;
+let view: ViewType = "table-row";
+const ctx = {
+  crud: "courseCredits" as CrudRegistryType,
+  config: tableConfigs.courseCredits.required,
+  endpoint: "/attendance/course-tickets",
+  headers: Object.keys(tableConfigs.courseCredits.required),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    // const session = await requirePermission(Astro.request, "users", "create");
+    // TODO
+    const { courseId, userId } = Astro.params;
+
+    const session = TEST_ADMIN_SESSION;
+
+    const formData = await Astro.request.formData();
+
+    // TODO may remove later
+    view = (formData.get("_view") as ViewType) ?? "table-row"; // caller decides
+
+    // TODO shouldn't need to filter out _
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    newUserCredit = await crud.courseCredits.create(
+      parseOutUndefinedFormData(submitFields),
+      session,
+    );
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---
+
+{
+  error && typeof error === "object" && "fieldErrors" in error ? (
+    <>
+      {ctx.headers.map((fieldName) => {
+        const messages = error.fieldErrors[fieldName];
+        return (
+          <span
+            id={`field-error-create-${fieldName}`}
+            hx-swap-oob="outerHTML"
+            class="anim-vibrate field-error"
+          >
+            {messages?.[0] ?? ""}
+          </span>
+        );
+      })}
+
+      <div id={`#row-create-error-${crud}`} class="row-error error top-level" />
+    </>
+  ) : error ? (
+    <>
+      <div id={`#row-create-error-${crud}`} class="row-error error top-level">
+        {typeof error === "string" ? error : JSON.stringify(error)}
+      </div>
+      {ctx.headers.map((fieldName) => (
+        <span
+          id={`field-error-create-${fieldName}`}
+          hx-swap-oob="outerHTML"
+          class="field-error"
+        />
+      ))}
+    </>
+  ) : newUserCredit && view === "table-row" ? (
+    <>
+      <RowView row={newUserCredit} {...ctx} classList={["new-row"]} />
+      <RowCreateForm {...ctx} />
+    </>
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

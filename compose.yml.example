@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:  
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${PGDATABASE}
+      PGDATA: /data/postgres
+    ports:
+      - "5060:5432"
+    networks:
+      - moeits_staff-astro-network
+    volumes:
+      - ./db/postgres-data:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
+      interval: 5s
+      retries: 10
+
+  # Migration service - runs once using the build stage with dev deps
+  migrate:
+    build:
+      context: .
+      target: migrate # Use the migrate stage that has drizzle-kit
+    networks:
+      - moeits_staff-astro-network
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: "no" # Run once and exit
+
+  seed:
+    build:
+      context: .
+      target: seed
+    networks:
+      - moeits_staff-astro-network
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    container_name: moeits_staff-astro
+    restart: unless-stopped
+    ports:
+      - "4321:4321"
+    networks:
+      - moeits_staff-astro-network
+    env_file:
+      - .env
+    volumes:
+      - ./public:/app/public
+      # - ./db/data:/app/db/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4321/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+  # seed:
+  #   build: .
+  #   command: >
+  #     sh -c "npm install && npx tsx db/seed-libsql.ts"
+  #   environment:
+  #     - LIBSQL_URL=http://db:4320
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   restart: "no" # exits after running — intentional
+
+networks:
+  moeits_staff-astro-network:
+    driver: bridge

@@ -1,0 +1,193 @@
+---
+import MOEITSStaffCalendar from "../partials/moeits-staff-data.astro";
+
+const title = "MOEITS_Staff Calendar";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  </head>
+  <body class="area duotone">
+    <section>
+      <div class="air air1"></div>
+      <div class="air air2"></div>
+      <div class="air air3"></div>
+      <div class="air air4"></div>
+
+      <MOEITSStaffCalendar />
+    </section>
+  </body>
+
+  <style is:global>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      /* padding: 20px; */
+      color: white;
+      background: linear-gradient(
+        135deg,
+        hsl(184, 76%, 16%) 0%,
+        hsl(168, 37%, 16%) 100%
+      );
+      background-image: url("/assets/sunset-cranes.jpg");
+      background-repeat: no-repeat;
+      background-origin: content-box;
+      background-size: cover;
+      background-position: center bottom;
+      overflow: hidden;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    header.title {
+      text-align: center;
+      display: grid;
+      margin-bottom: 1rem;
+    }
+
+    .sub-text {
+      color: rgb(196, 196, 196);
+    }
+    .error-message {
+      border-left: dashed 8px red;
+      border-right: dashed 8px red;
+      padding: 1rem;
+      padding-left: 1rem;
+      background-color: rgb(109, 60, 60);
+    }
+
+    h2 {
+      text-align: center;
+      color: white;
+      margin-block: 1.5rem;
+      margin-bottom: 0;
+      font-size: 3em;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    button {
+      background: white;
+      color: #667eea;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition:
+        transform 0.2s,
+        box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .duotone {
+      backdrop-filter: grayscale(100%) contrast(1.2) brightness(0.3);
+    }
+
+    .duotone::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, #b5b5b5, #9e9e9e);
+      opacity: 0.2;
+      mix-blend-mode: multiply;
+      z-index: -1;
+    }
+
+    /* background coolness */
+    section {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      display: grid;
+      gap: 1rem;
+      place-items: center;
+    }
+    .grid.gap-m {
+      display: grid;
+      gap: 3rem;
+    }
+    section .air {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      background: url(https://1.bp.blogspot.com/-xQUc-TovqDk/XdxogmMqIRI/AAAAAAAACvI/AizpnE509UMGBcTiLJ58BC6iViPYGYQfQCLcBGAsYHQ/s1600/wave.png);
+      background-size: 1000px 100px;
+    }
+    section .air.air1 {
+      animation: wave 30s linear infinite;
+      z-index: -1;
+      opacity: 0.3;
+      animation-delay: 0s;
+      bottom: 0;
+    }
+    section .air.air2 {
+      animation: wave2 15s linear infinite;
+      z-index: -2;
+      opacity: 0.2;
+      animation-delay: -5s;
+      /* bottom: 10px; */
+    }
+    section .air.air3 {
+      animation: wave 30s linear infinite;
+      z-index: -3;
+      opacity: 0.1;
+      animation-delay: -2s;
+      /* bottom: 15px; */
+    }
+    section .air.air4 {
+      animation: wave2 5s linear infinite;
+      z-index: -4;
+      opacity: 0.4;
+      animation-delay: -5s;
+      /* bottom: 20px; */
+    }
+    @keyframes wave {
+      0% {
+        background-position-x: 0px;
+      }
+      100% {
+        background-position-x: 1000px;
+      }
+    }
+    @keyframes wave2 {
+      0% {
+        background-position-x: 0px;
+      }
+      100% {
+        background-position-x: -1000px;
+      }
+    }
+  </style>
+</html>

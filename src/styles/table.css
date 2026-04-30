@@ -1,0 +1,148 @@
+.table-wrap {
+  font-family: "IBM Plex Mono", monospace;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+
+  & > thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--c-txt-bg);
+    z-index: 1;
+  }
+}
+
+th {
+  padding-block: 0.75rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* tr[data-status="editing"] td {
+  background: #fffbeb;
+} */
+
+.action-cell {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+th,
+td {
+  padding-inline: 0.5rem;
+}
+td {
+  padding-block: 0.5rem;
+}
+
+table tbody > tr:not(.row-error):nth-of-type(odd) {
+  background-color: #0000001c;
+}
+table tbody > tr:not(.row-error):nth-of-type(even) {
+  background-color: #0000004f;
+}
+
+.row-error:empty {
+  display: none;
+}
+
+tr,
+tr[data-status="editing"],
+tr[data-status="creating"] {
+  position: relative;
+}
+
+.error-cell {
+  padding: 0;
+  width: 0;
+}
+
+/* td .row-error:not(:empty) {
+  position: absolute;
+  left: 0;
+  bottom: -3.5rem;
+  width: 90%;
+  position-try-fallbacks: flip-block;
+
+  display: flex;
+  align-items: center;
+
+  & button.close {
+    margin-left: auto;
+    padding: 0.2rem;
+    border: none;
+    background-color: transparent;
+    color: white;
+  }
+} */
+
+.row-error:not(:empty) {
+  z-index: 20;
+  padding: 0.5rem 1rem;
+  background-color: color-mix(in srgb, var(--c-error) 30%, black 70%);
+  color: white;
+}
+
+.row-error:has(.message span:empty) {
+  visibility: hidden;
+  opacity: 0.2;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+
+table tbody tr:hover {
+  background-color: rgba(139, 139, 69, 0.046) !important;
+}
+
+table tr.new-row {
+  outline: dashed 3px rgba(0, 0, 255, 0.102);
+  position: relative;
+  td:first-child::before {
+    color: mediumslateblue;
+    content: "✸";
+    position: absolute;
+    left: 1%;
+    bottom: 50%;
+  }
+}
+
+td[data-key="id"] {
+  & a,
+  & code span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    width: 6ch;
+    direction: rtl;
+  }
+
+  & a {
+    color: var(--c-primary);
+  }
+}
+
+td[data-type="hidden"],
+th[data-type="hidden"] {
+  display: none;
+  outline: dotted red 3px;
+}
+
+data[value="null"]::before {
+  content: "-";
+  color: var(--c-seperator, grey);
+}

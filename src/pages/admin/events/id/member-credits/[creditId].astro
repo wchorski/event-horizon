@@ -1,0 +1,23 @@
+---
+interface Props {
+  creditId: string;
+}
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const { creditId } = Astro.params;
+const first_name = Astro.url.searchParams.get('first_name') || '';
+const last_name = Astro.url.searchParams.get('last_name') || '';
+const userId = Astro.url.searchParams.get('userId') || '';
+const courseId = Astro.url.searchParams.get('courseId') || '';
+---
+
+<BaseLayout>
+  <main>
+    <h1>User Ticket</h1>
+    <ul>
+      <li>Ticket ID: {creditId}</li>
+      <li>Event ID: {courseId}</li>
+      <li>User: {`${first_name} ${last_name}`} | {userId}</li>
+    </ul>
+  </main>
+</BaseLayout>

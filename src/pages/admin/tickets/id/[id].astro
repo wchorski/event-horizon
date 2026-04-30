@@ -1,0 +1,77 @@
+---
+interface Params {
+  event_id: string;
+}
+import { db } from "@db/db";
+import { Event, Ticket, User } from "@db/schema";
+import { eq } from "drizzle-orm";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CourseCreditsEditableTable from "@components/CourseCreditsEditableTable.astro";
+export const prerender = false; // Not needed in 'server' mode
+const { id } = Astro.params;
+if (!id) throw new Error("no id found. throw 404");
+const [foundCourse] = await db
+  .select()
+  .from(Event)
+  .where(eq(Event.id, id))
+  .limit(1);
+
+const courseCredits = await db
+  .select({
+    ticket: Ticket,
+    user: User,
+  })
+  .from(Ticket)
+  .innerJoin(User, eq(Ticket.user_id, User.id))
+  .where(eq(Ticket.event_id, id));
+
+if (!foundCourse) return Astro.redirect("/404");
+const { subject, timestamp, excerpt } = foundCourse;
+---
+
+<BaseLayout>
+  <main>
+    <header>
+      <h1>
+        {subject}
+        |
+        <time datetime={timestamp.toISOString()}>
+          {
+            timestamp.toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+            })
+          }
+        </time>
+      </h1>
+      <p>
+        <time datetime={timestamp.toISOString()}>
+          {
+            timestamp.toLocaleString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
+          }
+        </time>{excerpt}
+        |
+        <span class="course-id">{id}</span>
+      </p>
+    </header>
+
+    <ul class="callout warning">
+      <li>TODO: secure route and data with auth</li>
+      <li>Proto-type: Using example member data</li>
+    </ul>
+
+    <div class="flex space-between">
+      <h2>Event Tickets</h2>
+      <button
+        onclick="alert('In the works. Will be implimented later')"
+        hx-put="/api/tickets/export">Export CSV to Sharepoint</button
+      >
+    </div>
+
+    <CourseCreditsEditableTable courseCredits={courseCredits} event_id={id} />
+  </main>
+</BaseLayout>

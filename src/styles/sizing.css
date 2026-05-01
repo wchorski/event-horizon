@@ -1,0 +1,20 @@
+:root {
+  /* Base unit in rem (1rem = 16px by default) */
+  --size-unit: 1rem;  /* 8px at default font size */
+  
+  /* Scale multiplier - controls expansion rate */
+  --size-scale: 1.5;
+  
+  /* Spacing scale */
+  --size-xs: calc(var(--size-unit) * 0.5);                                    /* 0.25rem / 4px */
+  --size-s: var(--size-unit);                                                 /* 0.5rem / 8px */
+  --size-m: calc(var(--size-unit) * var(--size-scale));                     /* 0.75rem / 12px */
+  --size-l: calc(var(--size-unit) * var(--size-scale) * var(--size-scale)); /* 1.125rem / 18px */
+  --size-xl: calc(var(--size-unit) * pow(var(--size-scale), 3));            /* 1.6875rem / 27px */
+  --size-2xl: calc(var(--size-unit) * pow(var(--size-scale), 4));           /* 2.53rem / 40.5px */
+  --size-3xl: calc(var(--size-unit) * pow(var(--size-scale), 5));           /* 3.8rem / 60.75px */
+
+  --br-sharp: var(--size-s);
+  --br-dull: var(--size-m);
+  --br-soft: var(--size-l);
+}

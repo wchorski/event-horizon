@@ -26,8 +26,8 @@ import type { Session } from "./auth/session";
 import { userCreditMap } from "./tableConfigs";
 import type { FormFields } from "@ty/Form";
 import type {
-  CourseSelect,
-  CreditSelect,
+  EventSelect,
+  TicketSelect,
   LocationSelect,
   UserCreditFlat as CourseCreditFlat,
   UserSelect,
@@ -587,8 +587,8 @@ type CrudRegistry = {
   locations: CrudEntry<LocationSelect>;
   users: CrudEntry<UserSelect>;
   // roles: CrudEntry<RoleSelect>;
-  events: CrudEntry<CourseSelect>;
-  tickets: CrudEntry<CreditSelect>;
+  events: CrudEntry<EventSelect>;
+  tickets: CrudEntry<TicketSelect>;
   // ...
 };
 export type CrudRegistryType = keyof typeof crud;

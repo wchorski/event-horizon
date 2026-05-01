@@ -26,10 +26,10 @@ export default defineConfig({
   },
   //? caused problems with pagination + searchParams
   // redirects: {
-  //   "/attendance/events/1": "/attendance/events",
-  //   "/attendance/admin/events/1": "/attendance/admin/events",
-  //   "/attendance/admin/locations/1": "/attendance/admin/locations",
-  //   "/attendance/admin/users/1": "/attendance/admin/users",
+  //   "/events/1": "/events",
+  //   "/admin/events/1": "/admin/events",
+  //   "/admin/locations/1": "/admin/locations",
+  //   "/admin/users/1": "/admin/users",
   // },
   output: "server",
 

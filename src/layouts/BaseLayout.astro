@@ -5,6 +5,7 @@ interface Props {
   classNames?: string;
 }
 import "@styles/global.css";
+import "@styles/sizing.css";
 import "@styles/colors.css";
 import "@styles/form.css";
 import "@styles/table.css";
@@ -13,9 +14,10 @@ import styles from "@styles/layout_reading.module.css";
 import DialogConfirm from "@components/DialogConfirm.astro";
 import { ClientRouter } from "astro:transitions";
 
+const { SITE_TITLE, SITE_EXCERPT } = import.meta.env;
 const {
-  title = "Astro + HTMX",
-  excerpt = "Astro for SSR. HTMX for user interactions",
+  title = SITE_TITLE,
+  excerpt = SITE_EXCERPT,
   classNames = styles.layout_reading,
 } = Astro.props;
 ---

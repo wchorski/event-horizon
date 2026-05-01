@@ -1,10 +1,10 @@
 ---
 // components/CoursesEditableTable.astro
 interface Props {
-  events: CourseSelect[];
+  events: EventSelect[];
   locations: LocationSelect[];
 }
-import type { CourseSelect, LocationSelect } from "@ty/Schema";
+import type { EventSelect, LocationSelect } from "@ty/Schema";
 import TableEditable from "./TableEditable.astro";
 import RowCreate from "./tables/RowCreate.astro";
 import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";

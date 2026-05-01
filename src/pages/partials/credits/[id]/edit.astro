@@ -4,12 +4,12 @@ import { ticketsConfigRequired } from "@lib/tableConfigs";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
-import type { CreditSelect } from "@ty/Schema";
+import type { TicketSelect } from "@ty/Schema";
 import RowEdit from "@components/tables/RowEdit.astro";
 
 type ViewType = "table-row" | "card";
 
-let ticket: CreditSelect | null | undefined = null;
+let ticket: TicketSelect | null | undefined = null;
 let error = null;
 let view: ViewType = "table-row";
 

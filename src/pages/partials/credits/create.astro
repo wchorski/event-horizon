@@ -7,7 +7,7 @@ import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { parseOutUndefinedFormData } from "@lib/sanatizers";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
-import type { CreditSelect } from "@ty/Schema";
+import type { TicketSelect } from "@ty/Schema";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
@@ -18,7 +18,7 @@ type ViewType = "table-row" | "card";
 
 
 let error = null;
-let ticket: CreditSelect | null | undefined = null;
+let ticket: TicketSelect | null | undefined = null;
 const users = await crud.users.readMany(TEST_ADMIN_SESSION);
 const events = await crud.events.readMany(TEST_ADMIN_SESSION);
 const config = ticketsConfigRequired(users, events);
@@ -58,7 +58,7 @@ const partialType = Astro.request.headers.get("X-Partial-Type") as
   | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
-const result = handleResult<CreditSelect>({
+const result = handleResult<TicketSelect>({
   error,
   entity: ticket,
   method: Astro.request.method,

@@ -1,8 +1,8 @@
 import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
 import type { CrudRegistryType } from "./crudRegistry";
 import type {
-  CourseSelect,
-  CreditSelect,
+  EventSelect,
+  TicketSelect,
   LocationSelect,
   UserSelect,
 } from "@ty/Schema";
@@ -138,7 +138,7 @@ export const courseConfigRequired = (locations: LocationSelect[]) =>
         label: loc.name,
       })),
     },
-  }) as FieldConfig<BaseRow> satisfies FieldConfig<CourseSelect>;
+  }) as FieldConfig<BaseRow> satisfies FieldConfig<EventSelect>;
 
 const courseCreditsRequiredConfig = {
   id: {
@@ -213,7 +213,7 @@ const courseCreditsRequiredConfig = {
 
 export const ticketsConfigRequired = (
   users: UserSelect[],
-  events: CourseSelect[],
+  events: EventSelect[],
 ) =>
   ({
     id: {
@@ -261,7 +261,7 @@ export const ticketsConfigRequired = (
     attended: {
       type: "checkbox",
     },
-  }) as FieldConfig<BaseRow> satisfies FieldConfig<CreditSelect>;
+  }) as FieldConfig<BaseRow> satisfies FieldConfig<TicketSelect>;
 
 const locationRequiredConfig = {
   id: {
@@ -346,7 +346,7 @@ export const tableConfigs = {
   >
 >;
 
-export const userCreditMap = (ticket: CreditSelect, user: UserSelect) => ({
+export const userCreditMap = (ticket: TicketSelect, user: UserSelect) => ({
   id: ticket.id,
   user_id: user.id,
   // event_id: ticket.courseId,

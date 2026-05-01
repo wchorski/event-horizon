@@ -3,12 +3,11 @@ import ButtonCoursesImport from "@components/ButtonCoursesImport.astro";
 import CoursesEditableTable from "@components/CoursesEditableTable.astro";
 import AdminNav from "@components/navigation/AdminNav.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { getCoursesPage } from "@lib/getCoursesPage";
+import { getEventsPage } from "@lib/getEventsPage";
 import PaginationNav from "@components/navigation/PaginationNav.astro";
 import TableMenu from "@components/tables/TableMenu.astro";
-import SelectField from "@components/form/SelectField.astro";
 import FilterSelect from "@components/form/FilterSelect.astro";
-
+const { SITE_TITLE } = import.meta.env;
 const { WORDPRESS_ENDPOINT } = import.meta.env;
 
 const params = Astro.url.searchParams;
@@ -24,6 +23,7 @@ const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
 const DEFAULT_PER_PAGE = 25;
 
 let perPageParam = DEFAULT_PER_PAGE;
+const page = parseInt(params.get("page") || "1");
 const rawPerPage = params.get("perPage");
 
 if (rawPerPage !== null) {
@@ -37,20 +37,25 @@ if (rawPerPage !== null) {
   }
 }
 
-const result = await getCoursesPage({
-  page: 1,
+const result = await getEventsPage({
+  page,
   perPage: perPageParam,
   location_id,
 });
 
 if ("redirect" in result) {
-  return Astro.redirect("/attendance/admin/events");
+  return Astro.redirect("/admin/events");
 }
 
-const { events, locations, page, perPage, totalCount, totalPages } = result;
+const { events, locations, perPage, totalCount, totalPages } = result;
+// SEO metadata
+const pageTitle = page === 1 ? "Events" : `Events - Page ${page}`;
 ---
 
 <BaseLayout>
+  <Fragment slot="head">
+    <title>{pageTitle} | {SITE_TITLE}</title>
+  </Fragment>
   <script type="module" src="/src/client/tablePerPage.ts"></script>
 
   <AdminNav />
@@ -107,8 +112,8 @@ const { events, locations, page, perPage, totalCount, totalPages } = result;
       {
         events.length > 0 ? (
           <PaginationNav
-            path="/attendance/admin/events"
-            page={Number(page)}
+            path="/admin/events"
+            page={page}
             perPage={perPage}
             totalCount={totalCount}
           />

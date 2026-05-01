@@ -1,0 +1,62 @@
+---
+import type { EventSelect } from "@ty/Schema";
+
+interface Props {
+  events: EventSelect[];
+}
+
+const { events } = Astro.props;
+---
+
+<ul class="events-list unstyled">
+  {
+    events.length > 0 ? (
+      events.map(({ id, subject, excerpt, timestamp }) => (
+        <li>
+          <article class="card">
+            <time datetime={timestamp.toISOString()}>
+              {timestamp.toLocaleString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </time>
+
+            <div class="content">
+              <a href={`/events/${id}`}>{subject}</a>
+              <p class="excerpt">{excerpt}</p>
+            </div>
+            <a href={`/events/${id}`} class="btn">
+              Get Tickets
+            </a>
+          </article>
+        </li>
+      ))
+    ) : (
+      <p>No events found</p>
+    )
+  }
+</ul>
+
+<style>
+  ul {
+    display: grid;
+    gap: var(--size-m);
+  }
+
+  article {
+    display: flex;
+    gap: var(--size-m);
+    max-width: 50rem;
+    align-content: center;
+  }
+
+  time {
+    font-size: var(--size-m);
+    align-self: center;
+  }
+
+  .btn {
+    align-self: center;
+  }
+</style>

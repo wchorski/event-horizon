@@ -3,12 +3,12 @@ interface Props {
   event_id: string,
   courseCredits: {
     user: UserSelect;
-    ticket: CreditSelect;
+    ticket: TicketSelect;
   }[];
 }
 
 import TableEditable from "@components/TableEditable.astro";
-import type { CreditSelect, UserSelect } from "@ty/Schema";
+import type { TicketSelect, UserSelect } from "@ty/Schema";
 import RowCreate from "./tables/RowCreate.astro";
 import { tableConfigs, userCreditMap } from "@lib/tableConfigs";
 const { courseCredits, event_id } = Astro.props;

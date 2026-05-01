@@ -4,7 +4,7 @@ import { or, ilike, like } from "drizzle-orm";
 import { Event, Location } from "@db/schema";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
-import type { CourseSelect } from "@ty/Schema";
+import type { EventSelect } from "@ty/Schema";
 import { handleResult } from "@lib/handleRenderResult";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
@@ -12,12 +12,12 @@ import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
 import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
 import { getUsersPage } from "@lib/getUsersPage";
-import { getCoursesPage } from "@lib/getCoursesPage";
+import { getEventsPage } from "@lib/getEventsPage";
 import { handleQueryResult } from "@lib/handleQueryResult";
 
 const locations = await db.select().from(Location);
 
-let events: CourseSelect[] | null | undefined = null;
+let events: EventSelect[] | null | undefined = null;
 let error = null;
 const config = courseConfigRequired(locations);
 const ctx = {
@@ -57,7 +57,7 @@ if (Astro.request.method === "POST") {
         .limit(10);
     } else {
       // Empty search - return no results (or all events if you prefer)
-      const result = await getCoursesPage({ page });
+      const result = await getEventsPage({ page });
       events = result.events;
     }
   } catch (e) {
@@ -80,7 +80,7 @@ const partialType = Astro.request.headers.get("X-Partial-Type") as
   | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
-const result = handleQueryResult<CourseSelect>({
+const result = handleQueryResult<EventSelect>({
   error,
   rows: events,
   method: Astro.request.method,

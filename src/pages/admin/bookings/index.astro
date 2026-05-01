@@ -1,15 +1,15 @@
 ---
-import CoursesEditableTable from "@components/CoursesEditableTable.astro";
-import BaseLayout from "@layouts/BaseLayout.astro";
-import { getCoursesPage } from "@lib/getCoursesPage";
-import PaginationNav from "@components/navigation/PaginationNav.astro";
-import AdminNav from "@components/navigation/AdminNav.astro";
 import ButtonCoursesImport from "@components/ButtonCoursesImport.astro";
+import CoursesEditableTable from "@components/CoursesEditableTable.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
 import TableMenu from "@components/tables/TableMenu.astro";
-import SelectField from "@components/form/SelectField.astro";
 import FilterSelect from "@components/form/FilterSelect.astro";
+import { getBookingsPage } from "@lib/getBookingsPage";
+import TableEditable from "@components/TableEditable.astro";
+const { SITE_TITLE } = import.meta.env;
 const { WORDPRESS_ENDPOINT } = import.meta.env;
-const page = Number(Astro.params.page);
 
 const params = Astro.url.searchParams;
 const rawLocation = params.get("location_id");
@@ -24,6 +24,7 @@ const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
 const DEFAULT_PER_PAGE = 25;
 
 let perPageParam = DEFAULT_PER_PAGE;
+const page = parseInt(params.get("page") || "1");
 const rawPerPage = params.get("perPage");
 
 if (rawPerPage !== null) {
@@ -37,34 +38,40 @@ if (rawPerPage !== null) {
   }
 }
 
-const result = await getCoursesPage({
+const result = await getBookingsPage({
   page,
   perPage: perPageParam,
   location_id,
 });
 
 if ("redirect" in result) {
-  return Astro.redirect("/attendance/admin/events");
+  return Astro.redirect("/admin/bookings");
 }
 
-const { events, locations, perPage, totalCount, totalPages } = result;
+const { bookings, locations, perPage, totalCount, totalPages } = result;
+// SEO metadata
+const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
 ---
 
 <BaseLayout>
+  <Fragment slot="head">
+    <title>{pageTitle} | {SITE_TITLE}</title>
+  </Fragment>
   <script type="module" src="/src/client/tablePerPage.ts"></script>
+
   <AdminNav />
   <main>
     <header class="flex space-between">
-      <h1>Events - Page {page}</h1>
+      <h1>Bookings - Page {page}</h1>
       <div>
         <ButtonCoursesImport />
-        <a href={WORDPRESS_ENDPOINT + "/events"}>View Wordpress Events</a>
+        <a href={WORDPRESS_ENDPOINT + "/bookings"}>View Wordpress Bookings</a>
       </div>
     </header>
     <div data-layout="content" class="content">
       <div class="callout warning">
         <p>
-          Created/Updated Events here will create/update an accompanying
+          Created/Updated Bookings here will create/update an accompanying
           Wordpress event set as DRAFT. To become viewable on the <a
             href={WORDPRESS_ENDPOINT + "/wp-admin/edit.php?post_type=event"}
             >Wordpress site</a
@@ -72,10 +79,11 @@ const { events, locations, perPage, totalCount, totalPages } = result;
         </p>
       </div>
       <hr />
+
       <TableMenu
         page={page}
         perPage={perPage}
-        model="events"
+        model="bookings"
         placeholder={"Search by subject, excerpt, or numerical date..."}
       >
         <fieldset slot="filters-fieldset">
@@ -90,6 +98,7 @@ const { events, locations, perPage, totalCount, totalPages } = result;
           />
         </fieldset>
       </TableMenu>
+
       {
         locations.length === 0 ? (
           <p>
@@ -97,14 +106,20 @@ const { events, locations, perPage, totalCount, totalPages } = result;
             <a href="/attendance/admin/locations">locations page</a>
           </p>
         ) : (
-          <CoursesEditableTable events={events} locations={locations} />
+          // <TableEditable crud={"bookings"} rows={bookings} config={ctx.config} />
+          <ul>
+            {bookings.map((booking) => (
+              <li>{booking.id}</li>
+            ))}
+          </ul>
         )
       }
+
       {
-        events ? (
+        bookings.length > 0 ? (
           <PaginationNav
-            path="/attendance/admin/events"
-            page={Number(page)}
+            path="/admin/bookings"
+            page={page}
             perPage={perPage}
             totalCount={totalCount}
           />

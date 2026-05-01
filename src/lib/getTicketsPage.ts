@@ -1,15 +1,15 @@
 import { db } from "@db/db";
-import { User, Ticket } from "@db/schema";
+import { Ticket } from "@db/schema";
 import { count } from "drizzle-orm";
 import { crud } from "./crudRegistry";
 import { TEST_ADMIN_SESSION } from "./auth/session";
 
 const session = TEST_ADMIN_SESSION;
 
-export async function getCreditsPage(page: number, perPage = 12) {
+export async function getTicketsPage(page: number, perPage = 12) {
   if (page < 1) page = 1;
 
-  const totalResult = await db.select({ count: count(User.id) }).from(User);
+  const totalResult = await db.select({ count: count(Ticket.id) }).from(Ticket);
 
   const totalCount = totalResult[0].count;
   const totalPages = Math.ceil(totalCount / perPage);

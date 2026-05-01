@@ -4,7 +4,7 @@ import { or, ilike, like, eq, getTableColumns } from "drizzle-orm";
 import { Event, Ticket, User } from "@db/schema";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
-import type { CreditSelect } from "@ty/Schema";
+import type { TicketSelect } from "@ty/Schema";
 import { handleResult } from "@lib/handleRenderResult";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
@@ -13,12 +13,12 @@ import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
 import { getUsersPage } from "@lib/getUsersPage";
 import { handleQueryResult } from "@lib/handleQueryResult";
-import { getCreditsPage } from "@lib/getCreditsPage";
+import { getTicketsPage } from "@lib/getTicketsPage";
 
 const users = await db.select().from(User);
 const events = await db.select().from(Event);
 
-let tickets: CreditSelect[] | null | undefined = null;
+let tickets: TicketSelect[] | null | undefined = null;
 let error = null;
 const config = ticketsConfigRequired(users, events);
 const ctx = {
@@ -130,7 +130,7 @@ if (Astro.request.method === "POST") {
         : await baseQuery;
     } else {
       // Empty search - return no results (or all tickets if you prefer)
-      const result = await getCreditsPage(page);
+      const result = await getTicketsPage(page);
       tickets = result.tickets;
     }
   } catch (e) {
@@ -153,7 +153,7 @@ const partialType = Astro.request.headers.get("X-Partial-Type") as
   | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
-const result = handleQueryResult<CreditSelect>({
+const result = handleQueryResult<TicketSelect>({
   error,
   rows: tickets,
   method: Astro.request.method,

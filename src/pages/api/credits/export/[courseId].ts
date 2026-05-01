@@ -1,7 +1,7 @@
 // /api/tickets/export/:id
 import { getMsToken } from "@lib/auth/msAuthentication";
 import { formatPhonePrettyManual } from "@lib/formatters";
-import type { CreditInsert, UserInsert } from "@ty/Schema.d.ts";
+import type { TicketInsert, UserInsert } from "@ty/Schema.d.ts";
 import type { APIRoute } from "astro";
 import { db } from "@db/db";
 import { Event, Ticket, User } from "@db/schema";
@@ -162,9 +162,9 @@ export const PUT: APIRoute = async ({ params, request, redirect }) => {
 //   user: typeof User.$inferInsert;
 // };
 
-type CreditWithMember = Omit<CreditInsert, "id" | "date"> & {
-  creditId: CreditInsert["id"];
-  dateCreated: CreditInsert["timestamp"];
+type CreditWithMember = Omit<TicketInsert, "id" | "date"> & {
+  creditId: TicketInsert["id"];
+  dateCreated: TicketInsert["timestamp"];
   user: Omit<UserInsert, "id"> & {
     user_id: UserInsert["id"];
     phone: string; // because you force "" as fallback

@@ -1,4 +1,7 @@
-## ⚙️ DEV Environment
+Event hosting platform (tickets, planning, upcoming/past promotion)
+
+<details>
+<summary>⚙️ DEV Environment</summary>
 
 ```shell
 ## spin up development postgres container
@@ -63,18 +66,23 @@ npx drizzle-kit generate   # generates SQL migration files
 npx drizzle-kit migrate    # runs them against your DB
 ```
 
-## 🏭 Production
+</details>
+
+<details>
+<summary> 🏭 Production</summary>
 
 ```shell
 cp .env.example .env
 cp compose.yml.example compose.yml
 docker compose build
 docker compose up --remove-orphans
-
 ```
+
+</details>
 
 #todo
 
+- [ ] use the db.select() thoughtfully to not just grab ALL data
 - [ ] how to create `virtual` fields (like an `event.location_info` pulls the location.name location.address in a short one liner without having to make a join or api)
 - [ ] db exporter data to .json file
 - [x] table sorting for each column (asc, desc, default)

@@ -4,12 +4,12 @@ import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { crud } from "@lib/crudRegistry";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
-import type { CourseSelect } from "@ty/Schema";
+import type { EventSelect } from "@ty/Schema";
 import RowEdit from "@components/tables/RowEdit.astro";
 
 type ViewType = "table-row" | "card";
 
-let course: CourseSelect | null | undefined = null;
+let course: EventSelect | null | undefined = null;
 let error = null;
 let view: ViewType = "table-row";
 
@@ -23,7 +23,7 @@ const ctx = {
   crud: crudKey,
   config,
   endpoint: "/attendance/events",
-  headers: Object.keys(config) as (keyof CourseSelect & string)[],
+  headers: Object.keys(config) as (keyof EventSelect & string)[],
 };
 
 if (Astro.request.method === "GET") {

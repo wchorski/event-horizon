@@ -14,7 +14,7 @@
 // "_ame_cpe_post_policy": "{\"accessProtection\":{\"active\":\"replace\"}}"
 // }
 
-import type { CourseInsert } from "@ty/Schema";
+import type { EventInsert } from "@ty/Schema";
 import {
   ConflictError,
   ForbiddenError,
@@ -51,7 +51,7 @@ function acfDateTimeFromCivil(date_civil: string) {
 // }
 
 export async function createWordpressEventPost(
-  course: CourseInsert,
+  course: EventInsert,
   //   timezone: string,
 ) {
   if (!WP_USERNAME || !WP_APP_PASSWORD)
@@ -148,7 +148,7 @@ export async function createWordpressEventPost(
 
 export async function updateWordpressEventPost(
   //   eventId: number,
-  course: CourseInsert,
+  course: EventInsert,
   //   timezone: string,
 ) {
   if (!WP_USERNAME || !WP_APP_PASSWORD) {
@@ -212,7 +212,7 @@ export async function updateWordpressEventPost(
 }
 
 // TODO hardcoding for now to get MVP prototype. need to save id to Event.siteId
-function getSiteMap(course: CourseInsert) {
+function getSiteMap(course: EventInsert) {
   const { locationId } = course;
   const ids = [];
   switch (true) {
@@ -232,7 +232,7 @@ function getSiteMap(course: CourseInsert) {
 }
 
 // TODO learn how to move from hardcode
-function getEventFilterMap(course: CourseInsert) {
+function getEventFilterMap(course: EventInsert) {
   const { locationId, subject } = course;
   const ids = [];
   switch (true) {

@@ -6,9 +6,10 @@ interface Props {
   page: number;
   perPage?: number;
   location_id?: string;
+  selectFields?: Object;
 }
 
-export async function getCoursesPage({
+export async function getEventsPage({
   page,
   perPage = 12,
   location_id,
@@ -34,6 +35,13 @@ export async function getCoursesPage({
   }
 
   const events = await db
+    // TODO configurable conditional filter
+    // .select({
+    //   id: Event.id,
+    //   timestamp: Event.timestamp,
+    //   subject: Event.subject,
+    //   excerpt: Event.excerpt,
+    // })
     .select()
     .from(Event)
     .where(and(...conditions))

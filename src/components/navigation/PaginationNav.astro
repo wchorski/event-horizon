@@ -7,22 +7,29 @@ interface Props {
   // how many pages to show on each side of current page
   siblingCount?: number;
 }
-const params = new URLSearchParams(Astro.url.searchParams);
+
 const { page, perPage, totalCount, path, siblingCount = 10 } = Astro.props;
 
 const totalPages = Math.ceil(totalCount / perPage);
-
 const start = (page - 1) * perPage + 1;
 const end = Math.min(page * perPage, totalCount);
 
 function href(p: number) {
+  const params = new URLSearchParams(Astro.url.searchParams);
+
+  // Remove page param for page 1, otherwise set it
+  if (p === 1) {
+    params.delete("page");
+  } else {
+    params.set("page", p.toString());
+  }
+
   const query = params.toString();
-  return query ? `${path}/${p}?${query}` : `${path}/${p}`;
+  return query ? `${path}?${query}` : path;
 }
 
 function getPageRange() {
   const pages: (number | "dots")[] = [];
-
   const left = Math.max(1, page - siblingCount);
   const right = Math.min(totalPages, page + siblingCount);
 
@@ -50,7 +57,6 @@ const visiblePages = getPageRange();
 ---
 
 <nav class="pagination">
-  <!-- Previous -->
   <a
     href={href(page - 1)}
     class="btn"
@@ -59,7 +65,6 @@ const visiblePages = getPageRange();
     Previous
   </a>
 
-  <!-- Page numbers -->
   <ul class="sub-nav">
     {
       visiblePages.map((p) =>
@@ -82,7 +87,6 @@ const visiblePages = getPageRange();
     }
   </ul>
 
-  <!-- Next -->
   <a
     href={href(page + 1)}
     class="btn"

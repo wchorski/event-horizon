@@ -54,6 +54,7 @@ if (process.argv.includes("--truncate")) {
   await db.delete(schema.User);
   await db.delete(schema.Location);
   await db.delete(schema.Role);
+  await db.delete(schema.Booking);
 }
 
 // if (process.argv.includes("--truncate")) {
@@ -107,6 +108,9 @@ await db.insert(schema.User).values(seedData.users);
 // seedData.users.forEach((element) => {
 //   console.log(`+ ${element.email}`);
 // });
+console.log(`=== Bookings (+${seedData.bookings.length})===`);
+await db.insert(schema.Booking).values(seedData.bookings);
+
 console.log(`=== Events (+${seedData.events.length})===`);
 await db.insert(schema.Event).values(seedData.events);
 // seedData.events.forEach((element) => {
@@ -123,6 +127,12 @@ await db.insert(schema.Ticket).values(seedData.tickets);
 
 await client.end();
 
-console.log(
-  `🌲 Database seeded successfully. ${seedData.roles.length + seedData.users.length + seedData.events.length + seedData.tickets.length} items added 🌲`,
-);
+const total =
+  seedData.roles.length +
+  seedData.bookings.length +
+  seedData.events.length +
+  seedData.locations.length +
+  seedData.tickets.length +
+  seedData.users.length;
+  
+console.log(`🌲 Database seeded successfully. ${total} items added 🌲`);

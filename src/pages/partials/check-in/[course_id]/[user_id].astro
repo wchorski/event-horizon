@@ -11,7 +11,7 @@ import {
   errorHandlingOnSubmit,
   NotFoundError,
 } from "@lib/errors";
-import type { CreditSelect, UserSelect } from "@ty/Schema";
+import type { TicketSelect, UserSelect } from "@ty/Schema";
 import { handleResult } from "@lib/handleRenderResult";
 import CreditsForm from "@components/CreditsForm.astro";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
@@ -110,7 +110,7 @@ if (Astro.request.method === "POST") {
   }
 }
 
-const result = handleResult<CreditSelect>({
+const result = handleResult<TicketSelect>({
   error,
   entity: ticket,
   method: Astro.request.method as HttpMethod,

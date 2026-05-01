@@ -4,7 +4,7 @@ import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
-import type { CreditSelect } from "@ty/Schema";
+import type { TicketSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
 import type { BaseRow } from "@ty/FieldConfig";
 import type { TableRow } from "@ty/Table";
@@ -19,7 +19,7 @@ interface Params {
 
 const id = Astro.params.id;
 if (!id) throw new BadRequestError("Missing required parameter: id");
-let ticket: CreditSelect | null | undefined = null;
+let ticket: TicketSelect | null | undefined = null;
 let error: string | ReturnType<ZodError["flatten"]> | null = null;
 const users = await crud.users.readMany(TEST_ADMIN_SESSION);
 const events = await crud.events.readMany(TEST_ADMIN_SESSION);
@@ -87,7 +87,7 @@ const partialType = Astro.request.headers.get("X-Partial-Type") as
   | PartialType
   | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
-type ZodErrorFlattened = ReturnType<ZodError<CreditSelect>["flatten"]>;
+type ZodErrorFlattened = ReturnType<ZodError<TicketSelect>["flatten"]>;
 type RenderResult =
   | {
       kind: "field-error";
@@ -99,7 +99,7 @@ type RenderResult =
     }
   | {
       kind: "success";
-      ticket: CreditSelect;
+      ticket: TicketSelect;
       method: "GET" | "POST" | "PATCH" | "DELETE";
     };
 

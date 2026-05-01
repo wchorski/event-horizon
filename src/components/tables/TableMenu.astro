@@ -17,6 +17,7 @@ const { model, page, perPage, placeholder } = Astro.props;
   <TableSearchForm model={model} page={page} placeholder={placeholder} />
   <form method="get">
     <slot name="filters-fieldset" />
+    <input type="hidden" name="page" value={page} />
     <PerPageSelect perPage={perPage} />
   </form>
 </menu>

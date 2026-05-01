@@ -1,34 +1,68 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { getCoursesPage } from "@lib/getCoursesPage";
-import CoursesList from "@partials/events-list.astro";
+import { getEventsPage } from "@lib/getEventsPage";
+import EventsList from "@components/EventsList.astro";
 import PaginationNav from "@components/navigation/PaginationNav.astro";
+const { SITE_TITLE } = import.meta.env;
+const page = parseInt(Astro.url.searchParams.get("page") || "1");
 
-const result = await getCoursesPage({page: 1});
-
-if ("redirect" in result) {
-  return Astro.redirect("/attendance/events");
+// Redirect ?page=1 to clean /events
+if (page === 1 && Astro.url.searchParams.has("page")) {
+  return Astro.redirect("/events", 301);
 }
 
-const { events = [], page, perPage, totalCount, totalPages } = result;
+const result = await getEventsPage({ page });
+
+if ("redirect" in result) {
+  return Astro.redirect("/events");
+}
+
+const { events = [], perPage, totalCount, totalPages } = result;
+
+// SEO metadata
+const canonicalUrl =
+  page === 1 ? `${Astro.site}/events` : `${Astro.site}/events?page=${page}`;
+const pageTitle = page === 1 ? "Events" : `Events - Page ${page}`;
 ---
 
 <BaseLayout>
-  <main>
-    <div class="card">
-      <h1>Events - Page {page}</h1>
-
-      {events ? <CoursesList events={events} /> : <p>no events found</p>}
-    </div>
+  <Fragment slot="head">
+    <link rel="canonical" href={canonicalUrl} />
     {
-      events.length > 0 ? (
-        <PaginationNav
-          path="/attendance/events"
-          page={Number(page)}
-          perPage={perPage}
-          totalCount={totalCount}
+      page > 1 && (
+        <link
+          rel="prev"
+          href={page === 2 ? `/events` : `/events?page=${page - 1}`}
         />
-      ) : null
+      )
     }
+    {page < totalPages && <link rel="next" href={`/events?page=${page + 1}`} />}
+    <title>{pageTitle} | {SITE_TITLE}</title>
+    <meta
+      name="description"
+      content={`Browse events - page ${page} of ${totalPages}`}
+    />
+  </Fragment>
+
+  <main>
+    <div data-layout="content">
+      <h1>Events{page > 1 && ` - Page ${page}`}</h1>
+
+      {
+        events.length > 0 ? (
+          <>
+            <EventsList events={events} />
+            <PaginationNav
+              path="/events"
+              page={page}
+              perPage={perPage}
+              totalCount={totalCount}
+            />
+          </>
+        ) : (
+          <p>No events found</p>
+        )
+      }
+    </div>
   </main>
 </BaseLayout>

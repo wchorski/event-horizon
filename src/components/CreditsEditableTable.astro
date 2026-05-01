@@ -1,14 +1,14 @@
 ---
 interface Props {
   
-  tickets: CreditSelect[];
+  tickets: TicketSelect[];
   users: UserSelect[];
-  events: CourseSelect[];
+  events: EventSelect[];
   
 }
 
 import TableEditable from "@components/TableEditable.astro";
-import type { CourseSelect, CreditSelect, UserSelect } from "@ty/Schema";
+import type { EventSelect, TicketSelect, UserSelect } from "@ty/Schema";
 import RowCreate from "./tables/RowCreate.astro";
 import { ticketsConfigRequired } from "@lib/tableConfigs";
 const { tickets: tableRows, users, events } = Astro.props;

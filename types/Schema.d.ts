@@ -1,24 +1,26 @@
-import { Role, Location, User, Event, Ticket } from "@db/schema";
+import { Role, Location, User, Event, Ticket, Booking } from "@db/schema";
 
 export type RoleInsert = typeof Role.$inferInsert;
 export type RoleSelect = typeof Role.$inferSelect;
-export type CreditInsert = typeof Ticket.$inferInsert;
-export type CreditSelect = typeof Ticket.$inferSelect;
+export type TicketInsert = typeof Ticket.$inferInsert;
+export type TicketSelect = typeof Ticket.$inferSelect;
 export type UserInsert = typeof User.$inferInsert;
 export type UserSelect = typeof User.$inferSelect;
-export type CourseInsert = typeof Event.$inferInsert;
-export type CourseSelect = typeof Event.$inferSelect;
+export type EventInsert = typeof Event.$inferInsert;
+export type EventSelect = typeof Event.$inferSelect;
 export type LocationInsert = typeof Location.$inferInsert;
 export type LocationSelect = typeof Location.$inferSelect;
+export type BookingInsert = typeof Booking.$inferInsert;
+export type BookingSelect = typeof Booking.$inferSelect;
 export type UserCreditSelect = {
-  ticket: CreditSelect;
+  ticket: TicketSelect;
   user: UserSelect;
 };
 export type AnyEntitySelect =
   | RoleSelect
-  | CreditSelect
+  | TicketSelect
   | UserSelect
-  | CourseSelect
+  | EventSelect
   | LocationSelect;
 
 export const schemaEntityMap = {

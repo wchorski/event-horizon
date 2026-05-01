@@ -6,7 +6,7 @@ import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { crud } from "@lib/crudRegistry";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
-import type { CourseSelect } from "@ty/Schema";
+import type { EventSelect } from "@ty/Schema";
 import type { ZodError } from "astro:schema";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
@@ -17,7 +17,7 @@ type ViewType = "table-row" | "card";
 
 const session = TEST_ADMIN_SESSION;
 
-let course: CourseSelect | null | undefined = null;
+let course: EventSelect | null | undefined = null;
 let error = null;
 let view: ViewType = "table-row";
 const crudKey = "events" as const;
@@ -27,7 +27,7 @@ const ctx = {
   crud: crudKey,
   config,
   endpoint: "/attendance/events",
-  headers: Object.keys(config) as (keyof CourseSelect & string)[],
+  headers: Object.keys(config) as (keyof EventSelect & string)[],
 };
 
 if (Astro.request.method === "POST") {
@@ -66,7 +66,7 @@ const partialType = Astro.request.headers.get("X-Partial-Type") as
   | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
-const result = handleResult<CourseSelect>({
+const result = handleResult<EventSelect>({
   error,
   entity: course,
   method: Astro.request.method,

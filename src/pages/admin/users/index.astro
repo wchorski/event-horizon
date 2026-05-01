@@ -5,12 +5,14 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import { getUsersPage } from "@lib/getUsersPage";
 import PaginationNav from "@components/navigation/PaginationNav.astro";
 import TableMenu from "@components/tables/TableMenu.astro";
+const { SITE_TITLE } = import.meta.env;
 const params = Astro.url.searchParams;
 
 const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
 const DEFAULT_PER_PAGE = 25;
 
 let perPageParam = DEFAULT_PER_PAGE;
+const page = parseInt(params.get("page") || "1");
 const rawPerPage = params.get("perPage");
 
 if (rawPerPage !== null) {
@@ -24,16 +26,22 @@ if (rawPerPage !== null) {
   }
 }
 
-const result = await getUsersPage({ page: 1, perPage: perPageParam });
+const result = await getUsersPage({ page, perPage: perPageParam });
 
 if ("redirect" in result) {
-  return Astro.redirect("/attendance/admin/users");
+  return Astro.redirect("/admin/users");
 }
 
-const { users, page, perPage, totalCount, totalPages } = result;
+const { users, perPage, totalCount, totalPages } = result;
+
+// SEO metadata
+const pageTitle = page === 1 ? "Users" : `Users - Page ${page}`;
 ---
 
 <BaseLayout>
+  <Fragment slot="head">
+    <title>{pageTitle} | {SITE_TITLE}</title>
+  </Fragment>
   <script type="module" src="/src/client/tablePerPage.ts"></script>
   <AdminNav />
   <main>
@@ -51,8 +59,8 @@ const { users, page, perPage, totalCount, totalPages } = result;
       {
         users ? (
           <PaginationNav
-            path="/attendance/admin/users"
-            page={Number(page)}
+            path="/admin/users"
+            page={page}
             perPage={perPage}
             totalCount={totalCount}
           />

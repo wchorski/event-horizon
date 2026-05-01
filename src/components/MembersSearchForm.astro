@@ -1,12 +1,12 @@
 ---
 // components/MemberSearchForm.astro
 import BarcodeScanner from "./BarcodeScanner.astro";
-import type { CourseSelect, UserSelect } from "@ty/Schema";
+import type { EventSelect, UserSelect } from "@ty/Schema";
 import InputField from "./form/InputField.astro";
 import SubmitButton from "./form/SubmitButton.astro";
 import { userCreditCheckInConfig } from "@lib/tableConfigs";
 interface Props {
-  course: CourseSelect;
+  course: EventSelect;
   formId?: string;
   user?: UserSelect;
 }

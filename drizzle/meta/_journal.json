@@ -8,6 +8,20 @@
       "when": 1777572558734,
       "tag": "0000_little_ted_forrester",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777667536979,
+      "tag": "0001_ordinary_lord_hawal",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777672372605,
+      "tag": "0002_normal_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

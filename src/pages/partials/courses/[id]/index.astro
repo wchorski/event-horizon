@@ -4,7 +4,7 @@ import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
-import type { CourseSelect } from "@ty/Schema";
+import type { EventSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import { delay } from "@lib/wait";
@@ -16,14 +16,14 @@ interface Params {
   id: string | undefined;
 }
 
-type ZodErrorFlattened = ReturnType<ZodError<CourseSelect>["flatten"]>;
+type ZodErrorFlattened = ReturnType<ZodError<EventSelect>["flatten"]>;
 
 // let id: string | null | undefined = null;
 const { id } = Astro.params;
 if (!id) throw new BadRequestError("course ID missing in request");
 const session = TEST_ADMIN_SESSION;
 const locations = await crud.locations.readMany(session);
-let course: CourseSelect | null | undefined = null;
+let course: EventSelect | null | undefined = null;
 let error: string | ReturnType<ZodError["flatten"]> | null = null;
 const crudKey = "events" as const;
 const config = courseConfigRequired(locations);
@@ -31,7 +31,7 @@ const ctx = {
   crud: crudKey,
   config,
   endpoint: "/attendance/events",
-  headers: Object.keys(config) as (keyof CourseSelect & string)[],
+  headers: Object.keys(config) as (keyof EventSelect & string)[],
 };
 
 if (Astro.request.method === "GET") {
@@ -98,7 +98,7 @@ type RenderResult =
     }
   | {
       kind: "success";
-      course: CourseSelect;
+      course: EventSelect;
       method: "GET" | "POST" | "PATCH" | "DELETE";
     };
 

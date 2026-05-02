@@ -6,7 +6,6 @@ import type { UserSelect } from "@ty/Schema";
 import TableEditable from "./TableEditable.astro";
 import RowCreate from "./tables/RowCreate.astro";
 import { tableConfigs } from "@lib/tableConfigs";
-const { DATALIST_STATES, DATALIST_CITIES } = import.meta.env;
 const { users } = Astro.props;
 
 const config = tableConfigs.users.required

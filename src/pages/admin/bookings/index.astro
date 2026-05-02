@@ -1,6 +1,5 @@
 ---
 import ButtonCoursesImport from "@components/ButtonCoursesImport.astro";
-import CoursesEditableTable from "@components/CoursesEditableTable.astro";
 import AdminNav from "@components/navigation/AdminNav.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import PaginationNav from "@components/navigation/PaginationNav.astro";
@@ -8,6 +7,8 @@ import TableMenu from "@components/tables/TableMenu.astro";
 import FilterSelect from "@components/form/FilterSelect.astro";
 import { getBookingsPage } from "@lib/getBookingsPage";
 import TableEditable from "@components/TableEditable.astro";
+import { bookingsRequiredConfig } from "@lib/tableConfigs";
+import RowCreate from "@components/tables/RowCreate.astro";
 const { SITE_TITLE } = import.meta.env;
 const { WORDPRESS_ENDPOINT } = import.meta.env;
 
@@ -51,6 +52,13 @@ if ("redirect" in result) {
 const { bookings, locations, perPage, totalCount, totalPages } = result;
 // SEO metadata
 const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
+
+const config = bookingsRequiredConfig(locations)
+const ctx = {
+  crud: "bookings" as const,
+  config,
+  headers: Object.keys(config)
+}
 ---
 
 <BaseLayout>
@@ -72,10 +80,10 @@ const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
       <div class="callout warning">
         <p>
           Created/Updated Bookings here will create/update an accompanying
-          Wordpress event set as DRAFT. To become viewable on the <a
-            href={WORDPRESS_ENDPOINT + "/wp-admin/edit.php?post_type=event"}
-            >Wordpress site</a
-          >, it must be set to PUBLISH.
+          Wordpress event set as DRAFT. To become viewable on the
+          <a href={WORDPRESS_ENDPOINT + "/wp-admin/edit.php?post_type=event"}>
+            Wordpress site
+          </a>, it must be set to PUBLISH.
         </p>
       </div>
       <hr />
@@ -105,14 +113,20 @@ const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
             No locations set. First create a location on the{" "}
             <a href="/attendance/admin/locations">locations page</a>
           </p>
-        ) : (
-          // <TableEditable crud={"bookings"} rows={bookings} config={ctx.config} />
-          <ul>
-            {bookings.map((booking) => (
-              <li>{booking.id}</li>
-            ))}
-          </ul>
-        )
+        ) : bookings.length === 0 ? (
+    <p class="callout not-found">no users found</p>
+    <table>
+      <tbody>
+        <RowCreate {...ctx} class:list={"highlight-green"} />
+      </tbody>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={bookings}
+      config={ctx.config}
+    />
+  )
       }
 
       {

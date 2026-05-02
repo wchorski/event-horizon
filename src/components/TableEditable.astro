@@ -3,18 +3,18 @@
 interface Props<TRow extends BaseRow = BaseRow> {
   rows: TRow[];
   config: FieldConfig<TRow>;
-  crud: CrudRegistryType;
+  crud: ModelName;
   endpoint?: string;
   createUrl?: string;
   editUrl?: (id: string | number) => string;
   // TODO passed down from page
   // headers: string[]
 }
-// EditableTable.astro
+
 import ViewRow from "@components/tables/RowView.astro";
 import RowCreate from "./tables/RowCreate.astro";
-import type { CrudRegistryType } from "@lib/crudRegistry";
 import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
+import type { ModelName } from "@ty/Schema";
 
 const {
   rows,

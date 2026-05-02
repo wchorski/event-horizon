@@ -33,10 +33,15 @@ function randomStatus(): BookingSelect["status"] {
 
 function createBooking(i: number): BookingSelect {
   const id = `00000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}`;
+
+  const start = randomDate();
+  const durationHours = randomInt(1, 8); // 1–8 hour events
+  const end = addHours(start, durationHours);
+
   return {
     id,
-    start: new Date(),
-    end: new Date(),
+    start,
+    end,
     date_created: new Date(),
     date_modified: new Date(),
     revision: 1,

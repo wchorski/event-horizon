@@ -1,8 +1,10 @@
 import { z } from "astro/zod";
 import { normalizePhoneToE164Manual } from "./formatters";
+import { BOOKING_STATUSES } from "@db/schema";
 
 export const validate = {
   id: z.string(),
+  bookingStatus: z.enum(BOOKING_STATUSES),
   phone: z
     .string()
     .trim()

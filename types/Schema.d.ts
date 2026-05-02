@@ -1,4 +1,20 @@
-import { Role, Location, User, Event, Ticket, Booking } from "@db/schema";
+import { Role, Location, User, Event, Ticket, Booking, bookingStatusEnum, BookingContractorWithRole } from "@db/schema";
+
+export const models = {
+  locations: Location,
+  users: User,
+  roles: Role,
+  bookings: Booking,
+  events: Event,
+  tickets: Ticket,
+  booking_contractors: BookingContractorWithRole,
+} as const;
+
+
+export type ModelName =
+  (typeof models)[keyof typeof models]["_"]["name"];
+
+
 
 export type RoleInsert = typeof Role.$inferInsert;
 export type RoleSelect = typeof Role.$inferSelect;
@@ -52,3 +68,7 @@ export type UserCreditFlat = {
   state: string;
   zip: string;
 };
+
+
+export type BookingStatus =
+  typeof bookingStatusEnum.enumValues[number];

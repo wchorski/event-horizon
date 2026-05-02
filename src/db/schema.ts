@@ -1,4 +1,4 @@
-// src/lib/schema.ts
+// db/schema.ts
 import {
   pgTable,
   integer,
@@ -12,6 +12,7 @@ import {
   json,
   pgEnum,
   check,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -82,6 +83,8 @@ export const bookingStatusEnum = pgEnum("booking_status", [
   "POSTPONED",
 ]);
 
+export const BOOKING_STATUSES = bookingStatusEnum.enumValues;
+
 export const Booking = pgTable(
   "bookings",
   {
@@ -97,7 +100,7 @@ export const Booking = pgTable(
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),
-    // contractors_id:
+    // workers_id: added with bookingRelations
     client_id: uuid().references(() => User.id),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
@@ -108,28 +111,35 @@ export const Booking = pgTable(
   }),
 );
 
-export const contractorRoleEnum = pgEnum("contractor_role", [
+export const workerRoleEnum = pgEnum("worker_role", [
   "PRIMARY",
   "ASSISTANT",
   "SUPPORT",
 ]);
-// Junction table for many-to-many relationship between bookings and contractors
-export const BookingContractorWithRole = pgTable("booking_contractors", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  booking_id: uuid()
-    .notNull()
-    .references(() => Booking.id, { onDelete: "cascade" }),
-  contractor_id: uuid()
-    .notNull()
-    .references(() => User.id, { onDelete: "cascade" }),
-  role: contractorRoleEnum("role").default("PRIMARY"),
-  date_assigned: timestamp().notNull().defaultNow(),
-});
+// Junction table for many-to-many relationship between bookings and workers
+
+export const BookingWorkerWithRole = pgTable(
+  "booking_workers",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    booking_id: uuid()
+      .notNull()
+      .references(() => Booking.id, { onDelete: "cascade" }),
+    worker_id: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    role: workerRoleEnum("role").notNull().default("PRIMARY"),
+    date_assigned: timestamp().notNull().defaultNow(),
+  },
+  (table) => ({
+    uniq: unique().on(table.booking_id, table.worker_id),
+  }),
+);
 
 export const bookingRelations = relations(Booking, ({ many, one }) => ({
-  contractors: many(BookingContractorWithRole),
+  workers: many(BookingWorkerWithRole),
   client: one(User, { fields: [Booking.client_id], references: [User.id] }),
   location: one(Location, {
     fields: [Booking.location_id],
@@ -138,14 +148,14 @@ export const bookingRelations = relations(Booking, ({ many, one }) => ({
 }));
 
 export const bookingEmployeeRelations = relations(
-  BookingContractorWithRole,
+  BookingWorkerWithRole,
   ({ one }) => ({
     booking: one(Booking, {
-      fields: [BookingContractorWithRole.booking_id],
+      fields: [BookingWorkerWithRole.booking_id],
       references: [Booking.id],
     }),
-    employee: one(User, {
-      fields: [BookingContractorWithRole.contractor_id],
+    worker: one(User, {
+      fields: [BookingWorkerWithRole.worker_id],
       references: [User.id],
     }),
   }),

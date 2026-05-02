@@ -3,18 +3,16 @@
 import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
 import CellViewElement from "./CellViewElement.astro";
 import type { AstroBuiltinAttributes } from "astro";
-import type { CrudRegistryType } from "@lib/crudRegistry";
 import { slugify } from "@lib/formatters";
 import type { ZodError } from "astro/zod";
-import Popover from "@components/Popover.astro";
-import FormErrorMessage from "@components/mgmt/FormErrorMessage.astro";
 import AnchoredBox from "@components/AnchoredBox.astro";
+import type { ModelName } from "@ty/Schema";
 
 interface Props<TRow extends BaseRow = BaseRow> {
   row: TRow;
   headers: (keyof TRow & string)[];
   config: FieldConfig<TRow>;
-  crud: CrudRegistryType;
+  crud: ModelName;
   endpoint: string;
   classList?: AstroBuiltinAttributes["class:list"];
   oob?: boolean;

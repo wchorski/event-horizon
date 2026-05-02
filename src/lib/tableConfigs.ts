@@ -7,6 +7,7 @@ import type {
   UserSelect,
 } from "@ty/Schema";
 import { prettyDateToLocale } from "./formatters";
+import { BOOKING_STATUSES } from "@db/schema";
 
 const { DATALIST_CITIES, DATALIST_STATES, DATALIST_TIMEZONES } = import.meta
   .env;
@@ -81,6 +82,58 @@ const userRequiredConfig = {
   },
 } as FieldConfig<BaseRow>;
 
+export const bookingsRequiredConfig = (
+  locations: LocationSelect[],
+  events: EventSelect[],
+  clients: UserSelect[],
+) =>
+  ({
+    id: {
+      label: "ID",
+      type: "text",
+      required: true,
+      readonly: true,
+    },
+    start: {
+      type: "datetime-local",
+      required: true,
+    },
+    end: {
+      type: "datetime-local",
+      required: true,
+    },
+    revision: {
+      type: "number",
+      readonly: true,
+    },
+    status: {
+      type: "select",
+      required: true,
+      options: BOOKING_STATUSES.map((status) => ({
+        value: status,
+        label: status,
+      })),
+    },
+    location_id: {
+      label: "Location",
+      type: "select",
+      required: true,
+      options: locations.map((loc) => ({
+        value: loc.id,
+        label: loc.name,
+      })),
+    },
+    client_id: {
+      label: "Client",
+      type: "select",
+      required: true,
+      options: clients.map((user) => ({
+        value: user.id,
+        label: user.first_name,
+      })),
+    },
+  }) as FieldConfig<BaseRow>;
+
 export const userCreditCheckInConfig = {
   event_id: {
     label: "Event ID",
@@ -89,7 +142,7 @@ export const userCreditCheckInConfig = {
   },
   user_id: {
     label: "User ID",
-    type: "text"
+    type: "text",
   },
   email: {
     type: "email",
@@ -134,7 +187,7 @@ export const courseConfigRequired = (locations: LocationSelect[]) =>
       type: "select",
       required: true,
       options: locations.map((loc) => ({
-        value: String(loc.id),
+        value: loc.id,
         label: loc.name,
       })),
     },
@@ -228,7 +281,7 @@ export const ticketsConfigRequired = (
       type: "select",
       required: true,
       options: users.map((item) => ({
-        value: String(item.id),
+        value: item.id,
         label: `${item.first_name} ${item.middle_initial ?? ""} ${item.last_name} <${item.email}>`,
       })),
     },
@@ -247,7 +300,7 @@ export const ticketsConfigRequired = (
       type: "select",
       required: true,
       options: events.map((item) => ({
-        value: String(item.id),
+        value: item.id,
         label:
           item.subject + " | " + prettyDateToLocale(new Date(item.date_civil)),
       })),

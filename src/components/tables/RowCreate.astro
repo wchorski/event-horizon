@@ -7,7 +7,6 @@ import type {
   SearchSelectFieldSlot,
   SelectFieldSlot,
 } from "@ty/FieldConfig";
-import type { CrudRegistryType } from "@lib/crudRegistry";
 import SelectField from "@components/form/SelectField.astro";
 import TextareaField from "@components/form/TextareaField.astro";
 import InputField from "@components/form/InputField.astro";
@@ -15,9 +14,10 @@ import { slugify } from "@lib/formatters";
 import { ZodError } from "astro:schema";
 import SearchSelect from "@components/form/SearchSelect.astro";
 import AnchoredBox from "@components/AnchoredBox.astro";
+import type { ModelName } from "@ty/Schema";
 
 interface Props {
-  crud: CrudRegistryType;
+  crud: ModelName;
   config: FieldConfig;
   headers: string[];
   oob?: boolean;
@@ -66,7 +66,7 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
       if (key === "id") {
         return (
           <td data-type={type} class="background-success">
-            <span id={fieldErrorId} style="display: none;"></span>
+            <span id={fieldErrorId} style="display: none;" />
           </td>
         );
       }
@@ -115,8 +115,9 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
             {...inputAttrs}
             checked={false}
             formId={formId}
-            errorId={fieldErrorId}
             name={key}
+            model={crud}
+            id={"create"}
             label={label}
             type={type}
             value={override}

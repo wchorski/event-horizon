@@ -52,7 +52,7 @@ export async function getBookingsPage({
     .limit(perPage)
     .offset((page - 1) * perPage);
 
-  // TODO move this into one db call
+  // TODO don't fetch ALL locations. maybe use a join?
   const locations = await db.select().from(Location);
   // .limit(perPage)
   // .offset((page - 1) * perPage);

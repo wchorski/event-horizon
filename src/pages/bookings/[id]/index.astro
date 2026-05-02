@@ -42,7 +42,7 @@ if (!booking) {
   return new Response(null, { status: 404 });
 }
 
-const { start, end, client, notes, location } = booking;
+const { start, status, end, client, notes, location, assignments } = booking;
 const summary = bookingSummary(booking, client);
 // const locations = await crud.locations.readMany(session);
 ---
@@ -54,10 +54,23 @@ const summary = bookingSummary(booking, client);
       <h1>
         {summary}
       </h1>
-      <time datetime={start.toString()}>
-        start:
-        {prettyDateToLocale(start)}
-      </time>
+      <dl class="kv">
+        <dd>Status</dd>
+        <dt>{status}</dt>
+        <dd>start</dd>
+        <dt>
+          <time datetime={start.toString()}>
+            {prettyDateToLocale(start)}
+          </time>
+        </dt>
+        <dd>end</dd>
+        <dt>
+          <time datetime={end.toString()}>
+            {prettyDateToLocale(end)}
+          </time>
+        </dt>
+      </dl>
+
       <br />
       <br />
       {location ? <AddressOfLocation location={location} /> : null}
@@ -84,7 +97,15 @@ const summary = bookingSummary(booking, client);
     </header>
     <hr />
     <div data-layout="content">
+      <h2>Client</h2>
       <ArticleOfUserInfo user={client} />
+      <hr />
+      <h2>Assignments</h2>
+      {
+        assignments
+          .map((a) => a.user)
+          .map((user) => <ArticleOfUserInfo user={user} />)
+      }
       <p class="notes">
         {notes}
       </p>

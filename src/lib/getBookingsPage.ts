@@ -43,17 +43,16 @@ export async function getBookingsPage({
     limit: perPage,
     offset: (page - 1) * perPage,
     with: {
-      workers: {
+      assignments: {
         with: {
-          worker: true,
+          user: true,
+          role: true,
         },
       },
       client: true,
       location: true,
     },
   });
-
-  console.log({ bookings });
 
   // TODO don't fetch ALL locations. maybe use a join?
   const locations = await db.select().from(Location);
@@ -67,6 +66,8 @@ export async function getBookingsPage({
     totalCount,
     totalPages,
     perPage,
-    clients: bookings.filter((b) => b.client),
+    clients: bookings.flatMap((b) => (b.client ? [b.client] : [])),
+    // workers: bookings.map((b) => b.assignments).map((a) => a.user),
+    event_ids: bookings.flatMap((b) => b.event_id),
   };
 }

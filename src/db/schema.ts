@@ -91,6 +91,8 @@ export const Booking = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
+    // TODO handled with helper
+    // summary: ,
     start: timestamp().notNull(),
     end: timestamp().notNull(),
     notes: text(),
@@ -102,6 +104,8 @@ export const Booking = pgTable(
     date_modified: timestamp().notNull().defaultNow(),
     // worker_ids: added with bookingRelations
     client_id: uuid().references(() => User.id),
+    // TODO allow booking to survive if User is deleted
+    // client_id: uuid().references(() => User.id, { onDelete: "set null" }),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
     // service_id:
@@ -111,15 +115,16 @@ export const Booking = pgTable(
   }),
 );
 
-export const workerRoleEnum = pgEnum("worker_role", [
-  "PRIMARY",
-  "ASSISTANT",
-  "SUPPORT",
-]);
+// maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
+// export const assignmentsRoleEnum = pgEnum("worker_role", [
+//   "PRIMARY",
+//   "ASSISTANT",
+//   "SUPPORT",
+// ]);
 // Junction table for many-to-many relationship between bookings and workers
 
-export const BookingWorkerWithRole = pgTable(
-  "booking_workers",
+export const BookingAssignment = pgTable(
+  "booking_assignments",
   {
     id: uuid("id")
       .primaryKey()
@@ -127,19 +132,23 @@ export const BookingWorkerWithRole = pgTable(
     booking_id: uuid()
       .notNull()
       .references(() => Booking.id, { onDelete: "cascade" }),
-    worker_id: uuid()
+    user_id: uuid()
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
-    role: workerRoleEnum("role").notNull().default("PRIMARY"),
+    // role: assignmentsRoleEnum("role").notNull().default("PRIMARY"),
+    role_id: uuid()
+      .notNull()
+      .references(() => Role.id),
+
     date_assigned: timestamp().notNull().defaultNow(),
   },
   (table) => ({
-    uniq: unique().on(table.booking_id, table.worker_id),
+    uniq: unique().on(table.booking_id, table.user_id),
   }),
 );
 
 export const bookingRelations = relations(Booking, ({ many, one }) => ({
-  workers: many(BookingWorkerWithRole),
+  assignments: many(BookingAssignment),
   client: one(User, { fields: [Booking.client_id], references: [User.id] }),
   location: one(Location, {
     fields: [Booking.location_id],
@@ -147,16 +156,20 @@ export const bookingRelations = relations(Booking, ({ many, one }) => ({
   }),
 }));
 
-export const bookingEmployeeRelations = relations(
-  BookingWorkerWithRole,
+export const bookingAssignmentRelations = relations(
+  BookingAssignment,
   ({ one }) => ({
     booking: one(Booking, {
-      fields: [BookingWorkerWithRole.booking_id],
+      fields: [BookingAssignment.booking_id],
       references: [Booking.id],
     }),
-    worker: one(User, {
-      fields: [BookingWorkerWithRole.worker_id],
+    user: one(User, {
+      fields: [BookingAssignment.user_id],
       references: [User.id],
+    }),
+    role: one(Role, {
+      fields: [BookingAssignment.role_id],
+      references: [Role.id],
     }),
   }),
 );

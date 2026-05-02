@@ -1,0 +1,22 @@
+---
+import type { LocationSelect } from "@ty/Schema";
+
+interface Props {
+  location: LocationSelect;
+}
+
+const { location } = Astro.props;
+const { id, name, address, city, state, zip } = location;
+---
+
+<address class="location">
+  <strong class="name">
+    <a href={`/locations/${id}`}>{name}</a>
+  </strong>
+  <br />
+  {address}
+  <br />
+  {city}, {state}
+  {zip}
+  USA
+</address>

@@ -10,7 +10,7 @@
     "astro": "astro",
     "test": "vitest",
     "test:e2e": "npm run build && playwright test",
-    "db:dev:create": "tsx src/db/create-collection.ts",
+    "db:create": "tsx src/db/create-collection.ts",
     "db:push": "npx drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

@@ -1,0 +1,53 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getEventsPage } from "@lib/getEventsPage";
+import EventsList from "@components/EventsList.astro";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
+const { SITE_TITLE } = import.meta.env;
+const page = parseInt(Astro.url.searchParams.get("page") || "1");
+
+// Redirect ?page=1 to clean /events
+if (page === 1 && Astro.url.searchParams.has("page")) {
+  return Astro.redirect("/events", 301);
+}
+
+// const result = await getEventsPage({ page });
+
+// if ("redirect" in result) {
+//   return Astro.redirect("/bookings");
+// }
+
+// const { events = [], perPage, totalCount, totalPages } = result;
+
+// SEO metadata
+const canonicalUrl =
+  page === 1 ? `${Astro.site}/events` : `${Astro.site}/events?page=${page}`;
+const pageTitle = page === 1 ? "Events" : `Events - Page ${page}`;
+---
+
+<BaseLayout>
+  <Fragment slot="head">
+    <link rel="canonical" href={canonicalUrl} />
+    {
+      page > 1 && (
+        <link
+          rel="prev"
+          href={page === 2 ? `/events` : `/events?page=${page - 1}`}
+        />
+      )
+    }
+    <!-- {page < totalPages && <link rel="next" href={`/events?page=${page + 1}`} />} -->
+    <title>{pageTitle} | {SITE_TITLE}</title>
+    <!-- <meta
+      name="description"
+      content={`Browse events - page ${page} of ${totalPages}`}
+    /> -->
+  </Fragment>
+
+  <main>
+    <div data-layout="content">
+      <h1>Bookings{page > 1 && ` - Page ${page}`}</h1>
+
+    </div>
+  </main>
+</BaseLayout>

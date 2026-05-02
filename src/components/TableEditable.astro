@@ -7,6 +7,7 @@ interface Props<TRow extends BaseRow = BaseRow> {
   endpoint?: string;
   createUrl?: string;
   editUrl?: (id: string | number) => string;
+  showCreateRow?: boolean;
   // TODO passed down from page
   // headers: string[]
 }
@@ -23,6 +24,7 @@ const {
   endpoint = `/${crud}`,
   editUrl,
   createUrl,
+  showCreateRow = true,
 } = Astro.props;
 
 const headers = Object.keys(config);
@@ -69,14 +71,18 @@ function label(key: string) {
         ))
       }
     </tbody>
-    <tfoot>
-      <RowCreate
-        config={config}
-        crud={crud}
-        headers={headers}
-        actionUrl={createUrl}
-      />
-    </tfoot>
+    {
+      showCreateRow ? (
+        <tfoot>
+          <RowCreate
+            config={config}
+            crud={crud}
+            headers={headers}
+            actionUrl={createUrl}
+          />
+        </tfoot>
+      ) : null
+    }
   </table>
 </div>
 <script>

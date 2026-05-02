@@ -129,7 +129,7 @@ export const bookingsRequiredConfig = (
       required: true,
       options: clients.map((user) => ({
         value: user.id,
-        label: user.first_name,
+        label: `${user.first_name} ${user.middle_initial || ""} ${user.last_name} <${user.email}>`,
       })),
     },
   }) as FieldConfig<BaseRow>;

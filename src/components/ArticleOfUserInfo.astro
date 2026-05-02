@@ -1,0 +1,25 @@
+---
+import { formatPhonePrettyManual } from "@lib/formatters";
+import type { UserInsert } from "@ty/Schema";
+
+interface Props {
+  user: UserInsert;
+}
+const { user } = Astro.props;
+
+const { id, first_name, middle_initial, last_name, email, phone } = user;
+---
+
+<article class="card">
+  <h3>
+    <a href={`/users/${id}`}>
+      {`${first_name} ${middle_initial || ""} ${last_name}`}</a
+    >
+  </h3>
+  <dl class="kv">
+    <dd>email</dd>
+    <dt>{email}</dt>
+    <dd>phone</dd>
+    <dt>{formatPhonePrettyManual(phone)}</dt>
+  </dl>
+</article>

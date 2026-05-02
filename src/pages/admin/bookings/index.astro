@@ -9,6 +9,9 @@ import { getBookingsPage } from "@lib/getBookingsPage";
 import TableEditable from "@components/TableEditable.astro";
 import { bookingsRequiredConfig } from "@lib/tableConfigs";
 import RowCreate from "@components/tables/RowCreate.astro";
+import { and, desc, eq } from "drizzle-orm";
+import { Booking } from "@db/schema";
+import { db } from "@db/db";
 const { SITE_TITLE } = import.meta.env;
 const { WORDPRESS_ENDPOINT } = import.meta.env;
 
@@ -45,15 +48,22 @@ const result = await getBookingsPage({
   location_id,
 });
 
+const conditions = [];
+
+  if (location_id) {
+    conditions.push(eq(Booking.location_id, location_id));
+  }
+
+
 if ("redirect" in result) {
   return Astro.redirect("/admin/bookings");
 }
 
-const { bookings, locations, perPage, totalCount, totalPages } = result;
+const { bookings, locations, perPage, totalCount, clients, totalPages } = result;
 // SEO metadata
 const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
 
-const config = bookingsRequiredConfig(locations)
+const config = bookingsRequiredConfig(locations, [], clients)
 const ctx = {
   crud: "bookings" as const,
   config,
@@ -125,6 +135,7 @@ const ctx = {
       crud={ctx.crud}
       rows={bookings}
       config={ctx.config}
+      showCreateRow={false}
     />
   )
       }

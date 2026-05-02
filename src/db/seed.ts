@@ -7,7 +7,7 @@ import * as schema from "./schema.js";
 import { seedData } from "./seed-data.js";
 import { createPgClient, getPGDatabaseUrl } from "./client.js";
 import { sql } from "drizzle-orm";
-import { createWorkersForBooking } from "./seed/bookingWorkerWithRole.js";
+import { createAssignmentsForBooking } from "./seed/bookingAssignments.js";
 
 // ---- guards -------------------------------------------------
 
@@ -50,12 +50,13 @@ const db = drizzle(client, {
 
 if (process.argv.includes("--truncate")) {
   console.log("⚠️ Truncating tables...");
+  await db.delete(schema.BookingAssignment);
+  await db.delete(schema.Booking);
   await db.delete(schema.Ticket);
   await db.delete(schema.Event);
   await db.delete(schema.User);
   await db.delete(schema.Location);
   await db.delete(schema.Role);
-  await db.delete(schema.Booking);
 }
 
 // if (process.argv.includes("--truncate")) {
@@ -119,15 +120,13 @@ const randomBookings = seedData.bookings;
 console.log(`=== Bookings (+${randomBookings.length})===`);
 await db.insert(schema.Booking).values(randomBookings);
 
-const bookingWorkers = randomBookings.flatMap((b) =>
-  createWorkersForBooking(b.id),
+const bookingAssignments = randomBookings.flatMap((b) =>
+  createAssignmentsForBooking(b.id),
 );
-console.log(
-  `=== Relations: Workers for Bookings (+${bookingWorkers.length})===`,
-);
+console.log(`=== Booking Assignments (+${bookingAssignments.length})===`);
 await db
-  .insert(schema.BookingWorkerWithRole)
-  .values(bookingWorkers)
+  .insert(schema.BookingAssignment)
+  .values(bookingAssignments)
   .onConflictDoNothing();
 
 console.log(`=== Tickets (+${seedData.tickets.length})===`);

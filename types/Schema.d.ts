@@ -1,5 +1,5 @@
 import {
-  BookingWorkerWithRole,
+  BookingAssignment,
   Role,
   Location,
   User,
@@ -7,7 +7,7 @@ import {
   Ticket,
   Booking,
   bookingStatusEnum,
-  workerRoleEnum,
+  assignmentsRoleEnum,
   BookingContractorWithRole,
 } from "@db/schema";
 
@@ -35,10 +35,8 @@ export type LocationInsert = typeof Location.$inferInsert;
 export type LocationSelect = typeof Location.$inferSelect;
 export type BookingInsert = typeof Booking.$inferInsert;
 export type BookingSelect = typeof Booking.$inferSelect;
-export type BookingWorkerWithRoleInsert =
-  typeof BookingWorkerWithRole.$inferInsert;
-export type BookingWorkerWithRoleSelect =
-  typeof BookingWorkerWithRole.$inferSelect;
+export type BookingAssignmentInsert = typeof BookingAssignment.$inferInsert;
+export type BookingAssignmentSelect = typeof BookingAssignment.$inferSelect;
 export type UserCreditSelect = {
   ticket: TicketSelect;
   user: UserSelect;
@@ -81,4 +79,4 @@ export type UserCreditFlat = {
 };
 
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
-export type WorkerRoles = (typeof workerRoleEnum.enumValues)[number];
+export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];

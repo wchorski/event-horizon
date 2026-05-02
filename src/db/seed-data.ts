@@ -10,10 +10,11 @@ import type {
   BookingSelect,
 } from "@ty/Schema";
 
-import usersSeed from "./seed/users";
-import eventsSeed from "./seed/events";
-import bookingsSeed from "./seed/bookings";
-import locationsSeed from "./seed/locations";
+import users from "./seed/users";
+import events from "./seed/events";
+import bookings from "./seed/bookings";
+import locations from "./seed/locations";
+import roles from "./seed/roles";
 
 type SeedData = {
   locations: LocationSelect[];
@@ -25,39 +26,8 @@ type SeedData = {
 };
 
 export const seedData: SeedData = {
-  roles: [
-    {
-      id: "00000000-0000-0000-0000-000000000001",
-      label: "admin",
-      excerpt: "Permission to create/read/update/delete all data",
-      permissions: Object.values(PERMISSIONS), // admin gets everything
-    },
-    {
-      id: "00000000-0000-0000-0000-000000000002",
-      label: "host",
-      excerpt:
-        "Permission to create/read/update/delete all users, events, locations, & tickets",
-      permissions: [
-        PERMISSIONS.viewAllUsers,
-        PERMISSIONS.manageAllEvents,
-        PERMISSIONS.viewAllTickets,
-      ],
-    },
-    {
-      id: "00000000-0000-0000-0000-000000000003",
-      label: "attendee",
-      excerpt:
-        "Permission to create/read/update/delete all users, events, locations, & tickets",
-      permissions: [PERMISSIONS.viewAllEvents],
-    },
-    {
-      id: "00000000-0000-0000-0000-000000000004",
-      label: "guest",
-      excerpt: "Permission to only view events",
-      permissions: [PERMISSIONS.viewAllEvents],
-    },
-  ],
-  locations: locationsSeed,
+  roles,
+  locations,
   tickets: [
     {
       id: "00000000-0000-0000-0000-000000000001",
@@ -160,7 +130,7 @@ export const seedData: SeedData = {
       date_modified: new Date("2026-03-20T10:00:00"),
     },
   ],
-  users: usersSeed,
-  events: eventsSeed,
-  bookings: bookingsSeed,
+  users,
+  events,
+  bookings,
 };

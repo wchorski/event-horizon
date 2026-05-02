@@ -37,20 +37,23 @@ export async function getBookingsPage({
     return { redirect: true };
   }
 
-  const bookings = await db
-    // TODO configurable conditional filter
-    // .select({
-    //   id: Booking.id,
-    //   timestamp: Booking.timestamp,
-    //   subject: Booking.subject,
-    //   excerpt: Booking.excerpt,
-    // })
-    .select()
-    .from(Booking)
-    .where(and(...conditions))
-    .orderBy(desc(Booking.start))
-    .limit(perPage)
-    .offset((page - 1) * perPage);
+  const bookings = await db.query.Booking.findMany({
+    where: and(...conditions),
+    orderBy: desc(Booking.start),
+    limit: perPage,
+    offset: (page - 1) * perPage,
+    with: {
+      workers: {
+        with: {
+          worker: true,
+        },
+      },
+      client: true,
+      location: true,
+    },
+  });
+
+  console.log({ bookings });
 
   // TODO don't fetch ALL locations. maybe use a join?
   const locations = await db.select().from(Location);
@@ -64,5 +67,6 @@ export async function getBookingsPage({
     totalCount,
     totalPages,
     perPage,
+    clients: bookings.filter((b) => b.client),
   };
 }

@@ -1,4 +1,15 @@
-import { Role, Location, User, Event, Ticket, Booking, bookingStatusEnum, BookingContractorWithRole } from "@db/schema";
+import {
+  BookingWorkerWithRole,
+  Role,
+  Location,
+  User,
+  Event,
+  Ticket,
+  Booking,
+  bookingStatusEnum,
+  workerRoleEnum,
+  BookingContractorWithRole,
+} from "@db/schema";
 
 export const models = {
   locations: Location,
@@ -10,11 +21,7 @@ export const models = {
   booking_contractors: BookingContractorWithRole,
 } as const;
 
-
-export type ModelName =
-  (typeof models)[keyof typeof models]["_"]["name"];
-
-
+export type ModelName = (typeof models)[keyof typeof models]["_"]["name"];
 
 export type RoleInsert = typeof Role.$inferInsert;
 export type RoleSelect = typeof Role.$inferSelect;
@@ -28,6 +35,10 @@ export type LocationInsert = typeof Location.$inferInsert;
 export type LocationSelect = typeof Location.$inferSelect;
 export type BookingInsert = typeof Booking.$inferInsert;
 export type BookingSelect = typeof Booking.$inferSelect;
+export type BookingWorkerWithRoleInsert =
+  typeof BookingWorkerWithRole.$inferInsert;
+export type BookingWorkerWithRoleSelect =
+  typeof BookingWorkerWithRole.$inferSelect;
 export type UserCreditSelect = {
   ticket: TicketSelect;
   user: UserSelect;
@@ -69,6 +80,5 @@ export type UserCreditFlat = {
   zip: string;
 };
 
-
-export type BookingStatus =
-  typeof bookingStatusEnum.enumValues[number];
+export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
+export type WorkerRoles = (typeof workerRoleEnum.enumValues)[number];

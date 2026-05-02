@@ -100,7 +100,7 @@ export const Booking = pgTable(
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),
-    // workers_id: added with bookingRelations
+    // worker_ids: added with bookingRelations
     client_id: uuid().references(() => User.id),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),

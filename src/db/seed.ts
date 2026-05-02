@@ -7,6 +7,7 @@ import * as schema from "./schema.js";
 import { seedData } from "./seed-data.js";
 import { createPgClient, getPGDatabaseUrl } from "./client.js";
 import { sql } from "drizzle-orm";
+import { createWorkersForBooking } from "./seed/bookingWorkerWithRole.js";
 
 // ---- guards -------------------------------------------------
 
@@ -108,14 +109,26 @@ await db.insert(schema.User).values(seedData.users);
 // seedData.users.forEach((element) => {
 //   console.log(`+ ${element.email}`);
 // });
-console.log(`=== Bookings (+${seedData.bookings.length})===`);
-await db.insert(schema.Booking).values(seedData.bookings);
 
 console.log(`=== Events (+${seedData.events.length})===`);
 await db.insert(schema.Event).values(seedData.events);
 // seedData.events.forEach((element) => {
 //   console.log(`+ ${element.subject} | ${element.date_civil}`);
 // });
+const randomBookings = seedData.bookings;
+console.log(`=== Bookings (+${randomBookings.length})===`);
+await db.insert(schema.Booking).values(randomBookings);
+
+const bookingWorkers = randomBookings.flatMap((b) =>
+  createWorkersForBooking(b.id),
+);
+console.log(
+  `=== Relations: Workers for Bookings (+${bookingWorkers.length})===`,
+);
+await db
+  .insert(schema.BookingWorkerWithRole)
+  .values(bookingWorkers)
+  .onConflictDoNothing();
 
 console.log(`=== Tickets (+${seedData.tickets.length})===`);
 await db.insert(schema.Ticket).values(seedData.tickets);
@@ -134,5 +147,5 @@ const total =
   seedData.locations.length +
   seedData.tickets.length +
   seedData.users.length;
-  
+
 console.log(`🌲 Database seeded successfully. ${total} items added 🌲`);

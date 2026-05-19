@@ -141,7 +141,8 @@ await client.end();
 
 const total =
   seedData.roles.length +
-  seedData.bookings.length +
+  randomBookings.length +
+  bookingAssignments.length +
   seedData.events.length +
   seedData.locations.length +
   seedData.tickets.length +

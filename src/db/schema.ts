@@ -97,7 +97,7 @@ export const Booking = pgTable(
     end: timestamp().notNull(),
     notes: text(),
     secret_notes: text(),
-    revision: integer().notNull().default(1), // default to 1
+    revision: integer().notNull().default(1),
     google_calendar: json(),
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
     date_created: timestamp().notNull().defaultNow(),
@@ -173,6 +173,26 @@ export const bookingAssignmentRelations = relations(
     }),
   }),
 );
+
+export const Planner = pgTable("planners", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  booking_id: uuid()
+    .notNull()
+    .references(() => Booking.id, { onDelete: "cascade" }),
+  owner_user_id: uuid()
+    .notNull()
+    .references(() => User.id, { onDelete: "cascade" }),
+  revision: integer().notNull().default(1),
+  date_created: timestamp().notNull().defaultNow(),
+  date_modified: timestamp().notNull().defaultNow(),
+  timestamp: timestamp().notNull(),
+  date_civil: text().notNull(),
+  notes: text(),
+  secret_notes: text(),
+  color: text(),
+});
 
 export const Event = pgTable(
   "events",

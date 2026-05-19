@@ -1,0 +1,106 @@
+---
+interface Props {
+  hours?: number;
+  start?: number;
+  end?: number;
+  planner: {
+    desc: string;
+    skill: string;
+    block_id: number;
+    note: string;
+    start: string;
+    end: string;
+  }[];
+}
+const { hours = 24, start = 0, end = 24, planner } = Astro.props;
+---
+
+<div class="timeline-graph">
+  <!-- Y-axis labels -->
+  <div class="y-axis">
+    <span>Breakfast</span>
+    <span>Brunch</span>
+    <span>Lunch</span>
+    <span>Dinner</span>
+    <span>Late Night Snack</span>
+  </div>
+
+  <!-- Grid container -->
+  <div class="grid-container">
+    <!-- Grid lines -->
+    <div class="grid-area">
+      {Array.from({ length: hours }, (_, i) => <div class="hour-column" />)}
+    </div>
+
+    <!-- X-axis hours -->
+    <div class="x-axis">
+      {
+        Array.from({ length: hours }, (_, i) => (
+          <span class="hour-label">{i}</span>
+        ))
+      }
+    </div>
+  </div>
+</div>
+
+<style define:vars={{ hours }}>
+  .timeline-graph {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding-right: 1rem;
+    border-right: 2px solid #dddddd36;
+  }
+
+  .y-axis span {
+    font-size: 0.9rem;
+    text-align: right;
+    padding: 0.5rem 0;
+  }
+
+  .grid-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .x-axis {
+    display: grid;
+    grid-template-columns: repeat(var(--hours), 1fr);
+    border-top: 2px solid #dddddd4c;
+    padding-top: 0.5rem;
+    gap: 4px;
+  }
+
+  .hour-label {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .grid-area {
+    display: grid;
+    grid-template-columns: repeat(var(--hours), 1fr);
+    min-height: 300px;
+    position: relative;
+  }
+
+  .hour-column {
+    border-right: 1px solid #eeeeee3b;
+  }
+
+  .hour-column:last-child {
+    border-right: none;
+  }
+
+  /* Style every 6th column to mark quarters */
+  .hour-column:nth-child(6n) {
+    border-right: 1px solid #cccccc35;
+  }
+</style>

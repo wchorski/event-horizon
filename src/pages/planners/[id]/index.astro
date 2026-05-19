@@ -1,0 +1,189 @@
+---
+interface Params {
+  id: string;
+}
+import TimelineGraph from "@components/TimelineGraph.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+export const prerender = false; // Not needed in 'server' mode
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/404");
+
+const planner = [
+  {
+    start: "16:00",
+    end: "16:10",
+    desc: "Ceremony Precession",
+    skill: "Song Que",
+    block_id: 1,
+    note: "",
+  },
+  {
+    start: "16:25",
+    end: "16:30",
+    desc: "Ceremony Recession",
+    skill: "Song Que",
+    block_id: 1,
+    note: "",
+  },
+  {
+    start: "16:30",
+    end: "17:30",
+    desc: "Cocktail Hour",
+    skill: "Music Playlist",
+    block_id: 2,
+    note: "",
+  },
+  {
+    start: "17:30",
+    end: "17:40",
+    desc: "Introductions",
+    skill: "MC Announcement",
+    block_id: 3,
+    note: "",
+  },
+  {
+    start: "17:40",
+    end: "17:45",
+    desc: "Cake Cutting",
+    skill: "Song Que",
+    block_id: 4,
+    note: "",
+  },
+  {
+    start: "17:45",
+    end: "17:50",
+    desc: "Blessing",
+    skill: "Speech",
+    block_id: 5,
+    note: "",
+  },
+  {
+    start: "18:00",
+    end: "19:30",
+    desc: "Dinner Music",
+    skill: "Music Playlist",
+    block_id: 2,
+    note: "",
+  },
+  {
+    start: "18:30",
+    end: "18:45",
+    desc: "Toasts",
+    skill: "Speech",
+    block_id: 4,
+    note: "",
+  },
+  {
+    start: "19:30",
+    end: "19:45",
+    desc: "Traditional Dances",
+    skill: "Song Que",
+    block_id: 4,
+    note: "",
+  },
+  {
+    start: "19:45",
+    end: "21:00",
+    desc: "Open Dancefloor",
+    skill: "Music Playlist",
+    block_id: 5,
+    note: "",
+  },
+];
+
+const blocks = [
+  {
+    id: 1,
+    name: "Ceremony",
+  },
+  {
+    id: 2,
+    name: "Reception",
+  },
+  {
+    id: 3,
+    name: "Introductions",
+  },
+  {
+    id: 4,
+    name: "Traditionals",
+  },
+  {
+    id: 5,
+    name: "Dancing",
+  },
+];
+
+function getTimeBlockClass(time: string) {
+  const hours = time.split(":")[0];
+  return `time-block--${hours}-00`;
+}
+---
+
+<BaseLayout>
+  <main>
+    <header class="flex">
+      <h1>Planner</h1>
+      <p class="sub-text">{id}</p>
+    </header>
+
+    <TimelineGraph planner={planner}/>
+
+    
+
+    <div class="flex gap-m" data-layout="content">
+      <table>
+        <thead>
+          <tr>
+            <th>start</th>
+            <th>end</th>
+            <th>desc</th>
+            <th>skill</th>
+            <th>block_id</th>
+            <th>note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            planner.map(({ start, end, desc, skill, block_id, note }) => (
+              <tr class={`time-block-row`}>
+                <td>{start}</td>
+                <td>{end}</td>
+                <td>{desc}</td>
+                <td>{skill}</td>
+                <td>
+                  <a href={`#${block_id}`}>{block_id}</a>
+                </td>
+                <td>{note}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+      <aside class="grid gap-m">
+        <h2>blocks</h2>
+        {
+          blocks.map(({ name, id }) => {
+            const relatedPlans = planner.filter((plan) => plan.block_id === id);
+            return (
+              <div class="card" id={String(id)}>
+                <h3>
+                  {name} | {id}
+                </h3>
+                {relatedPlans.length > 0 ? (
+                  <ul>
+                    {relatedPlans.map((plan) => (
+                      <li>{plan.desc}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>no plans set</p>
+                )}
+              </div>
+            );
+          })
+        }
+      </aside>
+    </div>
+  </main>
+</BaseLayout>

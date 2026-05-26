@@ -3,104 +3,131 @@ interface Props {
   hours?: number;
   start?: number;
   end?: number;
+  skills: {
+    name: string;
+    id: number;
+  }[];
   planner: {
     desc: string;
-    skill: string;
     block_id: number;
+    skill_id: number;
     note: string;
     start: string;
     end: string;
   }[];
 }
-const { hours = 24, start = 0, end = 24, planner } = Astro.props;
+
+import "@styles/timeline-graph.css";
+
+const { hours = 24, start = 0, end = 24, planner, skills } = Astro.props;
+
+const stepMinutes = 15;
+const tickEvery = 60;
+
+const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const formatTime = (mins: number) =>
+  `${pad2(Math.floor(mins / 60))}:${pad2(mins % 60)}`;
+
+// bounds
+const minStart = Math.min(...planner.map((p) => toMinutes(p.start)));
+const maxEnd = Math.max(...planner.map((p) => toMinutes(p.end)));
+
+// const totalMinutes = maxEnd - minStart;
+// const cols = Math.ceil(totalMinutes / stepMinutes); // 15-min columns
+
+// // align hourly grid lines even if minStart isn't on the hour
+// const hourRemainder = minStart % 60;
+// const hourOffsetMinutes = (60 - hourRemainder) % 60;
+// const hourOffsetSteps = Number.isInteger(hourOffsetMinutes / stepMinutes)
+//   ? hourOffsetMinutes / stepMinutes
+//   : 0;
+
+// // lanes: using block_id
+// const laneIds = Array.from(new Set(planner.map((p) => p.skill_id))).sort(
+//   (a: any, b: any) => {
+//     // numeric sort if both numeric-like
+//     const na = Number(a),
+//       nb = Number(b);
+//     if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+//     return String(a).localeCompare(String(b));
+//   },
+// );
+// const laneIndex = new Map(skills.map((s, i) => [s, i + 1])); // grid rows are 1-based
+
+// x-axis ticks (hourly only)
+let firstTick = Math.ceil(minStart / 60) * 60;
+if (minStart % 60 === 0) firstTick = minStart;
+
+const ticks: { time: number; colLine: number }[] = [];
+for (let t = firstTick; t <= maxEnd; t += tickEvery) {
+  const offset = t - minStart;
+  const colLine = Math.round(offset / stepMinutes) + 1;
+  ticks.push({ time: t, colLine });
+}
+
+// place blocks: compute grid lines for grid-column start/end [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column)
+const blocks = planner.map((item) => {
+  const startOffset = toMinutes(item.start) - minStart;
+  const endOffset = toMinutes(item.end) - minStart;
+
+  const c1 = Math.floor(startOffset / stepMinutes) + 1;
+  const c2Raw = Math.ceil(endOffset / stepMinutes) + 1;
+  const c2 = Math.max(c1 + 1, c2Raw); // ensure at least 1 column wide
+
+  const r = item.skill_id ?? 1;
+  return { item, c1, c2, r };
+});
+
+// const laneLabel = (name: string, id: number) => `${name} (${id})`;
+const columns = 24;
 ---
 
-<div class="timeline-graph">
-  <!-- Y-axis labels -->
-  <div class="y-axis">
-    <span>Breakfast</span>
-    <span>Brunch</span>
-    <span>Lunch</span>
-    <span>Dinner</span>
-    <span>Late Night Snack</span>
+<div
+  class="timeline-graph"
+  style={`
+    --cols:${columns};
+    --lanes:${skills.length};
+  `}
+>
+  <div class="y-axis" aria-label="Y axis lanes">
+    {skills.map(({ name, id }) => <div class="lane">{`${name} (${id})`}</div>)}
   </div>
 
-  <!-- Grid container -->
-  <div class="grid-container">
-    <!-- Grid lines -->
-    <div class="grid-area">
-      {Array.from({ length: hours }, (_, i) => <div class="hour-column" />)}
-    </div>
+  <div class="grid-container unstyled" aria-label="Timeline grid">
+    {
+      blocks.map(({ item, c1, c2, r }) => (
+        <div
+          class="time-block-item"
+          style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
+          title={`${item.desc} ${item.start}-${item.end} • ${item.skill_id}`}
+        >
+          <div class="time-block-item__title">{item.desc}</div>
+          <div class="time-block-item__meta">
+            {item.start}-{item.end} • {item.skill_id}
+          </div>
+        </div>
+      ))
+    }
+  </div>
 
-    <!-- X-axis hours -->
-    <div class="x-axis">
-      {
-        Array.from({ length: hours }, (_, i) => (
-          <span class="hour-label">{i}</span>
-        ))
-      }
-    </div>
+  <div class="x-axis unstyled" aria-label="X axis time labels">
+    {
+      ticks.map((t) => (
+        <div class="tick" style={`--c:${t.colLine};`}>
+          {formatTime(t.time)}
+        </div>
+      ))
+    }
   </div>
 </div>
 
 <style define:vars={{ hours }}>
-  .timeline-graph {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  .y-axis {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-evenly;
-    padding-right: 1rem;
-    border-right: 2px solid #dddddd36;
-  }
-
-  .y-axis span {
-    font-size: 0.9rem;
-    text-align: right;
-    padding: 0.5rem 0;
-  }
-
-  .grid-container {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .x-axis {
-    display: grid;
-    grid-template-columns: repeat(var(--hours), 1fr);
-    border-top: 2px solid #dddddd4c;
-    padding-top: 0.5rem;
-    gap: 4px;
-  }
-
-  .hour-label {
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 500;
-  }
-
-  .grid-area {
-    display: grid;
-    grid-template-columns: repeat(var(--hours), 1fr);
-    min-height: 300px;
-    position: relative;
-  }
-
-  .hour-column {
-    border-right: 1px solid #eeeeee3b;
-  }
-
-  .hour-column:last-child {
-    border-right: none;
-  }
-
-  /* Style every 6th column to mark quarters */
-  .hour-column:nth-child(6n) {
-    border-right: 1px solid #cccccc35;
+  :root {
+    --hours: hours;
   }
 </style>

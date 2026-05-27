@@ -4,6 +4,10 @@
   --c-pending: rgb(214, 221, 114);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body,
 html {
   margin: 0;

@@ -1,4 +1,12 @@
 ---
+export type Planner = {
+  desc: string;
+  block_id: number;
+  skill_id: number;
+  note: string;
+  start: number;
+  end: number;
+};
 interface Props {
   hours?: number;
   start?: number;
@@ -7,16 +15,10 @@ interface Props {
     name: string;
     id: number;
   }[];
-  planner: {
-    desc: string;
-    block_id: number;
-    skill_id: number;
-    note: string;
-    start: string;
-    end: string;
-  }[];
+  planner: Planner[];
 }
 
+import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import "@styles/timeline-graph.css";
 
 const { hours = 24, start = 0, end = 24, planner, skills } = Astro.props;
@@ -29,13 +31,9 @@ const toMinutes = (hhmm: string) => {
   return h * 60 + m;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-const formatTime = (mins: number) =>
-  `${pad2(Math.floor(mins / 60))}:${pad2(mins % 60)}`;
-
 // bounds
-const minStart = Math.min(...planner.map((p) => toMinutes(p.start)));
-const maxEnd = Math.max(...planner.map((p) => toMinutes(p.end)));
+const minStart = Math.min(...planner.map((p) => p.start));
+const maxEnd = Math.max(...planner.map((p) => p.end));
 
 // const totalMinutes = maxEnd - minStart;
 // const cols = Math.ceil(totalMinutes / stepMinutes); // 15-min columns
@@ -72,8 +70,8 @@ for (let t = firstTick; t <= maxEnd; t += tickEvery) {
 
 // place blocks: compute grid lines for grid-column start/end [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column)
 const blocks = planner.map((item) => {
-  const startOffset = toMinutes(item.start) - minStart;
-  const endOffset = toMinutes(item.end) - minStart;
+  const startOffset = item.start - minStart;
+  const endOffset = item.end - minStart;
 
   const c1 = Math.floor(startOffset / stepMinutes) + 1;
   const c2Raw = Math.ceil(endOffset / stepMinutes) + 1;
@@ -98,31 +96,34 @@ const columns = 24;
     {skills.map(({ name, id }) => <div class="lane">{`${name} (${id})`}</div>)}
   </div>
 
-  <div class="grid-container unstyled" aria-label="Timeline grid">
-    {
-      blocks.map(({ item, c1, c2, r }) => (
-        <div
-          class="time-block-item"
-          style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
-          title={`${item.desc} ${item.start}-${item.end} • ${item.skill_id}`}
-        >
-          <div class="time-block-item__title">{item.desc}</div>
-          <div class="time-block-item__meta">
-            {item.start}-{item.end} • {item.skill_id}
+  <div class="timeline-scroll" style={`--cols:${columns}; --time-cols: repeat(${columns}, var(--col-w));`}>
+    <div class="grid-container unstyled" aria-label="Timeline grid">
+      {
+        blocks.map(({ item, c1, c2, r }) => (
+          <div
+            class="time-block-item"
+            style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
+            title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}-${formatTimeMinutesToClockString(item.end, true)} • ${item.skill_id}`}
+          >
+            <div class="time-block-item__title">{item.desc}</div>
+            <div class="time-block-item__meta">
+              {formatTimeMinutesToClockString(item.start, true)}-
+              {formatTimeMinutesToClockString(item.end, true)} • {item.skill_id}
+            </div>
           </div>
-        </div>
-      ))
-    }
-  </div>
+        ))
+      }
+    </div>
 
-  <div class="x-axis unstyled" aria-label="X axis time labels">
-    {
-      ticks.map((t) => (
-        <div class="tick" style={`--c:${t.colLine};`}>
-          {formatTime(t.time)}
-        </div>
-      ))
-    }
+    <div class="x-axis unstyled" aria-label="X axis time labels">
+      {
+        ticks.map((t) => (
+          <div class="tick" style={`--c:${t.colLine};`}>
+            {formatTimeMinutesToClockString(t.time, true)}
+          </div>
+        ))
+      }
+    </div>
   </div>
 </div>
 

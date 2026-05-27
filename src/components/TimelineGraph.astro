@@ -1,134 +1,153 @@
 ---
-export type Planner = {
-  desc: string;
-  block_id: number;
-  skill_id: number;
-  note: string;
-  start: number;
-  end: number;
-};
 interface Props {
-  hours?: number;
-  start?: number;
-  end?: number;
-  skills: {
-    name: string;
-    id: number;
-  }[];
-  planner: Planner[];
+  /** viewport start hour (can be > 24 if you want a multi-day viewport) */
+  start?: number; // HOURS
+  /** viewport end hour (can be > 24 if you want a multi-day viewport) */
+  end?: number; // HOURS
+  skills: { name: string; id: number }[];
+  blocks: BlockPlanner[];
 }
 
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import "@styles/timeline-graph.css";
+import type { BlockPlanner } from "../pages/planners/[id]/index.astro";
 
-const { hours = 24, start = 0, end = 24, planner, skills } = Astro.props;
+const { start = 0, end = 24, blocks, skills } = Astro.props;
 
+/** grid resolution */
 const stepMinutes = 15;
+/** x-axis labels every hour */
 const tickEvery = 60;
 
-const toMinutes = (hhmm: string) => {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-};
+/** viewport bounds in minutes */
+const viewStartMin = start * 60;
+const viewEndMin = end * 60;
 
-// bounds
-const minStart = Math.min(...planner.map((p) => p.start));
-const maxEnd = Math.max(...planner.map((p) => p.end));
+/** number of 15-min columns visible */
+const cols = Math.ceil((viewEndMin - viewStartMin) / stepMinutes);
 
-// const totalMinutes = maxEnd - minStart;
-// const cols = Math.ceil(totalMinutes / stepMinutes); // 15-min columns
+/** lanes: skills define row order (id -> row index 1..N) */
+const laneIndex = new Map(skills.map((s, i) => [s.id, i + 1]));
+const lanes = skills.length;
 
-// // align hourly grid lines even if minStart isn't on the hour
-// const hourRemainder = minStart % 60;
-// const hourOffsetMinutes = (60 - hourRemainder) % 60;
-// const hourOffsetSteps = Number.isInteger(hourOffsetMinutes / stepMinutes)
-//   ? hourOffsetMinutes / stepMinutes
-//   : 0;
+/** clamp helper */
+const clamp = (n: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, n));
+const maxLine = cols + 1; // time-grid lines are 1..(cols+1)
 
-// // lanes: using block_id
-// const laneIds = Array.from(new Set(planner.map((p) => p.skill_id))).sort(
-//   (a: any, b: any) => {
-//     // numeric sort if both numeric-like
-//     const na = Number(a),
-//       nb = Number(b);
-//     if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
-//     return String(a).localeCompare(String(b));
-//   },
-// );
-// const laneIndex = new Map(skills.map((s, i) => [s, i + 1])); // grid rows are 1-based
-
-// x-axis ticks (hourly only)
-let firstTick = Math.ceil(minStart / 60) * 60;
-if (minStart % 60 === 0) firstTick = minStart;
+/** compute hourly ticks within viewport */
+let firstTick = Math.ceil(viewStartMin / 60) * 60;
+if (viewStartMin % 60 === 0) firstTick = viewStartMin;
 
 const ticks: { time: number; colLine: number }[] = [];
-for (let t = firstTick; t <= maxEnd; t += tickEvery) {
-  const offset = t - minStart;
-  const colLine = Math.round(offset / stepMinutes) + 1;
+for (let t = firstTick; t <= viewEndMin; t += tickEvery) {
+  const offset = t - viewStartMin;
+  const colLine = Math.round(offset / stepMinutes) + 1; // time-grid line
   ticks.push({ time: t, colLine });
 }
 
-// place blocks: compute grid lines for grid-column start/end [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column)
-const blocks = planner.map((item) => {
-  const startOffset = item.start - minStart;
-  const endOffset = item.end - minStart;
+/**
+ * Blocks:
+ * - filter to those overlapping viewport
+ * - clamp to viewport so we don't create implicit extra columns
+ * - convert minutes -> grid line numbers (c1/c2)
+ * - map skill_id -> row number
+ */
+const blockFormat = blocks
+  .filter((item) => item.end > viewStartMin && item.start < viewEndMin)
+  .map((item) => {
+    const clampedStart = Math.max(item.start, viewStartMin);
+    const clampedEnd = Math.min(item.end, viewEndMin);
 
-  const c1 = Math.floor(startOffset / stepMinutes) + 1;
-  const c2Raw = Math.ceil(endOffset / stepMinutes) + 1;
-  const c2 = Math.max(c1 + 1, c2Raw); // ensure at least 1 column wide
+    const startOffset = clampedStart - viewStartMin;
+    const endOffset = clampedEnd - viewStartMin;
 
-  const r = item.skill_id ?? 1;
-  return { item, c1, c2, r };
-});
+    let c1 = Math.floor(startOffset / stepMinutes) + 1;
+    let c2 = Math.ceil(endOffset / stepMinutes) + 1;
 
-// const laneLabel = (name: string, id: number) => `${name} (${id})`;
-const columns = 24;
+    c1 = clamp(c1, 1, maxLine - 1);
+    c2 = clamp(Math.max(c1 + 1, c2), 2, maxLine);
+
+    const r = laneIndex.get(item.skill_id) ?? 1;
+
+    return { item, c1, c2, r };
+  });
 ---
 
 <div
-  class="timeline-graph"
+  class="timeline-grid"
   style={`
-    --cols:${columns};
-    --lanes:${skills.length};
+    --cols:${cols};
+    --lanes:${lanes};
   `}
+  aria-label="Timeline"
+  id={"timeline"}
 >
-  <div class="y-axis" aria-label="Y axis lanes">
-    {skills.map(({ name, id }) => <div class="lane">{`${name} (${id})`}</div>)}
-  </div>
+  {
+    ticks.map((t) => (
+      <div class="hour-line" style={`--c:${t.colLine};`} aria-hidden="true" />
+    ))
+  }
 
-  <div class="timeline-scroll" style={`--cols:${columns}; --time-cols: repeat(${columns}, var(--col-w));`}>
-    <div class="grid-container unstyled" aria-label="Timeline grid">
-      {
-        blocks.map(({ item, c1, c2, r }) => (
-          <div
-            class="time-block-item"
-            style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
-            title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}-${formatTimeMinutesToClockString(item.end, true)} • ${item.skill_id}`}
-          >
-            <div class="time-block-item__title">{item.desc}</div>
-            <div class="time-block-item__meta">
-              {formatTimeMinutesToClockString(item.start, true)}-
-              {formatTimeMinutesToClockString(item.end, true)} • {item.skill_id}
-            </div>
-          </div>
-        ))
-      }
-    </div>
+  {
+    skills.map((skill, i) => (
+      <div class="y-axis" style={`grid-row:${i + 1};`} title={skill.name}>
+        {skill.name}
+      </div>
+    ))
+  }
 
-    <div class="x-axis unstyled" aria-label="X axis time labels">
-      {
-        ticks.map((t) => (
-          <div class="tick" style={`--c:${t.colLine};`}>
-            {formatTimeMinutesToClockString(t.time, true)}
-          </div>
-        ))
-      }
-    </div>
-  </div>
+  {
+    blockFormat.map(({ item, c1, c2, r }) => (
+      <div
+        class="time-block"
+        style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
+        title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}–${formatTimeMinutesToClockString(item.end, true)} • skill:${item.skill_id}`}
+      >
+        <div class="time-block__title">{item.desc}</div>
+        <div class="time-block__meta">
+          {formatTimeMinutesToClockString(item.start, true)}–
+          {formatTimeMinutesToClockString(item.end, true)}
+        </div>
+      </div>
+    ))
+  }
+
+  {
+    ticks.map((t) => (
+      <div class="x-tick" style={`--c:${t.colLine};`}>
+        <span class="x-tick__label">
+          {formatTimeMinutesToClockString(t.time, true)}
+        </span>
+      </div>
+    ))
+  }
 </div>
 
-<style define:vars={{ hours }}>
-  :root {
-    --hours: hours;
-  }
-</style>
+<script>
+  const timeline = document.getElementById("timeline");
+  if (!timeline) throw new Error("timeline not found");
+
+  // config (must match your CSS / component)
+  const stepMinutes = 15;
+
+  // ✅ read from computed style so it's always correct
+  const colWidth = parseFloat(
+    getComputedStyle(timeline).getPropertyValue("--col-w"),
+  );
+
+  // ✅ choose your target time (minutes)
+  const targetTimeMin = 16 * 60; // 4:00 PM
+
+  // ✅ view start (same logic as your component)
+  const viewStartMin = 0; // or whatever you're passing
+
+  const offsetMinutes = targetTimeMin - viewStartMin;
+
+  const scrollLeft = (offsetMinutes / stepMinutes) * colWidth;
+
+  timeline.scrollTo({
+    left: scrollLeft,
+    behavior: "smooth",
+  });
+</script>

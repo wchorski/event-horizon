@@ -1,92 +1,93 @@
-/* src/styles/timeline-graph.css */
+/* src/styles/timeline-onegrid.css */
 
-.timeline-graph {
-  font-size: 8px;
-  --y-axis-w: 120px;
-
+/* One-grid timeline:
+   - column 1 = y-axis skills
+   - columns 2.. = time (15-min columns)
+   - rows 1..N = skill lanes
+   - last row = x-axis labels
+*/
+.timeline-grid {
+  /* knobs */
   --y-axis-w: 180px;
-  --col-w: 56px;
-
   --lane-h: 2.75rem;
-
-  /* set by component inline style */
-  --cols: 1;
-  --lanes: 1;
-  --hour-offset-steps: 0;
+  --col-w: 64px; /* width per 15-min column (guarantees alignment) */
 
   --sep: var(--c-seperator, rgba(255, 255, 255, 0.25));
-  --muted: var(--c-muted, rgba(255, 255, 255, 0.7));
-  --text: var(--c-text, rgba(255, 255, 255, 0.92));
+  --muted: var(--c-muted, rgba(255, 255, 255, 0.70));
+  --surface: rgba(18, 18, 18, 0.70);
+
+  /* set inline from component */
+  --cols: 1;
+  --lanes: 1;
 
   display: grid;
-  grid-template-columns: var(--y-axis-w) 1fr;
-  grid-template-rows: 1fr auto;
-  grid-template-areas:
-    "y-axis graph"
-    ".      x-axis";
+  grid-template-columns: var(--y-axis-w) repeat(var(--cols), var(--col-w));
+  grid-template-rows: repeat(var(--lanes), var(--lane-h)) auto;
 
-  grid-template-areas: "y-axis scroll";
 
-  gap: 0.2rem;
-  margin-top: 2rem;
-}
-
-.timeline-scroll {
-  grid-area: scroll;
   overflow-x: auto;
-  overflow-y: hidden;
-  /* Reserve scrollbar space so widths don’t change when it appears/disappears */
-  scrollbar-gutter: stable both-edges; /* modern, avoids layout shift */
+  
+
+  /* reserve scrollbar space to prevent jumps when it appears */
+  scrollbar-gutter: stable both-edges; /* [2](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-gutter) */
+
+  /* size behavior: fill parent, but allow content to be wider and scroll */
+  width: 100%;
+  max-width: 100%;
+
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+
+  /* horizontal lane lines (repeat every lane height) */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.10) 0 1px,
+    transparent 1px var(--lane-h)
+  ); /* [3](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/gradient/repeating-linear-gradient) */
 }
 
-.x-axis,
-.grid-container {
-  display: grid;
-  grid-template-columns: var(--time-cols);
-  width: max-content;
+/* Y axis labels (skills) */
+.y-axis {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 0.6rem;
+  color: var(--muted);
+
+  /* stick while horizontal scrolling */
+  position: sticky;
+  left: 0;
+  z-index: 5;
+
+  background: linear-gradient(to right, var(--surface) 70%, transparent);
+  backdrop-filter: blur(6px);
+  border-right: 1px solid rgba(255,255,255,0.10);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tick {
-  width: 0;
+/* Vertical hour line (spans lanes + x-axis row) */
+.hour-line {
+  grid-column: calc(var(--c) + 1) / span 1; /* +1 because col 1 is y-axis */
+  grid-row: 1 / calc(var(--lanes) + 2);
   justify-self: start;
-  position: relative;
+
+  width: 0;
+  border-left: 1px solid rgba(255,255,255,0.18);
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* ----- Graph grid (15-minute columns, hourly lines) ----- */
-.grid-container {
-  grid-area: graph;
+/* Time block placement uses GRID LINES (not cells) */
+.time-block {
+  /* grid-column uses line-based placement (c1/c2 are time-grid lines) */
+  grid-column: calc(var(--c1) + 1) / calc(var(--c2) + 1); /* [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column) */
+  grid-row: var(--r);
 
-  display: grid;
-  /* grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); */
-  grid-auto-rows: var(--lane-h);
-
-  border-left: 1px solid var(--sep);
-  border-bottom: 1px solid var(--sep);
-
-  /* Hourly vertical lines + lane horizontal lines using repeating-linear-gradient(). [2](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/gradient/repeating-linear-gradient) */
-  background-image:
-    repeating-linear-gradient(
-      to right,
-      var(--sep) 0 1px,
-      transparent 1px calc((100% / var(--cols)) * 4)
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      var(--sep) 0 1px,
-      transparent 1px var(--lane-h)
-    );
-
-  /* shift to align to the next hour boundary if needed */
-  background-position:
-    calc((100% / var(--cols)) * var(--hour-offset-steps)) 0,
-    0 0;
-
-  background-repeat: repeat;
-}
-
-/* ----- Time blocks ----- */
-.time-block-item {
-  background-color: rgba(255, 255, 255, 0.228);
+  background-color: rgba(255, 255, 255, 0.18);
   border-top: 2px solid cornflowerblue;
   border-radius: 10px;
 
@@ -95,86 +96,65 @@
   justify-content: center;
   gap: 0.1rem;
 
-  padding: 0.2rem 0.4rem;
+  padding: 0.45rem 0.6rem;
+
+  min-width: 0;
   overflow: hidden;
 
-  /* Place via computed grid lines (lines, not cells). [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column) */
-  grid-column: var(--c1) / var(--c2);
-  grid-row: var(--r);
-
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+  z-index: 2;
 }
 
-.time-block-item__title {
-  color: var(--text);
+.time-block__title {
   font-weight: 600;
-  /* font-size: 0.95rem; */
+  font-size: 0.95rem;
   line-height: 1.1;
+
   white-space: nowrap;
-  text-overflow: ellipsis;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.time-block-item__meta {
-  color: rgba(255, 255, 255, 0.75);
-  /* font-size: 0.78rem; */
-  line-height: 1.1;
+.time-block__meta {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.75);
+
   white-space: nowrap;
-  text-overflow: ellipsis;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ----- X axis (hourly ticks only) ----- */
-.x-axis {
-  grid-area: x-axis;
-  display: grid;
-  /* grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); */
-  padding-top: 0.25rem;
-  color: var(--muted);
-  /* font-size: 0.8rem; */
-}
-
-.x-axis .tick {
-  grid-column: var(--c) / span 1;
+/* X-axis tick anchor at bottom row */
+.x-tick {
+  grid-row: calc(var(--lanes) + 1);
+  grid-column: calc(var(--c) + 1) / span 1; /* +1 because col 1 is y-axis */
   justify-self: start;
-  transform: translateX(-50%);
+
+  width: 0;
   position: relative;
-  white-space: nowrap;
-  /* padding-top: 0.25rem; */
+  z-index: 6;
 }
 
-/* .x-axis .tick::before {
+/* tick line */
+.x-tick::before {
   content: "";
   position: absolute;
-  left: 50%;
-  top: -0.15rem;
+  left: 0;
+  top: -8px;
   width: 1px;
-  height: 8px;
+  height: 10px;
   background: var(--sep);
-} */
+}
 
-/* ----- Y axis lanes ----- */
-.y-axis {
-  grid-area: y-axis;
-  display: grid;
-  grid-auto-rows: var(--lane-h);
-  align-content: start;
+/* label centered on the hour line */
+.x-tick__label {
+  /* position: absolute; */
+  left: 0;
+  top: 0.2rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.8rem;
   color: var(--muted);
-  /* font-size: 0.85rem; */
-}
-
-.y-axis .lane {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.x-axis {
-  position: sticky;
-  top: 0;
-  background: var(--surface, transparent);
-  z-index: 5;
-  padding-top: 0.25rem;
+  background: linear-gradient(to bottom, var(--surface), transparent);
+  padding: 0 0.15rem;
 }

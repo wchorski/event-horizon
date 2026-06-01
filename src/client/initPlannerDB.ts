@@ -1,11 +1,9 @@
-import type {
-  BlockPlanner,
-  GroupPlanner,
-} from "../pages/planners/[id]/index.astro";
+import type { BlockPlanner, GroupPlanner } from "@ty/Schema";
 import { openDB } from "./indexedDB";
 
 const BLOCKS_STORE = "blocks";
 const GROUPS_STORE = "groups";
+const SKILLS_STORE = "skills";
 
 const blocks_template: BlockPlanner[] = [
   {
@@ -132,43 +130,61 @@ const groups_template: GroupPlanner[] = [
   },
 ];
 
+const skills_template = [
+  { name: "MC Announcement", id: 1 },
+  { name: "Song Cue", id: 2 },
+  { name: "Music Playlist", id: 3 },
+  { name: "Misc", id: 4 },
+];
+
 export async function seedIfEmpty() {
+
   const db = await openDB();
 
-  const tx = db.transaction([BLOCKS_STORE, GROUPS_STORE], "readwrite");
+  const tx = db.transaction(
+    [BLOCKS_STORE, GROUPS_STORE, SKILLS_STORE],
+    "readwrite",
+  );
 
   const blocksStore = tx.objectStore(BLOCKS_STORE);
   const groupsStore = tx.objectStore(GROUPS_STORE);
+  const skillsStore = tx.objectStore(SKILLS_STORE);
 
-  // ✅ check if blocks already exist
-  const countRequest = blocksStore.count();
+  function countStore(store: IDBObjectStore): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
 
+  const [blocksCount, groupsCount, skillsCount] = await Promise.all([
+    countStore(blocksStore),
+    countStore(groupsStore),
+    countStore(skillsStore),
+  ]);
+
+  if (blocksCount === 0) {
+    console.log("Seeding blocks...");
+    blocks_template.forEach((b) => blocksStore.add(b));
+  }
+
+  if (groupsCount === 0) {
+    console.log("Seeding groups...");
+    groups_template.forEach((g) => groupsStore.add(g));
+  }
+
+  if (skillsCount === 0) {
+    console.log("Seeding skills...");
+    skills_template.forEach((s) => skillsStore.add(s));
+  }
+
+  // Wait for the whole transaction to finish
   return new Promise((resolve, reject) => {
-    countRequest.onerror = () => reject(countRequest.error);
-
-    countRequest.onsuccess = () => {
-      const count = countRequest.result;
-
-      if (count === 0) {
-        console.log("✅ First visit → seeding IndexedDB");
-
-        // ✅ insert blocks
-        blocks_template.forEach((b) => {
-          blocksStore.add(b);
-        });
-
-        // ✅ insert groups
-        groups_template.forEach((g) => {
-          groupsStore.add(g);
-        });
-      }
-
-      tx.oncomplete = () => {
-        console.log('initPlannerDB tx.oncomplete');
-        resolve(true)
+    tx.oncomplete = () => {
+      resolve(true);
     };
-      tx.onerror = () => reject(tx.error);
-    };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
   });
 }
-``;

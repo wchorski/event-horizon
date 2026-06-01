@@ -1,0 +1,174 @@
+---
+// components/planners/TimeBlockRow.astro
+import InputField from "@components/form/InputField.astro";
+import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
+import type { BlockPlanner, SkillPlanner } from "@ty/Schema";
+
+interface Props {
+  block: BlockPlanner;
+  skills: SkillPlanner[];
+}
+
+const { block, skills } = Astro.props;
+
+// const blocks_template: BlockPlanner[] = [
+//   {
+//     id: 1,
+//     start: 960,
+//     end: 990,
+//     desc: "Pre-Seating Music",
+//     skill_id: 3,
+//     group_id: 1,
+//     note: "",
+//   },
+//   {
+//     id: 2,
+//     start: 990,
+//     end: 1050,
+//     desc: "Ceremony",
+//     skill_id: 2,
+//     group_id: 1,
+//     note: "",
+//   },
+//   {
+//     id: 3,
+//     start: 1050,
+//     end: 1110,
+//     desc: "Cocktail Hour",
+//     skill_id: 3,
+//     group_id: 2,
+//     note: "",
+//   },
+//   {
+//     id: 4,
+//     start: 1110,
+//     end: 1125,
+//     desc: "Introductions",
+//     skill_id: 1,
+//     group_id: 3,
+//     note: "",
+//   },
+//   {
+//     id: 5,
+//     start: 1120,
+//     end: 1125,
+//     desc: "Cake Cutting",
+//     skill_id: 2,
+//     group_id: 4,
+//     note: "",
+//   },
+//   {
+//     id: 6,
+//     start: 1125,
+//     end: 1140,
+//     desc: "Blessing",
+//     skill_id: 1,
+//     group_id: 5,
+//     note: "",
+//   },
+//   {
+//     id: 7,
+//     start: 1125,
+//     end: 1200,
+//     desc: "Dinner Music",
+//     skill_id: 3,
+//     group_id: 2,
+//     note: "",
+//   },
+//   {
+//     id: 8,
+//     start: 1170,
+//     end: 1185,
+//     desc: "Toasts",
+//     skill_id: 1,
+//     group_id: 4,
+//     note: "",
+//   },
+//   {
+//     id: 9,
+//     start: 1200,
+//     end: 1215,
+//     desc: "Traditional Dances",
+//     skill_id: 2,
+//     group_id: 4,
+//     note: "",
+//   },
+//   {
+//     id: 10,
+//     start: 1260,
+//     end: 1275,
+//     desc: "Bouquet and Garter Toss",
+//     skill_id: 2,
+//     group_id: 3,
+//     note: "",
+//   },
+//   {
+//     id: 11,
+//     start: 1215,
+//     end: 1380,
+//     desc: "Open Dancefloor",
+//     skill_id: 3,
+//     group_id: 3,
+//     note: "",
+//   },
+// ];
+
+// const skills = [
+//   // { name: "Misc", id: 0 },
+//   { name: "MC Announcement", id: 1 },
+//   { name: "Song Cue", id: 2 },
+//   { name: "Music Playlist", id: 3 },
+// ];
+
+const { start, end, desc, skill_id, group_id, id, note } = block;
+---
+
+<tr class={`time-block-row`}>
+  <td>
+    <InputField
+      value={formatTimeMinutesToClockString(start)}
+      type={"time"}
+      name={"start"}
+      id="timeline-start"
+      model="time-block"
+      data-id={id}
+      label=""
+    />
+    <InputField
+      value={formatTimeMinutesToClockString(end)}
+      type={"time"}
+      name={"end"}
+      id={`timeline-block-${id}-start`}
+      model="time-block"
+      data-id={id}
+      label=""
+    />
+  </td>
+
+  <td>
+    <InputField
+      label=""
+      value={desc}
+      type={"text"}
+      name="desc"
+      id={`timeline-block-${id}-desc`}
+      data-id={id}
+      model="time-block"
+    />
+  </td>
+  <td>
+    <select name={"skill_id"} data-id={id}>
+      {
+        skills.map((skill) => (
+          <option value={skill.id} selected={skill.id === skill_id}>
+            {skill.name}
+          </option>
+        ))
+      }
+    </select>
+  </td>
+  <td>
+    <a href={`#${group_id}`}>{group_id}</a>
+  </td>
+  <td>{note}</td>
+</tr>

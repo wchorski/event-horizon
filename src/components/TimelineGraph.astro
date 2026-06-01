@@ -10,7 +10,7 @@ interface Props {
 
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import "@styles/timeline-graph.css";
-import type { BlockPlanner } from "../pages/planners/[id]/index.astro";
+import type { BlockPlanner } from "@ty/Schema";
 
 const { start = 0, end = 24, blocks, skills } = Astro.props;
 
@@ -82,6 +82,9 @@ const blockFormat = blocks
   `}
   aria-label="Timeline"
   id={"timeline"}
+  data-start={start}
+  data-end={end}
+  data-skills={JSON.stringify(skills)}
 >
   {
     ticks.map((t) => (
@@ -125,9 +128,21 @@ const blockFormat = blocks
 </div>
 
 <script>
-  const timeline = document.getElementById("timeline");
-  if (!timeline) throw new Error("timeline not found");
+  const timeline = document.getElementById("timeline")!;
 
+  //* LOCAL SYNC
+  import { renderTimelineGraph } from "@client/templates/timelineGraph";
+
+  const skills = JSON.parse(timeline.dataset.skills ?? "[]");
+  const start = Number(timeline.dataset.start ?? 0);
+  const end = Number(timeline.dataset.end ?? 24);
+
+  document.addEventListener("timeline:load", (e: Event) => {
+    const { blocks } = (e as CustomEvent).detail;
+    renderTimelineGraph(timeline, { start, end, skills, blocks });
+  });
+
+  //* SCROLL TO START
   // config (must match your CSS / component)
   const stepMinutes = 15;
 

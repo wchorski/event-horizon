@@ -1,0 +1,28 @@
+---
+import type { BlockPlanner, GroupPlanner } from "@ty/Schema";
+
+interface Props {
+  group: GroupPlanner;
+  relatedBlocks: BlockPlanner[];
+}
+const { group, relatedBlocks } = Astro.props;
+const { name, id } = group;
+// const relatedPlans = blocks_template.filter((plan) => plan.group_id === id);
+---
+
+<div class="card" id={String(id)}>
+  <h3>
+    {name} | {id}
+  </h3>
+  {
+    relatedBlocks.length > 0 ? (
+      <ul>
+        {relatedBlocks.map((block) => (
+          <li>{block.desc}</li>
+        ))}
+      </ul>
+    ) : (
+      <p>no plans set</p>
+    )
+  }
+</div>

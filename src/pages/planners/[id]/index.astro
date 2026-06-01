@@ -1,21 +1,4 @@
 ---
-export type BlockPlanner = {
-  id: number;
-  desc: string;
-  group_id: number;
-  skill_id: number;
-  note: string;
-  start: number; // minutes (can exceed 1440)
-  end: number; // minutes (can exceed 1440)
-};
-export type GroupPlanner = {
-  id: number;
-  name: string;
-};
-type Planner = {
-  blocks: BlockPlanner[];
-  groups: GroupPlanner[];
-};
 interface Params {
   id: string;
 }
@@ -32,109 +15,8 @@ const skills = [
   { name: "MC Announcement", id: 1 },
   { name: "Song Cue", id: 2 },
   { name: "Music Playlist", id: 3 },
+  { name: "Misc", id: 4 },
 ];
-
-// const blocks_template: BlockPlanner[] = [
-//   {
-//     id: 1,
-//     start: 960,
-//     end: 990,
-//     desc: "Pre-Seating Music",
-//     skill_id: 3,
-//     group_id: 1,
-//     note: "",
-//   },
-//   {
-//     id: 2,
-//     start: 990,
-//     end: 1050,
-//     desc: "Ceremony",
-//     skill_id: 2,
-//     group_id: 1,
-//     note: "",
-//   },
-//   {
-//     id: 3,
-//     start: 1050,
-//     end: 1110,
-//     desc: "Cocktail Hour",
-//     skill_id: 3,
-//     group_id: 2,
-//     note: "",
-//   },
-//   {
-//     id: 4,
-//     start: 1110,
-//     end: 1125,
-//     desc: "Introductions",
-//     skill_id: 1,
-//     group_id: 3,
-//     note: "",
-//   },
-//   {
-//     id: 5,
-//     start: 1120,
-//     end: 1125,
-//     desc: "Cake Cutting",
-//     skill_id: 2,
-//     group_id: 4,
-//     note: "",
-//   },
-//   {
-//     id: 6,
-//     start: 1125,
-//     end: 1140,
-//     desc: "Blessing",
-//     skill_id: 1,
-//     group_id: 5,
-//     note: "",
-//   },
-//   {
-//     id: 7,
-//     start: 1125,
-//     end: 1200,
-//     desc: "Dinner Music",
-//     skill_id: 3,
-//     group_id: 2,
-//     note: "",
-//   },
-//   {
-//     id: 8,
-//     start: 1170,
-//     end: 1185,
-//     desc: "Toasts",
-//     skill_id: 1,
-//     group_id: 4,
-//     note: "",
-//   },
-//   {
-//     id: 9,
-//     start: 1200,
-//     end: 1215,
-//     desc: "Traditional Dances",
-//     skill_id: 2,
-//     group_id: 4,
-//     note: "",
-//   },
-//   {
-//     id: 10,
-//     start: 1260,
-//     end: 1275,
-//     desc: "Bouquet and Garter Toss",
-//     skill_id: 2,
-//     group_id: 3,
-//     note: "",
-//   },
-//   {
-//     id: 11,
-//     start: 1215,
-//     end: 1380,
-//     desc: "Open Dancefloor",
-//     skill_id: 3,
-//     group_id: 3,
-//     note: "",
-//   },
-// ];
 
 // const groups_template: GroupPlanner[] = [
 //   {
@@ -195,7 +77,7 @@ const formatTimeRange = (start: string, end: string) => {
       <p class="sub-text">{id}</p>
     </header>
 
-    <TimelineGraph blocks={blocks_template} skills={skills} />
+    <TimelineGraph blocks={[]} skills={skills} />
 
     <hr />
 
@@ -211,137 +93,114 @@ const formatTimeRange = (start: string, end: string) => {
             <th>note</th>
           </tr>
         </thead>
-        <tbody>
-          {
-            blocks_template.map(
-              ({ start, end, desc, skill_id, group_id, id, note }) => (
-                <tr class={`time-block-row`}>
-                  <td>
-                    <InputField
-                      value={formatTimeMinutesToClockString(start)}
-                      type={"time"}
-                      name={"start"}
-                      id="timeline-start"
-                      model="time-block"
-                      data-id={id}
-                      label=""
-                    />
-                    <InputField
-                      value={formatTimeMinutesToClockString(end)}
-                      type={"time"}
-                      name={"end"}
-                      id={`timeline-block-${id}-start`}
-                      model="time-block"
-                      data-id={id}
-                      label=""
-                    />
-                  </td>
-
-                  <td>
-                    <InputField
-                      label=""
-                      value={desc}
-                      type={"text"}
-                      name="desc"
-                      id={`timeline-block-${id}-desc`}
-                      data-id={id}
-                      model="time-block"
-                    />
-                  </td>
-                  <td>
-                    <select name={"skill_id"} data-id={id}>
-                      {skills.map((skill) => (
-                        <option
-                          value={skill.id}
-                          selected={skill.id === skill_id}
-                        >
-                          {skill.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <a href={`#${group_id}`}>{group_id}</a>
-                  </td>
-                  <td>{note}</td>
-                </tr>
-              ),
-            )
-          }
-        </tbody>
+        <tbody id="time-block-list"> </tbody>
+        <tfoot
+          ><tr
+            ><td colspan="100%"
+              ><button aria-label="add line" title="add new line">+</button></td
+            ></tr
+          ></tfoot
+        >
       </table>
       <aside class="grid gap-m">
-        <h2>blocks</h2>
-        {
-          groups_template.map(({ name, id }) => {
-            const relatedPlans = blocks_template.filter(
-              (plan) => plan.group_id === id,
-            );
-            return (
-              <div class="card" id={String(id)}>
-                <h3>
-                  {name} | {id}
-                </h3>
-                {relatedPlans.length > 0 ? (
-                  <ul>
-                    {relatedPlans.map((plan) => (
-                      <li>{plan.desc}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>no plans set</p>
-                )}
-              </div>
-            );
-          })
-        }
+        <h2 class="display none">blocks</h2>
+        <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
       </aside>
+    </div>
+    <hr />
+    <div class="card">
+      <h2>Skills</h2>
+      <ul id="skills-list" class="unstyled grid gap-s"></ul>
     </div>
   </main>
 </BaseLayout>
 
 <script>
-  import { getAllBlockPlans } from "@db/indexedDB";
-  import { seedIfEmpty } from "@db/initPlannerDB";
+  import {
+    getAllBlockPlans,
+    getAllSkillPlans,
+    getAllGroupPlans,
+    addBlockPlan,
+  } from "@client/indexedDB";
+  import { seedIfEmpty } from "@client/initPlannerDB";
+  import { createEmptyBlock, timeBlockRow } from "@client/templates/timeBlockRow";
+  import { groupCard } from "@client/templates/groupCard";
+import type { SkillPlanner } from "@ty/Schema";
 
-  seedIfEmpty();
+  async function renderFromDB() {
+    await seedIfEmpty();
 
-  const items = await getAllBlockPlans();
+    const [blocks, skills, groups] = await Promise.all([
+      getAllBlockPlans(),
+      getAllSkillPlans(),
+      getAllGroupPlans(),
+    ]);
 
-  const blockList = document.getElementById("block-list")!;
-  blockList.innerHTML = items
-    .map((item) => `<li>${item.name} — $${item.price}</li>`)
-    .join("");
+    const tbody = document.getElementById("time-block-list")!;
+    tbody.replaceChildren(); // clear existing
+    blocks.forEach((b) => tbody.appendChild(timeBlockRow(b, skills)));
 
-  document.addEventListener("htmx:submit", (e) => {
-    console.log("SAVE TO LOCAL STORAGE?");
-    // e.preventDefault();
+    const groupList = document.getElementById("time-groups-list")!;
+    groupList.replaceChildren(); // clear before re-render
+    groups.forEach((g) => groupList.appendChild(groupCard(g, blocks)));
 
-    // const data = new FormData(this);
-    // const id = data.get("group_id");
+    const skillList = document.getElementById("skills-list")!;
+    skillList.replaceChildren();
+    skills.forEach(s => {
+      const li = document.createElement("li");
+      li.textContent = s.name;
+      skillList.appendChild(li);
+    });
 
-    // const planner = JSON.parse(localStorage.getItem("planner") || "[]");
+    // Notify TimelineGraph with the loaded blocks
+    document.dispatchEvent(new CustomEvent("timeline:load", {
+      detail: { blocks, skills }
+    }));
 
-    // const updated = planner.map((p) =>
-    //   p.group_id == id
-    //     ? {
-    //         ...p,
-    //         desc: data.get("desc"),
-    //         start: Number(data.get("start")),
-    //         end: Number(data.get("end")),
-    //         skill_id: Number(data.get("skill_id")),
-    //       }
-    //     : p,
-    // );
+    // ✅ wire add-row button after skills are loaded
+    initAddRow(skills); 
 
-    // localStorage.setItem("planner", JSON.stringify(updated));
+    function initAddRow(skills: SkillPlanner[]) {
+      const tbody  = document.getElementById("time-block-list")!;
+      const button = document.querySelector("tfoot button")!;
 
-    // location.reload(); // simplest re-render
-  });
+      button.addEventListener("click", async () => {
+        const newBlock = await addBlockPlan(createEmptyBlock(0));
+        tbody.appendChild(timeBlockRow(newBlock, skills));
+      });
+    }
+    
+    // HTMX Fetch both partials in parallel
+    // const [
+    //   blocksHTML,
+    //   // skillsHTML
+    //   groupsHTML,
+    // ] = await Promise.all([
+    //   fetch("/partials/planners/time-block-rows", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ blocks, skills }),
+    //   }).then((r) => r.text()),
 
-  const stored = localStorage.getItem("planner");
+    //   // fetch("/partials/planners/time-skills", {
+    //   //   method: "POST",
+    //   //   headers: { "Content-Type": "application/json" },
+    //   //   // body: JSON.stringify({  }),
+    //   // }).then(r => r.text()),
 
-  // if (stored) {
-  //   window.plannerData = JSON.parse(stored);
-  // }
+    //   fetch("/partials/planners/time-group-cards", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ groups, blocks }),
+    //   }).then((r) => r.text()),
+    // ]);
+
+    // document.getElementById("time-block-list")!.innerHTML = blocksHTML;
+    // // @ts-ignore
+    // const skillsHTML = skills.map((s) => `<li>${s.name}</li>`);
+    // document.getElementById("skills-list")!.innerHTML = skillsHTML;
+    // document.getElementById("time-groups-list")!.innerHTML = groupsHTML;
+  }
+
+  renderFromDB().catch(console.error);
 </script>

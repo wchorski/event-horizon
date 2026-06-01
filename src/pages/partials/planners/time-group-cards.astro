@@ -1,0 +1,46 @@
+---
+// partials/planners/time-group-cards.astro
+export const partial = true;
+
+import TimeGroupCard from "@components/planners/TimeGroupCard.astro";
+import type { BlockPlanner, GroupPlanner, SkillPlanner } from "@ty/Schema";
+
+if (Astro.request.method !== "POST") {
+  return new Response("Method not allowed", { status: 405 });
+}
+
+let blocks: BlockPlanner[] | null = null;
+let groups: GroupPlanner[] | null = null;
+let error: unknown | null = null;
+
+try {
+  const response = await Astro.request.json();
+
+  const { blocks: b, groups: g } = response;
+
+  blocks = b;
+  groups = g;
+} catch (e) {
+  error = e;
+}
+
+const relatedPlans = (blks: BlockPlanner[], group_id: number) =>
+  blks.filter((plan) => plan.group_id === group_id);
+---
+
+{
+  error ? (
+    <p class="error">{String(error)}</p>
+  ) : blocks && groups ? (
+    groups.map((group) => (
+      <li>
+        <TimeGroupCard
+          group={group}
+          relatedBlocks={relatedPlans(blocks, group.id)}
+        />
+      </li>
+    ))
+  ) : (
+    <p>unkown error occured</p>
+  )
+}

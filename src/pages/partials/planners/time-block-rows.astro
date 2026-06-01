@@ -1,0 +1,36 @@
+---
+// partials/planners/time-blocks-rows.astro
+export const partial = true;
+
+import TimeBlockRow from "@components/planners/TimeBlockRow.astro";
+import type { BlockPlanner, SkillPlanner } from "@ty/Schema";
+
+if (Astro.request.method !== "POST") {
+  return new Response("Method not allowed", { status: 405 });
+}
+
+let blocks: BlockPlanner[] | null = null;
+let skills: SkillPlanner[] | null = null;
+let error: unknown | null = null;
+
+try {
+  const response = await Astro.request.json();
+
+  const { blocks: b, skills: s } = response;
+
+  blocks = b;
+  skills = s;
+} catch (e) {
+  error = e;
+}
+---
+
+{
+  error ? (
+    <p class="error">{String(error)}</p>
+  ) : blocks && skills ? (
+    blocks.map((block) => <TimeBlockRow block={block} skills={skills} />)
+  ) : (
+    <p>unkown error occured</p>
+  )
+}

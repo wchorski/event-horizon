@@ -80,3 +80,28 @@ export type UserCreditFlat = {
 
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
+
+export type BlockPlanner = {
+  id: number;
+  desc: string;
+  group_id: number;
+  skill_id: number;
+  note: string;
+  start: number; // minutes (can exceed 1440)
+  end: number; // minutes (can exceed 1440)
+};
+export type GroupPlanner = {
+  id: number;
+  name: string;
+};
+
+export type SkillPlanner = {
+  name: string;
+  id: number;
+};
+
+export type Planner = {
+  blocks: BlockPlanner[];
+  groups: GroupPlanner[];
+  skills: SkillPlanner[];
+};

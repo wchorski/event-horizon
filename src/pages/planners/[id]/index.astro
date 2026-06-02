@@ -81,26 +81,20 @@ const formatTimeRange = (start: string, end: string) => {
 
     <hr />
 
-    <div class="flex gap-m" data-layout="content">
-      <table>
+    <div class="timeline-planner-grid gap-m" data-layout="content">
+      <table id="timeline-block-table" class="timeline-schedule">
         <thead>
           <tr>
             <th>time</th>
 
             <th>desc</th>
-            <th>skill_id</th>
-            <th>group_id</th>
+            <th>skill</th>
+            <th>group</th>
             <th>note</th>
+            <th>actions</th>
           </tr>
         </thead>
-        <tbody id="time-block-list"> </tbody>
-        <tfoot
-          ><tr
-            ><td colspan="100%"
-              ><button aria-label="add line" title="add new line">+</button></td
-            ></tr
-          ></tfoot
-        >
+        <tbody id="time-block-list"></tbody>
       </table>
       <aside class="grid gap-m">
         <h2 class="display none">blocks</h2>
@@ -120,12 +114,21 @@ const formatTimeRange = (start: string, end: string) => {
     getAllBlockPlans,
     getAllSkillPlans,
     getAllGroupPlans,
-    addBlockPlan,
+    dbCreateBlockPlan,
+    deleteBlockPlan,
+    idbUpdateTimeBlock,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initPlannerDB";
-  import { createEmptyBlock, timeBlockRow } from "@client/templates/timeBlockRow";
+  import {
+    createEmptyBlock,
+    timeBlockRow,
+  } from "@client/templates/timeBlockRow";
   import { groupCard } from "@client/templates/groupCard";
-import type { SkillPlanner } from "@ty/Schema";
+  import type { SkillPlanner } from "@ty/Schema";
+  import { undefined } from "astro:schema";
+  import { debounce } from "@lib/wait";
+
+  const table = document.querySelector("#timeline-block-table")!;
 
   async function renderFromDB() {
     await seedIfEmpty();
@@ -138,7 +141,10 @@ import type { SkillPlanner } from "@ty/Schema";
 
     const tbody = document.getElementById("time-block-list")!;
     tbody.replaceChildren(); // clear existing
-    blocks.forEach((b) => tbody.appendChild(timeBlockRow(b, skills)));
+    blocks.sort((a, b) => {
+      return a.start - b.start;
+    });
+    blocks.forEach((b) => tbody.appendChild(timeBlockRow(b, skills, groups)));
 
     const groupList = document.getElementById("time-groups-list")!;
     groupList.replaceChildren(); // clear before re-render
@@ -146,30 +152,86 @@ import type { SkillPlanner } from "@ty/Schema";
 
     const skillList = document.getElementById("skills-list")!;
     skillList.replaceChildren();
-    skills.forEach(s => {
+    skills.forEach((s) => {
       const li = document.createElement("li");
       li.textContent = s.name;
       skillList.appendChild(li);
     });
 
     // Notify TimelineGraph with the loaded blocks
-    document.dispatchEvent(new CustomEvent("timeline:load", {
-      detail: { blocks, skills }
-    }));
+    document.dispatchEvent(
+      new CustomEvent("timeline:load", {
+        detail: { blocks, skills },
+      }),
+    );
 
     // ✅ wire add-row button after skills are loaded
-    initAddRow(skills); 
+    initAddRow(skills);
 
     function initAddRow(skills: SkillPlanner[]) {
-      const tbody  = document.getElementById("time-block-list")!;
-      const button = document.querySelector("tfoot button")!;
+      const tbody = document.getElementById("time-block-list")!;
 
-      button.addEventListener("click", async () => {
-        const newBlock = await addBlockPlan(createEmptyBlock(0));
-        tbody.appendChild(timeBlockRow(newBlock, skills));
+      const insertButtons = document.querySelectorAll(
+        "#timeline-block-table button.insert",
+      );
+
+      table.addEventListener("click", async (e) => {
+        const target = e.target as HTMLElement;
+
+        const btn = target.closest("button"); // handles clicks on child elements too
+        if (!btn) return;
+        const rowEl = btn.closest("tr")!;
+        const blockId = Number(rowEl.dataset.blockId);
+        const targetBlock = blocks.find((b) => b.id === blockId);
+
+        if (btn.classList.contains("delete")) {
+          if (isNaN(blockId)) throw new Error(`block id invalid: ${blockId}`);
+
+          rowEl.remove();
+          const arrIndex = blocks.findIndex((b) => b.id === blockId);
+          if (arrIndex !== -1) {
+            blocks.splice(arrIndex, 1);
+          }
+
+          await deleteBlockPlan(blockId);
+        }
+        if (btn.classList.contains("insert")) {
+          // TODO get start and end from targed row
+          // insert into createEmptyBlock
+
+          let newStart = 0;
+          let newEnd = 0;
+
+          if (btn.classList.contains("above")) {
+            newStart = targetBlock ? targetBlock.start - 15 : 0;
+            newEnd = targetBlock ? targetBlock.start : 0;
+          } else if (btn.classList.contains("below")) {
+            newStart = targetBlock ? targetBlock.end : 0;
+            newEnd = targetBlock ? targetBlock.end + 15 : 0;
+          } else {
+            console.log("❌ Direction not supported");
+          }
+
+          const emptyBlock = createEmptyBlock(blocks.length + 1, {
+            start: newStart,
+            end: newEnd,
+          });
+          const newBlock = await dbCreateBlockPlan(emptyBlock);
+          const newRow = timeBlockRow(newBlock, skills, groups);
+
+          if (btn.classList.contains("above")) {
+            rowEl.insertAdjacentElement("beforebegin", newRow);
+          } else if (btn.classList.contains("below")) {
+            rowEl.insertAdjacentElement("afterend", newRow);
+          } else {
+            console.log("❌ Direction not supported");
+          }
+
+          blocks.push(emptyBlock);
+        }
       });
     }
-    
+
     // HTMX Fetch both partials in parallel
     // const [
     //   blocksHTML,
@@ -203,4 +265,39 @@ import type { SkillPlanner } from "@ty/Schema";
   }
 
   renderFromDB().catch(console.error);
+
+  const debouncedSave = debounce(
+    async (blockId: number, field: string, value: string) => {
+      const update = await idbUpdateTimeBlock(blockId, { [field]: value });
+    },
+    500,
+  );
+
+  table.addEventListener("input", (e) => {
+    const target = e.target as
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | HTMLSelectElement;
+    if (!target.matches("input, textarea")) return;
+
+    const row = target.closest("tr")!;
+    const blockId = Number(row.dataset.blockId);
+    const field = target.name; // e.g. data-field="desc"
+    if (!blockId || !field) return;
+
+    debouncedSave(blockId, field, target.value);
+  });
+
+  // selects feel snappier with instant save on "change" instead
+  table.addEventListener("change", (e) => {
+    const target = e.target as HTMLSelectElement;
+    if (!target.matches("select")) return;
+
+    const row = target.closest("tr")!;
+    const blockId = Number(row.dataset.blockId);
+    const field = target.name;
+    if (!blockId || !field) return;
+
+    idbUpdateTimeBlock(blockId, { [field]: target.value });
+  });
 </script>

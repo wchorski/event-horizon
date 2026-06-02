@@ -78,13 +78,17 @@ h1 {
 button,
 .btn {
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
   transition: background 0.2s;
   text-decoration: none;
   display: inline-block;
+  border-radius: 4px;
+}
+
+button.m,
+.btn.m {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
 }
 
 button:has(.icon),
@@ -265,4 +269,9 @@ ul.unstyled {
 
 .display.none {
   display: none;
+}
+
+.timeline-planner-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
 }

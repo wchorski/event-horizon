@@ -5,8 +5,49 @@ import {
   localDateTimeToRealDate,
   normalizePhoneToE164Manual,
   prettyPlainCivilDateFull,
-} from "@lib/formatters"; // adjust path
+} from "@lib/formatters";
+import { formatTimeMinutesToClockString, formatTimeToMinutes } from "@lib/timeFormatters";
 
+
+describe("formatTimeToMinutes", () => {
+  it("converts standard time to minutes", () => {
+    expect(formatTimeToMinutes("13:45")).toBe(825);
+  });
+  it("converts midnight to 0", () => {
+    expect(formatTimeToMinutes("00:00")).toBe(0);
+  });
+  it("converts end of day", () => {
+    expect(formatTimeToMinutes("23:59")).toBe(1439);
+  });
+  it("converts top of hour", () => {
+    expect(formatTimeToMinutes("09:00")).toBe(540);
+  });
+  it("converts half hour", () => {
+    expect(formatTimeToMinutes("00:30")).toBe(30);
+  });
+});
+
+describe("formatTimeMinutesToClockString", () => {
+  it("converts minutes to 24h clock string", () => {
+    expect(formatTimeMinutesToClockString(825, false)).toBe("13:45");
+  });
+  it("converts midnight (0) in 24h", () => {
+    expect(formatTimeMinutesToClockString(0, false)).toBe("00:00");
+  });
+  it("converts to 12h format AM", () => {
+    expect(formatTimeMinutesToClockString(540, true)).toBe("9:00 AM");
+  });
+  it("converts to 12h format PM", () => {
+    expect(formatTimeMinutesToClockString(825, true)).toBe("1:45 PM");
+  });
+  it("wraps values over 1439 back to start of day", () => {
+    expect(formatTimeMinutesToClockString(1440, false)).toBe("00:00"); // 1440 = next midnight
+    expect(formatTimeMinutesToClockString(1500, false)).toBe("01:00"); // 1500 - 1440 = 60
+  });
+  it("converts end of day 23:59", () => {
+    expect(formatTimeMinutesToClockString(1439, false)).toBe("23:59");
+  });
+});
 
 describe("prettyPlainCivilDateFull", () => {
   it("formats a valid civil datetime correctly", () => {

@@ -9,3 +9,8 @@ export const formatTimeMinutesToClockString = (mins: number, hour12?: boolean) =
     timeZone: "UTC",
   });
 };
+
+export function formatTimeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}

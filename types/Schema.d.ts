@@ -89,6 +89,17 @@ export type BlockPlanner = {
   note: string;
   start: number; // minutes (can exceed 1440)
   end: number; // minutes (can exceed 1440)
+  tbd?: boolean
+};
+export type BlockPlannerInput = {
+  id: string;
+  desc: string;
+  group_id: string;
+  skill_id: string;
+  note: string;
+  start: string; // minutes (can exceed 1440)
+  end: string; // minutes (can exceed 1440)
+  tbd?: boolean
 };
 export type GroupPlanner = {
   id: number;

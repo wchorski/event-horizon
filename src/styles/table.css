@@ -146,3 +146,27 @@ data[value="null"]::before {
   content: "-";
   color: var(--c-seperator, grey);
 }
+
+table.timeline-schedule {
+  & td {
+    padding-block: 0;
+  }
+  & td.actions {
+    opacity: 0.1;
+
+    & button {
+      padding: 0;
+      background-color: transparent;
+      color: var(--c-primary);
+      border: none;
+    }
+  }
+  & tr:hover td.actions {
+    opacity: 1;
+  }
+
+  & input[type="time"] {
+    background-color: transparent;
+    border: none;
+  }
+}

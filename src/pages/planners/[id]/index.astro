@@ -99,6 +99,7 @@ const formatTimeRange = (start: string, end: string) => {
       <aside class="grid gap-m">
         <h2 class="display none">blocks</h2>
         <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
+        <button id="create-group-item" class="btn">+ add group</button>
       </aside>
     </div>
     <hr />
@@ -122,6 +123,9 @@ const formatTimeRange = (start: string, end: string) => {
     idbCreateTimelineSkill,
     idbUpdateTimeSkill,
     idbDeleteTimeSkill,
+    idbUpdateTimeGroup,
+    idbCreateTimelineGroup,
+    idbDeleteTimeGroup,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initPlannerDB";
   import {
@@ -130,12 +134,15 @@ const formatTimeRange = (start: string, end: string) => {
   } from "@client/templates/timeBlockRow";
   import { groupCard } from "@client/templates/groupCard";
   import type { SkillPlanner } from "@ty/Schema";
-  import { undefined } from "astro:schema";
+  import { base64, base64url, bigint, undefined } from "astro:schema";
   import { debounce } from "@lib/wait";
   import { editableListItemElement } from "@client/templates/editableListItemElement";
 
   const table = document.querySelector("#timeline-block-table")!;
   const skillList = document.getElementById("skills-list")!;
+  const groupList = document.getElementById("time-groups-list")!;
+  const skillCreateBtn = document.getElementById("create-skill-item")!;
+  const groupCreateBtn = document.getElementById("create-group-item")!;
 
   async function renderFromDB() {
     await seedIfEmpty();
@@ -153,9 +160,15 @@ const formatTimeRange = (start: string, end: string) => {
     });
     blocks.forEach((b) => tbody.appendChild(timeBlockRow(b, skills, groups)));
 
-    const groupList = document.getElementById("time-groups-list")!;
     groupList.replaceChildren(); // clear before re-render
-    groups.forEach((g) => groupList.appendChild(groupCard(g, blocks)));
+    groups.forEach((g) =>
+      groupList.appendChild(
+        groupCard(
+          g,
+          blocks.filter((b) => b.group_id === g.id),
+        ),
+      ),
+    );
 
     skillList.replaceChildren();
     skills.forEach((s) => {
@@ -166,12 +179,20 @@ const formatTimeRange = (start: string, end: string) => {
       skillList.appendChild(li);
     });
 
-    const skillCreateBtn = document.getElementById("create-skill-item");
-    skillCreateBtn?.addEventListener("pointerup", async (e) => {
+    skillCreateBtn.addEventListener("pointerup", async (e) => {
       const emptySkill = await idbCreateTimelineSkill({ name: "" });
       const li = editableListItemElement(emptySkill.name);
       li.dataset.skillId = String(emptySkill.id);
       skillList.appendChild(li);
+    });
+    groupCreateBtn.addEventListener("pointerup", async (e) => {
+      const newGroup = await idbCreateTimelineGroup({ name: "" });
+      const div = groupCard(
+        newGroup,
+        blocks.filter((b) => b.group_id === newGroup.id),
+      );
+      div.dataset.groupId = String(newGroup.id);
+      groupList.appendChild(div);
     });
 
     // Notify TimelineGraph with the loaded blocks
@@ -288,7 +309,22 @@ const formatTimeRange = (start: string, end: string) => {
     },
     500,
   );
+  const debouncedSaveGroup = debounce(
+    async (groupId: number, field: string, value: string) => {
+      await idbUpdateTimeGroup(groupId, { [field]: value });
+    },
+    500,
+  );
 
+  groupList.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    const cardEl = target.closest("div")!;
+    const groupId = Number(cardEl.dataset.groupId);
+    const field = target.name;
+    if (!groupId || !field) return;
+    debouncedSaveGroup(groupId, field, target.value);
+  });
   skillList.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!target.matches("input, textarea")) return;
@@ -311,6 +347,20 @@ const formatTimeRange = (start: string, end: string) => {
       if (isNaN(skillId)) throw new Error(`skill id invalid: ${skillId}`);
       const deleted = await idbDeleteTimeSkill(skillId);
       liEl.remove();
+    }
+  });
+
+  groupList.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest("button");
+    if (!btn) return;
+    const divEl = btn.closest("div")!;
+    const groupId = Number(divEl.dataset.groupId);
+    // const targetBlock = skills.find((b) => b.id === skillId);
+    if (btn.classList.contains("delete")) {
+      if (isNaN(groupId)) throw new Error(`group id invalid: ${groupId}`);
+      const deleted = await idbDeleteTimeGroup(groupId);
+      divEl.remove();
     }
   });
 

@@ -169,4 +169,8 @@ table.timeline-schedule {
     background-color: transparent;
     border: none;
   }
+
+  & td[data-field-name="start-end"] {
+    max-width: 5rem;
+  }
 }

@@ -128,6 +128,7 @@ export function timeBlockRow(
 
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
+  tdTime.dataset.fieldName = "start-end"
   tdTime.appendChild(
     createTimeInput("start", formatTimeMinutesToClockString(start), id),
   );
@@ -138,11 +139,13 @@ export function timeBlockRow(
 
   // -- Desc cell
   const tdDesc = document.createElement("td");
+  tdDesc.dataset.fieldName = "desc"
   tdDesc.appendChild(createTextInput("desc", desc, id));
   tr.appendChild(tdDesc);
 
   // -- Skill select cell
   const tdSkill = document.createElement("td");
+  tdSkill.dataset.fieldName = "skill"
   tdSkill.appendChild(
     createSelectEl(
       id,
@@ -155,6 +158,7 @@ export function timeBlockRow(
 
   // -- Group link cell
   const tdGroup = document.createElement("td");
+  tdGroup.dataset.fieldName = "group"
   const groupLink = document.createElement("a");
   const groupSelectEl = createSelectEl(
     id,
@@ -170,10 +174,12 @@ export function timeBlockRow(
 
   // -- Note cell
   const tdNote = document.createElement("td");
+  tdNote.dataset.fieldName = "note"
   tdNote.appendChild(createTextArea("note", note, id));
   tr.appendChild(tdNote);
 
   const tdActions = document.createElement("td");
+  tdActions.dataset.fieldName = "actions"
   tdActions.classList.add("actions", "grid", "gap-s");
   tdActions.append(...createActionButtons(String(id)));
   tr.appendChild(tdActions);

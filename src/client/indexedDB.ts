@@ -157,6 +157,100 @@ export async function getAllGroupPlans(): Promise<GroupPlanner[]> {
     request.onerror = () => reject(request.error);
   });
 }
+export async function idbCreateTimelineGroup(
+  group: Omit<GroupPlanner, "id">,
+): Promise<GroupPlanner> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GROUPS_STORE, "readwrite");
+    const store = tx.objectStore(GROUPS_STORE);
+    const req = store.add(group);
+
+    req.onsuccess = () => {
+      resolve({ ...group, id: req.result as number });
+    };
+    req.onerror = () => {
+      console.error("IDB error:", req.error?.name, req.error?.message);
+      reject(req.error);
+    };
+  });
+}
+export async function idbUpdateTimeGroup(
+  id: number,
+  updates: Partial<GroupPlanner>,
+) {
+  const coerced = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => [
+      key,
+      isIdField(key) && value !== ""
+        ? Number(value)
+        : isTimeField(key) && typeof value === "string"
+          ? formatTimeToMinutes(value)
+          : value,
+    ]),
+  ) as Partial<GroupPlanner>;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GROUPS_STORE, "readwrite");
+    const store = tx.objectStore(GROUPS_STORE);
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+      const existing = req.result;
+      if (!existing) return reject(new Error(`Group ${id} not found`));
+
+      const merged = { ...existing, ...coerced };
+      const putReq = store.put(merged);
+
+      putReq.onsuccess = () =>
+        resolve({ ...merged, id: putReq.result as number });
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+export async function idbDeleteTimeGroup(id: number) {
+  const db = await openDB();
+
+  return new Promise<any>((resolve, reject) => {
+    const tx = db.transaction(GROUPS_STORE, "readwrite");
+    const store = tx.objectStore(GROUPS_STORE);
+
+    const getReq = store.get(id);
+
+    getReq.onerror = () => {
+      reject(getReq.error);
+    };
+
+    getReq.onsuccess = () => {
+      const existing = getReq.result;
+
+      if (!existing) {
+        reject(new Error(`No group found for id ${id}`));
+        return;
+      }
+
+      const deleteReq = store.delete(id);
+
+      deleteReq.onerror = () => {
+        reject(deleteReq.error);
+      };
+
+      tx.oncomplete = () => {
+        resolve(existing);
+      };
+
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+
+      tx.onabort = () => {
+        reject(tx.error);
+      };
+    };
+  });
+}
 
 //* SKILLS
 export async function getAllSkillPlans(): Promise<SkillPlanner[]> {
@@ -232,7 +326,6 @@ export async function idbDeleteTimeSkill(id: number) {
     const tx = db.transaction(SKILLS_STORE, "readwrite");
     const store = tx.objectStore(SKILLS_STORE);
 
-    // 1. Get the existing item
     const getReq = store.get(id);
 
     getReq.onerror = () => {
@@ -247,16 +340,14 @@ export async function idbDeleteTimeSkill(id: number) {
         return;
       }
 
-      // 2. Delete it
       const deleteReq = store.delete(id);
 
       deleteReq.onerror = () => {
         reject(deleteReq.error);
       };
 
-      // 3. Resolve AFTER transaction completes
       tx.oncomplete = () => {
-        resolve(existing); // ✅ return deleted object
+        resolve(existing);
       };
 
       tx.onerror = () => {
@@ -269,4 +360,3 @@ export async function idbDeleteTimeSkill(id: number) {
     };
   });
 }
-

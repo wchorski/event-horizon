@@ -275,3 +275,10 @@ ul.unstyled {
   display: grid;
   grid-template-columns: 2fr 1fr;
 }
+
+ul.editable {
+  & > li {
+    display: flex;
+    gap: var(--size-s);
+  }
+}

@@ -104,7 +104,9 @@ const formatTimeRange = (start: string, end: string) => {
     <hr />
     <div class="card">
       <h2>Skills</h2>
-      <ul id="skills-list" class="unstyled grid gap-s"></ul>
+      <ul id="skills-list" class="unstyled grid gap-m editable"></ul>
+      <br />
+      <button id="create-skill-item" class="btn">+ add skill</button>
     </div>
   </main>
 </BaseLayout>
@@ -115,8 +117,11 @@ const formatTimeRange = (start: string, end: string) => {
     getAllSkillPlans,
     getAllGroupPlans,
     dbCreateBlockPlan,
-    deleteBlockPlan,
+    idbDeleteBlockPlan,
     idbUpdateTimeBlock,
+    idbCreateTimelineSkill,
+    idbUpdateTimeSkill,
+    idbDeleteTimeSkill,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initPlannerDB";
   import {
@@ -127,8 +132,10 @@ const formatTimeRange = (start: string, end: string) => {
   import type { SkillPlanner } from "@ty/Schema";
   import { undefined } from "astro:schema";
   import { debounce } from "@lib/wait";
+  import { editableListItemElement } from "@client/templates/editableListItemElement";
 
   const table = document.querySelector("#timeline-block-table")!;
+  const skillList = document.getElementById("skills-list")!;
 
   async function renderFromDB() {
     await seedIfEmpty();
@@ -150,11 +157,20 @@ const formatTimeRange = (start: string, end: string) => {
     groupList.replaceChildren(); // clear before re-render
     groups.forEach((g) => groupList.appendChild(groupCard(g, blocks)));
 
-    const skillList = document.getElementById("skills-list")!;
     skillList.replaceChildren();
     skills.forEach((s) => {
-      const li = document.createElement("li");
-      li.textContent = s.name;
+      // const li = document.createElement("li");
+      // li.textContent = s.name;
+      const li = editableListItemElement(s.name);
+      li.dataset.skillId = String(s.id);
+      skillList.appendChild(li);
+    });
+
+    const skillCreateBtn = document.getElementById("create-skill-item");
+    skillCreateBtn?.addEventListener("pointerup", async (e) => {
+      const emptySkill = await idbCreateTimelineSkill({ name: "" });
+      const li = editableListItemElement(emptySkill.name);
+      li.dataset.skillId = String(emptySkill.id);
       skillList.appendChild(li);
     });
 
@@ -169,12 +185,6 @@ const formatTimeRange = (start: string, end: string) => {
     initAddRow(skills);
 
     function initAddRow(skills: SkillPlanner[]) {
-      const tbody = document.getElementById("time-block-list")!;
-
-      const insertButtons = document.querySelectorAll(
-        "#timeline-block-table button.insert",
-      );
-
       table.addEventListener("click", async (e) => {
         const target = e.target as HTMLElement;
 
@@ -193,7 +203,7 @@ const formatTimeRange = (start: string, end: string) => {
             blocks.splice(arrIndex, 1);
           }
 
-          await deleteBlockPlan(blockId);
+          await idbDeleteBlockPlan(blockId);
         }
         if (btn.classList.contains("insert")) {
           // TODO get start and end from targed row
@@ -266,26 +276,54 @@ const formatTimeRange = (start: string, end: string) => {
 
   renderFromDB().catch(console.error);
 
-  const debouncedSave = debounce(
+  const debouncedSaveBlock = debounce(
     async (blockId: number, field: string, value: string) => {
-      const update = await idbUpdateTimeBlock(blockId, { [field]: value });
+      await idbUpdateTimeBlock(blockId, { [field]: value });
+    },
+    500,
+  );
+  const debouncedSaveSkill = debounce(
+    async (skillId: number, field: string, value: string) => {
+      await idbUpdateTimeSkill(skillId, { [field]: value });
     },
     500,
   );
 
+  skillList.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    const itemEl = target.closest("li")!;
+    const skillId = Number(itemEl.dataset.skillId);
+    const field = target.name;
+    if (!skillId || !field) return;
+    debouncedSaveSkill(skillId, field, target.value);
+  });
+
+  skillList.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+
+    const btn = target.closest("button"); // handles clicks on child elements too
+    if (!btn) return;
+    const liEl = btn.closest("li")!;
+    const skillId = Number(liEl.dataset.skillId);
+    // const targetBlock = skills.find((b) => b.id === skillId);
+    if (btn.classList.contains("delete")) {
+      if (isNaN(skillId)) throw new Error(`skill id invalid: ${skillId}`);
+      const deleted = await idbDeleteTimeSkill(skillId);
+      liEl.remove();
+    }
+  });
+
   table.addEventListener("input", (e) => {
-    const target = e.target as
-      | HTMLInputElement
-      | HTMLTextAreaElement
-      | HTMLSelectElement;
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!target.matches("input, textarea")) return;
 
     const row = target.closest("tr")!;
     const blockId = Number(row.dataset.blockId);
-    const field = target.name; // e.g. data-field="desc"
+    const field = target.name;
     if (!blockId || !field) return;
 
-    debouncedSave(blockId, field, target.value);
+    debouncedSaveBlock(blockId, field, target.value);
   });
 
   // selects feel snappier with instant save on "change" instead

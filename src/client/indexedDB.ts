@@ -9,7 +9,7 @@ import type {
 
 const DB_NAME = "planner-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const BLOCKS_STORE = "blocks";
 const GROUPS_STORE = "groups";
@@ -32,6 +32,7 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(BLOCKS_STORE)) {
         const store = db.createObjectStore(BLOCKS_STORE, {
           keyPath: "id",
+          autoIncrement: true,
         });
 
         // useful later
@@ -42,12 +43,14 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(GROUPS_STORE)) {
         db.createObjectStore(GROUPS_STORE, {
           keyPath: "id",
+          autoIncrement: true,
         });
       }
 
       if (!db.objectStoreNames.contains(SKILLS_STORE)) {
         db.createObjectStore(SKILLS_STORE, {
           keyPath: "id",
+          autoIncrement: true,
         });
       }
     };
@@ -119,7 +122,7 @@ export async function idbUpdateTimeBlock(
     req.onerror = () => reject(req.error);
   });
 }
-export async function deleteBlockPlan(id: number) {
+export async function idbDeleteBlockPlan(id: number) {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
@@ -129,6 +132,7 @@ export async function deleteBlockPlan(id: number) {
 
     req.onsuccess = () => {
       console.log("block deleted with ID: ", id);
+      resolve(true);
     };
 
     req.onerror = (event) => {
@@ -153,6 +157,8 @@ export async function getAllGroupPlans(): Promise<GroupPlanner[]> {
     request.onerror = () => reject(request.error);
   });
 }
+
+//* SKILLS
 export async function getAllSkillPlans(): Promise<SkillPlanner[]> {
   const db = await openDB();
 
@@ -166,3 +172,101 @@ export async function getAllSkillPlans(): Promise<SkillPlanner[]> {
     request.onerror = () => reject(request.error);
   });
 }
+export async function idbCreateTimelineSkill(
+  skill: Omit<SkillPlanner, "id">,
+): Promise<SkillPlanner> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SKILLS_STORE, "readwrite");
+    const store = tx.objectStore(SKILLS_STORE);
+    const req = store.add(skill);
+
+    req.onsuccess = () => {
+      resolve({ ...skill, id: req.result as number });
+    };
+    req.onerror = () => {
+      console.error("IDB error:", req.error?.name, req.error?.message);
+      reject(req.error);
+    };
+  });
+}
+export async function idbUpdateTimeSkill(
+  id: number,
+  updates: Partial<SkillPlanner>,
+) {
+  const coerced = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => [
+      key,
+      isIdField(key) && value !== ""
+        ? Number(value)
+        : isTimeField(key) && typeof value === "string"
+          ? formatTimeToMinutes(value)
+          : value,
+    ]),
+  ) as Partial<SkillPlanner>;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SKILLS_STORE, "readwrite");
+    const store = tx.objectStore(SKILLS_STORE);
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+      const existing = req.result;
+      if (!existing) return reject(new Error(`Skill ${id} not found`));
+
+      const merged = { ...existing, ...coerced };
+      const putReq = store.put(merged);
+
+      putReq.onsuccess = () =>
+        resolve({ ...merged, id: putReq.result as number });
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+export async function idbDeleteTimeSkill(id: number) {
+  const db = await openDB();
+
+  return new Promise<any>((resolve, reject) => {
+    const tx = db.transaction(SKILLS_STORE, "readwrite");
+    const store = tx.objectStore(SKILLS_STORE);
+
+    // 1. Get the existing item
+    const getReq = store.get(id);
+
+    getReq.onerror = () => {
+      reject(getReq.error);
+    };
+
+    getReq.onsuccess = () => {
+      const existing = getReq.result;
+
+      if (!existing) {
+        reject(new Error(`No skill found for id ${id}`));
+        return;
+      }
+
+      // 2. Delete it
+      const deleteReq = store.delete(id);
+
+      deleteReq.onerror = () => {
+        reject(deleteReq.error);
+      };
+
+      // 3. Resolve AFTER transaction completes
+      tx.oncomplete = () => {
+        resolve(existing); // ✅ return deleted object
+      };
+
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+
+      tx.onabort = () => {
+        reject(tx.error);
+      };
+    };
+  });
+}
+

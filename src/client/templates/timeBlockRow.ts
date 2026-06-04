@@ -88,7 +88,7 @@ function createSubRowTodos(
 ): HTMLTableRowElement {
   const trSub = document.createElement("tr");
   trSub.className = "time-block-todos";
-  trSub.dataset.parentId = String(parentId);
+  trSub.dataset.blockId = String(parentId);
   // trSub.hidden = true;
 
   const tdSub = document.createElement("td");

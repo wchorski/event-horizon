@@ -312,6 +312,12 @@ const formatTimeRange = (start: string, end: string) => {
     },
     500,
   );
+  const debouncedSaveTodo = debounce(
+    async (blockId: number, field: string, value: string) => {
+      await idbUpdateTimeTodo(blockId, { [field]: value });
+    },
+    500,
+  );
   const debouncedSaveSkill = debounce(
     async (skillId: number, field: string, value: string) => {
       await idbUpdateTimeSkill(skillId, { [field]: value });
@@ -377,7 +383,16 @@ const formatTimeRange = (start: string, end: string) => {
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!target.matches("input, textarea")) return;
 
-    const row = target.closest("tr")!;
+    const todoItem = target.closest("li[data-todo-id]");
+    if (todoItem) {
+      const todoId = Number((todoItem as HTMLElement).dataset.todoId);
+      const field = target.name as keyof TodoPlanner;
+      debouncedSaveTodo(todoId, field, target.value);
+      return;
+    }
+
+    const row = target.closest("tr[data-block-id]") as HTMLTableRowElement;
+    if (!row) return;
     const blockId = Number(row.dataset.blockId);
     const field = target.name;
     if (!blockId || !field) return;

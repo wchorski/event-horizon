@@ -82,9 +82,12 @@ export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 
 export type TodoPlanner = {
+  id: number;
+  block_id: number;
   tbd?: boolean;
   text: string;
   note: string;
+  order: number;
 };
 
 export type BlockPlanner = {
@@ -96,7 +99,7 @@ export type BlockPlanner = {
   start: number; // minutes (can exceed 1440)
   end: number; // minutes (can exceed 1440)
   tbd?: boolean;
-  todos?: TodoPlanner[];
+  // todo_id: number
 };
 export type BlockPlannerInput = {
   id: string;

@@ -1,9 +1,36 @@
-import type { BlockPlanner, GroupPlanner } from "@ty/Schema";
+import type { BlockPlanner, GroupPlanner, TodoPlanner } from "@ty/Schema";
 import { openDB } from "./indexedDB";
 
 const BLOCKS_STORE = "blocks";
 const GROUPS_STORE = "groups";
 const SKILLS_STORE = "skills";
+
+const todos_template: TodoPlanner[] = [
+  {
+    id: 1,
+    order: 1,
+    block_id: 5,
+    tbd: false,
+    note: "",
+    text: "Brendan & Sara",
+  },
+  {
+    id: 2,
+    order: 2,
+    block_id: 5,
+    tbd: false,
+    note: "",
+    text: "Rachele & Harry",
+  },
+  {
+    id: 3,
+    order: 3,
+    block_id: 5,
+    tbd: true,
+    note: "",
+    text: "TBD Tom (or Brett) & Jessica",
+  },
+];
 
 const blocks_template: BlockPlanner[] = [
   {
@@ -50,11 +77,6 @@ const blocks_template: BlockPlanner[] = [
     skill_id: 1,
     group_id: 3,
     note: "",
-    todos: [
-      { tbd: false, note: "", text: "Brendan & Sara" },
-      { tbd: false, note: "", text: "Rachele & Harry" },
-      { tbd: true, note: "", text: "TBD Tom (or Brett) & Jessica" },
-    ],
   },
   {
     id: 6,

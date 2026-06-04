@@ -3,7 +3,7 @@
   --size-unit: 1rem;  /* 8px at default font size */
   
   /* Scale multiplier - controls expansion rate */
-  --size-scale: 1.5;
+  --size-scale: 1.1;
   
   /* Spacing scale */
   --size-xs: calc(var(--size-unit) * 0.5);                                    /* 0.25rem / 4px */

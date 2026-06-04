@@ -158,7 +158,7 @@ const formatTimeRange = (start: string, end: string) => {
     blocks.sort((a, b) => {
       return a.start - b.start;
     });
-    blocks.forEach((b) => tbody.appendChild(timeBlockRow(b, skills, groups)));
+    blocks.forEach((b) => tbody.append(...timeBlockRow(b, skills, groups)));
 
     groupList.replaceChildren(); // clear before re-render
     groups.forEach((g) =>
@@ -248,12 +248,21 @@ const formatTimeRange = (start: string, end: string) => {
             end: newEnd,
           });
           const newBlock = await dbCreateBlockPlan(emptyBlock);
-          const newRow = timeBlockRow(newBlock, skills, groups);
+          // const newRow = timeBlockRow(newBlock, skills, groups);
+          const [newRow, newSubRow] = timeBlockRow(newBlock, skills, groups);
 
           if (btn.classList.contains("above")) {
             rowEl.insertAdjacentElement("beforebegin", newRow);
+            newRow.insertAdjacentElement("afterend", newSubRow);
           } else if (btn.classList.contains("below")) {
-            rowEl.insertAdjacentElement("afterend", newRow);
+            console.log("below");
+            console.log(rowEl);
+            const existingSubRow = rowEl.nextElementSibling;
+            console.log(existingSubRow);
+            existingSubRow
+              ? existingSubRow.insertAdjacentElement("afterend", newRow)
+              : rowEl.insertAdjacentElement("afterend", newRow);
+            newRow.insertAdjacentElement("afterend", newSubRow);
           } else {
             console.log("❌ Direction not supported");
           }
@@ -387,5 +396,15 @@ const formatTimeRange = (start: string, end: string) => {
     if (!blockId || !field) return;
 
     idbUpdateTimeBlock(blockId, { [field]: target.value });
+  });
+
+  document.querySelectorAll("textarea").forEach((el) => {
+    const resize = () => {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    };
+
+    el.addEventListener("input", resize);
+    resize();
   });
 </script>

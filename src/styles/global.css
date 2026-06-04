@@ -39,7 +39,8 @@ h1 {
 }
 
 .card {
-  padding: 1.5rem;
+  --padding-size: var(--size-m, 1rem);
+  padding: var(--padding-size, 1rem);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
@@ -274,6 +275,10 @@ ul.unstyled {
 .timeline-planner-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
+
+  & > table {
+    height: fit-content;
+  }
 }
 
 ul.editable {
@@ -290,4 +295,25 @@ ul.editable {
 
 .faded {
   opacity: 0.3;
+}
+
+textarea.auto-size {
+  field-sizing: content;
+  min-height: 3lh;
+  width: 100%;
+  padding: 0.2rem;
+}
+
+ul.todos {
+  padding-inline-start: 0;
+  display: grid;
+  gap: var(--size-s);
+  & input {
+    font-size: small;
+  }
+
+  & > li {
+    display: flex;
+    gap: var(--size-s);
+  }
 }

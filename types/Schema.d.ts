@@ -81,6 +81,12 @@ export type UserCreditFlat = {
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 
+export type TodoPlanner = {
+  tbd?: boolean;
+  text: string;
+  note: string;
+};
+
 export type BlockPlanner = {
   id: number;
   desc: string;
@@ -89,7 +95,8 @@ export type BlockPlanner = {
   note: string;
   start: number; // minutes (can exceed 1440)
   end: number; // minutes (can exceed 1440)
-  tbd?: boolean
+  tbd?: boolean;
+  todos?: TodoPlanner[];
 };
 export type BlockPlannerInput = {
   id: string;
@@ -99,7 +106,7 @@ export type BlockPlannerInput = {
   note: string;
   start: string; // minutes (can exceed 1440)
   end: string; // minutes (can exceed 1440)
-  tbd?: boolean
+  tbd?: boolean;
 };
 export type GroupPlanner = {
   id: number;

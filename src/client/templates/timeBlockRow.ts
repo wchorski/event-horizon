@@ -1,6 +1,6 @@
 // src/client/templates/timeBlockRow.ts
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-import type { BlockPlanner, GroupPlanner } from "@ty/Schema";
+import type { BlockPlanner, GroupPlanner, TodoPlanner } from "@ty/Schema";
 
 interface Skill {
   id: number;
@@ -54,9 +54,62 @@ function createTextArea(
   el.name = name;
   el.value = value;
   el.id = `timeline-block-${blockId}-${name}`;
+  el.classList.add("auto-size");
   el.dataset.id = String(blockId);
   el.dataset.model = "time-block";
   return el;
+}
+
+function createTodoEl(todo: TodoPlanner): HTMLLIElement {
+  const li = document.createElement("li");
+  li.classList.add("todo");
+
+  const tdbCheckbox = Object.assign(document.createElement("input"), {
+    type: "checkbox",
+    name: "tbd",
+    value: todo.tbd,
+  });
+  const textInput = Object.assign(document.createElement("input"), {
+    name: "text",
+    type: "text",
+    value: todo.text,
+  });
+  const noteTextarea = Object.assign(document.createElement("textarea"), {
+    name: "note",
+    value: todo.note,
+  });
+  li.append(tdbCheckbox, textInput, noteTextarea);
+  return li;
+}
+
+function createSubRowTodos(
+  todos: TodoPlanner[],
+  parentId: number,
+): HTMLTableRowElement {
+  const trSub = document.createElement("tr");
+  trSub.className = "time-block-todos";
+  trSub.dataset.parentId = String(parentId);
+  // trSub.hidden = true;
+
+  const tdSub = document.createElement("td");
+  tdSub.colSpan = 999; // span all columns
+
+  const ul = document.createElement("ul");
+  ul.className = "todos";
+
+  todos.forEach((item) => {
+    ul.appendChild(createTodoEl(item));
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "add-todo-item";
+  addBtn.dataset.id = String(parentId);
+  addBtn.textContent = "+ add item";
+
+  tdSub.append(ul, addBtn);
+  trSub.appendChild(tdSub);
+
+  return trSub;
 }
 
 function createActionButtons(id: string): HTMLButtonElement[] {
@@ -75,7 +128,13 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   insertAboveBtn.title = "insert row above";
   insertBelowBtn.title = "insert row below";
 
-  return [insertAboveBtn, deleteRowBtn, insertBelowBtn];
+  const toggleTodosBtn = document.createElement("button");
+  toggleTodosBtn.className = "toggle-todos";
+  toggleTodosBtn.dataset.id = id;
+  toggleTodosBtn.setAttribute("aria-expanded", "false");
+  toggleTodosBtn.textContent = "☰";
+
+  return [insertAboveBtn, deleteRowBtn, insertBelowBtn, toggleTodosBtn];
 }
 
 function createSelectEl(
@@ -116,10 +175,11 @@ export function createEmptyBlock(
 }
 
 export function timeBlockRow(
-  block: Block,
+  block: BlockPlanner,
   skills: Skill[],
   groups: GroupPlanner[],
-): HTMLTableRowElement {
+): HTMLTableRowElement[] {
+  // const fragment = document.createDocumentFragment();
   const { id, start, end, desc, skill_id, group_id, note } = block;
 
   const tr = document.createElement("tr");
@@ -128,24 +188,22 @@ export function timeBlockRow(
 
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
-  tdTime.dataset.fieldName = "start-end"
+  tdTime.dataset.fieldName = "start-end";
   tdTime.appendChild(
     createTimeInput("start", formatTimeMinutesToClockString(start), id),
   );
   tdTime.appendChild(
     createTimeInput("end", formatTimeMinutesToClockString(end), id),
   );
-  tr.appendChild(tdTime);
 
   // -- Desc cell
   const tdDesc = document.createElement("td");
-  tdDesc.dataset.fieldName = "desc"
+  tdDesc.dataset.fieldName = "desc";
   tdDesc.appendChild(createTextInput("desc", desc, id));
-  tr.appendChild(tdDesc);
 
   // -- Skill select cell
   const tdSkill = document.createElement("td");
-  tdSkill.dataset.fieldName = "skill"
+  tdSkill.dataset.fieldName = "skill";
   tdSkill.appendChild(
     createSelectEl(
       id,
@@ -154,11 +212,10 @@ export function timeBlockRow(
       skill_id,
     ),
   );
-  tr.appendChild(tdSkill);
 
   // -- Group link cell
   const tdGroup = document.createElement("td");
-  tdGroup.dataset.fieldName = "group"
+  tdGroup.dataset.fieldName = "group";
   const groupLink = document.createElement("a");
   const groupSelectEl = createSelectEl(
     id,
@@ -170,19 +227,20 @@ export function timeBlockRow(
   groupLink.textContent = String(group_id);
   tdGroup.appendChild(groupSelectEl);
   tdGroup.appendChild(groupLink);
-  tr.appendChild(tdGroup);
 
   // -- Note cell
   const tdNote = document.createElement("td");
-  tdNote.dataset.fieldName = "note"
+  tdNote.dataset.fieldName = "note";
   tdNote.appendChild(createTextArea("note", note, id));
-  tr.appendChild(tdNote);
 
   const tdActions = document.createElement("td");
-  tdActions.dataset.fieldName = "actions"
+  tdActions.dataset.fieldName = "actions";
   tdActions.classList.add("actions", "grid", "gap-s");
   tdActions.append(...createActionButtons(String(id)));
-  tr.appendChild(tdActions);
 
-  return tr;
+  tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
+
+  const trSub = createSubRowTodos(block.todos || [], block.id);
+  // fragment.append(tr, trSub);
+  return [tr, trSub];
 }

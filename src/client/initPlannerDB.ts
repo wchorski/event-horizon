@@ -50,6 +50,11 @@ const blocks_template: BlockPlanner[] = [
     skill_id: 1,
     group_id: 3,
     note: "",
+    todos: [
+      { tbd: false, note: "", text: "Brendan & Sara" },
+      { tbd: false, note: "", text: "Rachele & Harry" },
+      { tbd: true, note: "", text: "TBD Tom (or Brett) & Jessica" },
+    ],
   },
   {
     id: 6,
@@ -147,7 +152,6 @@ const skills_template = [
 ];
 
 export async function seedIfEmpty() {
-
   const db = await openDB();
 
   const tx = db.transaction(

@@ -149,10 +149,19 @@ data[value="null"]::before {
 
 table.timeline-schedule {
   & td {
-    padding-block: 0;
+    padding-block: 0.2rem;
   }
   & td.actions {
     opacity: 0.1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    & button.insert {
+      grid-column: 1;
+    }
+    & button.delete, button.toggle-todos {
+      grid-column: 2;
+    }
 
     & button {
       padding: 0;
@@ -172,5 +181,9 @@ table.timeline-schedule {
 
   & td[data-field-name="start-end"] {
     max-width: 5rem;
+  }
+
+  & textarea {
+    max-width: 30ch;
   }
 }

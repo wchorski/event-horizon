@@ -1,4 +1,6 @@
 // src/client/templates/timeBlockRow.ts
+import { createElement } from "@client/elementRenders";
+import { BLOCKS_STORE, TODOS_STORE } from "@client/indexedDB";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import type { BlockPlanner, GroupPlanner, TodoPlanner } from "@ty/Schema";
 
@@ -35,6 +37,7 @@ function createTextInput(
   name: string,
   value: string,
   blockId: number,
+  padSize?: "xs" | "s" | "m" | "l",
 ): HTMLInputElement {
   const input = document.createElement("input");
   input.type = "text";
@@ -43,6 +46,8 @@ function createTextInput(
   input.id = `timeline-block-${blockId}-${name}`;
   input.dataset.id = String(blockId);
   input.dataset.model = "time-block";
+  if (padSize) input.classList.add(`pad-${padSize}`);
+
   return input;
 }
 function createTextArea(
@@ -60,10 +65,10 @@ function createTextArea(
   return el;
 }
 
-function createTodoEl(todo: TodoPlanner): HTMLLIElement {
+export function createTodoEl(todo: TodoPlanner): HTMLLIElement {
   const li = document.createElement("li");
-  li.dataset.todoId = String(todo.id)
-  li.classList.add("todo");
+  li.dataset.todoId = String(todo.id);
+  li.classList.add("todo", "anim--slide-in-left-right");
 
   const tdbCheckbox = Object.assign(document.createElement("input"), {
     type: "checkbox",
@@ -79,7 +84,17 @@ function createTodoEl(todo: TodoPlanner): HTMLLIElement {
     name: "note",
     value: todo.note,
   });
-  li.append(tdbCheckbox, textInput, noteTextarea);
+  const deleteBtn = createElement(
+    "button",
+    { className: "delete", textContent: "delete" },
+    { action: "delete", type: TODOS_STORE },
+  );
+  // const deleteBtn = Object.assign(document.createElement("button"), {
+  //   className: "delete",
+  //   textContent: "delete",
+  //   dataset: { action: "delete", type: "todo" },
+  // });
+  li.append(tdbCheckbox, textInput, noteTextarea, deleteBtn);
   return li;
 }
 
@@ -89,6 +104,7 @@ function createSubRowTodos(
 ): HTMLTableRowElement {
   const trSub = document.createElement("tr");
   trSub.className = "time-block-todos";
+  trSub.classList.add("time-block-todos", "anim--slide-in-left-right");
   trSub.dataset.blockId = String(parentId);
   // trSub.hidden = true;
 
@@ -102,10 +118,18 @@ function createSubRowTodos(
     ul.appendChild(createTodoEl(item));
   });
 
-  const addBtn = document.createElement("button");
-  addBtn.className = "add-todo-item";
-  addBtn.dataset.id = String(parentId);
-  addBtn.textContent = "+ add item";
+  // const addBtn = document.createElement("button");
+  const addBtn = createElement(
+    "button",
+    { className: "add-todo-item ghost", textContent: "+ add item" },
+    { blockId: String(parentId), action: "create", type: TODOS_STORE },
+  );
+  // addBtn.className = "add-todo-item";
+  // addBtn.classList.add("ghost");
+  // addBtn.dataset.blockId = String(parentId);
+  // addBtn.textContent = "+ add item";
+  // addBtn.dataset.action = "create";
+  // addBtn.dataset.type = TODOS_STORE;
 
   tdSub.append(ul, addBtn);
   trSub.appendChild(tdSub);
@@ -119,14 +143,24 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   const deleteRowBtn = document.createElement("button");
 
   deleteRowBtn.dataset.blockId = id;
-  insertAboveBtn.textContent = "+↑";
-  insertBelowBtn.textContent = "+↓";
   deleteRowBtn.textContent = "delete";
-  insertAboveBtn.classList.add("insert", "above");
-  insertBelowBtn.classList.add("insert", "below");
+  deleteRowBtn.dataset.action = "delete";
+  deleteRowBtn.dataset.type = BLOCKS_STORE;
   deleteRowBtn.classList.add("delete");
   deleteRowBtn.title = "delete this row";
+
+  insertAboveBtn.textContent = "+↑";
+  insertAboveBtn.dataset.action = "insert";
+  insertAboveBtn.dataset.direction = "above";
+  insertAboveBtn.dataset.type = BLOCKS_STORE;
+  insertAboveBtn.classList.add("insert", "above");
   insertAboveBtn.title = "insert row above";
+
+  insertBelowBtn.textContent = "+↓";
+  insertBelowBtn.classList.add("insert", "below");
+  insertBelowBtn.dataset.action = "insert";
+  insertBelowBtn.dataset.direction = "below";
+  insertBelowBtn.dataset.type = BLOCKS_STORE;
   insertBelowBtn.title = "insert row below";
 
   const toggleTodosBtn = document.createElement("button");
@@ -143,10 +177,12 @@ function createSelectEl(
   options: { label: string; value: string }[],
   fieldName: string,
   selectedId?: number,
+  padSize?: "xs" | "s" | "m" | "l",
 ): HTMLSelectElement {
   const select = document.createElement("select");
   select.name = fieldName;
   select.dataset.id = String(blockId);
+  if (padSize) select.classList.add(`pad-${padSize}`);
 
   options.forEach((skill) => {
     const option = document.createElement("option");
@@ -160,18 +196,17 @@ function createSelectEl(
 }
 
 export function createEmptyBlock(
-  id: number,
-  block?: Partial<BlockPlanner>,
-): Block {
+  partial?: Partial<BlockPlanner>,
+): Omit<BlockPlanner, "id"> {
   return {
-    id,
     start: 0,
     end: 0,
     desc: "",
     skill_id: 0,
     group_id: 0,
     note: "",
-    ...block,
+    tbd: false,
+    ...partial,
   };
 }
 
@@ -179,14 +214,15 @@ export function timeBlockRow(
   block: BlockPlanner,
   skills: Skill[],
   groups: GroupPlanner[],
-  todos: TodoPlanner[]|undefined,
+  todos: TodoPlanner[] | undefined,
 ): HTMLTableRowElement[] {
   // const fragment = document.createDocumentFragment();
   const { id, start, end, desc, skill_id, group_id, note } = block;
 
   const tr = document.createElement("tr");
-  tr.className = "time-block-row";
+  tr.id = `timeline-block-anchor-${id}`
   tr.dataset.blockId = String(id);
+  tr.classList.add("time-block-row", "anim--slide-in-left-right");
 
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
@@ -201,7 +237,7 @@ export function timeBlockRow(
   // -- Desc cell
   const tdDesc = document.createElement("td");
   tdDesc.dataset.fieldName = "desc";
-  tdDesc.appendChild(createTextInput("desc", desc, id));
+  tdDesc.appendChild(createTextInput("desc", desc, id, "xs"));
 
   // -- Skill select cell
   const tdSkill = document.createElement("td");
@@ -212,6 +248,7 @@ export function timeBlockRow(
       skills.map((s) => ({ label: s.name, value: String(s.id) })),
       "skill_id",
       skill_id,
+      "xs",
     ),
   );
 
@@ -224,11 +261,12 @@ export function timeBlockRow(
     groups.map((g) => ({ label: g.name, value: String(g.id) })),
     "group_id",
     group_id,
+    "xs"
   );
   groupLink.href = `#${group_id}`;
   groupLink.textContent = String(group_id);
   tdGroup.appendChild(groupSelectEl);
-  tdGroup.appendChild(groupLink);
+  // tdGroup.appendChild(groupLink);
 
   // -- Note cell
   const tdNote = document.createElement("td");

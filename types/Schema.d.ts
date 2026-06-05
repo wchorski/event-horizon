@@ -1,3 +1,4 @@
+import type { BLOCKS_STORE } from "@client/indexedDB";
 import {
   BookingAssignment,
   Role,
@@ -126,3 +127,13 @@ export type Planner = {
   groups: GroupPlanner[];
   skills: SkillPlanner[];
 };
+
+import {
+  BLOCKS_STORE,
+  GROUPS_STORE,
+  SKILLS_STORE,
+  TODOS_STORE,
+} from "@client/indexedDB";
+export type BtnAction = "delete" | "insert" | "create";
+export type BtnDirection = "above" | "below";
+export type BtnType = "blocks" | "groups" | "skills" | "todos";

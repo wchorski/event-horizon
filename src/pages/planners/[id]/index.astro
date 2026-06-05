@@ -10,6 +10,7 @@ export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
 
+// TODO move to skills pulled from idb
 const skills = [
   // { name: "Misc", id: 0 },
   { name: "MC Announcement", id: 1 },
@@ -18,39 +19,16 @@ const skills = [
   { name: "Misc", id: 4 },
 ];
 
-// const groups_template: GroupPlanner[] = [
+// const vendors = [
 //   {
-//     id: 1,
-//     name: "Ceremony",
+//     name: "DJ",
+//     skills: ["MC", "Song Que", "Music Playlist"],
 //   },
 //   {
-//     id: 2,
-//     name: "Reception",
-//   },
-//   {
-//     id: 3,
-//     name: "Introductions",
-//   },
-//   {
-//     id: 4,
-//     name: "Traditionals",
-//   },
-//   {
-//     id: 5,
-//     name: "Dancing",
+//     name: "Photographer",
+//     skills: ["special moment", "candid"],
 //   },
 // ];
-
-const vendors = [
-  {
-    name: "DJ",
-    skills: ["MC", "Song Que", "Music Playlist"],
-  },
-  {
-    name: "Photographer",
-    skills: ["special moment", "candid"],
-  },
-];
 
 const parseTime = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
@@ -99,7 +77,7 @@ const formatTimeRange = (start: string, end: string) => {
       <aside class="grid gap-m">
         <h2 class="display none">blocks</h2>
         <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
-        <button id="create-group-item" class="btn">+ add group</button>
+        <button id="create-group-item" class="btn ghost">+ add group</button>
       </aside>
     </div>
     <hr />
@@ -128,17 +106,27 @@ const formatTimeRange = (start: string, end: string) => {
     idbCreateTimelineGroup,
     idbDeleteTimeGroup,
     idbUpdateTimelineTodo,
+    idbCreateTimelineTodo,
+    idbDeleteTimelineTodo,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initPlannerDB";
   import {
     createEmptyBlock,
+    createTodoEl,
     timeBlockRow,
   } from "@client/templates/timeBlockRow";
   import { groupCard } from "@client/templates/groupCard";
-  import type { SkillPlanner } from "@ty/Schema";
+  import type {
+    BtnAction,
+    BtnDirection,
+    SkillPlanner,
+    TodoPlanner,
+  } from "@ty/Schema";
   import { base64, base64url, bigint, undefined } from "astro:schema";
   import { debounce } from "@lib/wait";
   import { editableListItemElement } from "@client/templates/editableListItemElement";
+  import { BLOCKS_STORE } from "@client/indexedDB";
+  import { TODOS_STORE } from "@client/indexedDB";
 
   const table = document.querySelector("#timeline-block-table")!;
   const skillList = document.getElementById("skills-list")!;
@@ -224,12 +212,18 @@ const formatTimeRange = (start: string, end: string) => {
         const btn = target.closest("button"); // handles clicks on child elements too
         if (!btn) return;
         const rowEl = btn.closest("tr")!;
+        // const liEl = btn.closest("li");
+        // console.log({liEl});
         const blockId = Number(rowEl.dataset.blockId);
+        if (isNaN(blockId)) throw new Error(`block id invalid: ${blockId}`);
+        const btnType = btn.dataset.type;
+        const btnAction = btn.dataset.action as BtnAction;
+        const btnDirection = btn.dataset.direction as BtnDirection | undefined;
+        // const todoId = Number(liEl?.dataset.todoId);
+
         const targetBlock = blocks.find((b) => b.id === blockId);
 
-        if (btn.classList.contains("delete")) {
-          if (isNaN(blockId)) throw new Error(`block id invalid: ${blockId}`);
-
+        if (btnAction === "delete" && btnType === BLOCKS_STORE) {
           rowEl.remove();
           const arrIndex = blocks.findIndex((b) => b.id === blockId);
           if (arrIndex !== -1) {
@@ -237,40 +231,74 @@ const formatTimeRange = (start: string, end: string) => {
           }
 
           await idbDeleteBlockPlan(blockId);
+          return;
         }
-        if (btn.classList.contains("insert")) {
+
+        if (btnAction === "delete" && btnType === TODOS_STORE) {
+          const todoLi = btn.closest("li")!;
+          const todoId = Number(todoLi.dataset.todoId)
+          if(isNaN(todoId)) throw new Error(`todo id is invalid: ${todoId}`)
+          todoLi.remove();
+          const arrIndex = todos.findIndex((t) => t.id === todoId);
+          if (arrIndex !== -1) {
+            todos.splice(arrIndex, 1);
+          }
+
+          await idbDeleteTimelineTodo(todoId);
+          return;
+        }
+
+        if (!isNaN(blockId) && btnAction === "create") {
+          const emptyTodo: Omit<TodoPlanner, "id"> = {
+            text: "",
+            tbd: false,
+            block_id: blockId,
+            note: "",
+            order: 1,
+          };
+
+          const newTodo = await idbCreateTimelineTodo(emptyTodo);
+          const todoEl = createTodoEl(newTodo);
+          const todoList = btn.closest("td")!.querySelector("ul.todos");
+          console.log(todoList);
+          todoList?.appendChild(todoEl);
+          return;
+        }
+        if (btnAction === "insert") {
           // TODO get start and end from targed row
           // insert into createEmptyBlock
 
           let newStart = 0;
           let newEnd = 0;
 
-          if (btn.classList.contains("above")) {
+          if (btnDirection === "above") {
             newStart = targetBlock ? targetBlock.start - 15 : 0;
             newEnd = targetBlock ? targetBlock.start : 0;
-          } else if (btn.classList.contains("below")) {
+          } else if (btnDirection === "below") {
             newStart = targetBlock ? targetBlock.end : 0;
             newEnd = targetBlock ? targetBlock.end + 15 : 0;
           } else {
             console.log("❌ Direction not supported");
           }
 
-          const emptyBlock = createEmptyBlock(blocks.length + 1, {
+          const emptyBlock = createEmptyBlock({
             start: newStart,
             end: newEnd,
           });
           const newBlock = await dbCreateBlockPlan(emptyBlock);
           // const newRow = timeBlockRow(newBlock, skills, groups);
-          const [newRow, newSubRow] = timeBlockRow(newBlock, skills, groups);
+          const [newRow, newSubRow] = timeBlockRow(
+            newBlock,
+            skills,
+            groups,
+            [],
+          );
 
-          if (btn.classList.contains("above")) {
+          if (btnDirection === "above") {
             rowEl.insertAdjacentElement("beforebegin", newRow);
             newRow.insertAdjacentElement("afterend", newSubRow);
-          } else if (btn.classList.contains("below")) {
-            console.log("below");
-            console.log(rowEl);
+          } else if (btn.dataset.direction === "below") {
             const existingSubRow = rowEl.nextElementSibling;
-            console.log(existingSubRow);
             existingSubRow
               ? existingSubRow.insertAdjacentElement("afterend", newRow)
               : rowEl.insertAdjacentElement("afterend", newRow);
@@ -279,7 +307,8 @@ const formatTimeRange = (start: string, end: string) => {
             console.log("❌ Direction not supported");
           }
 
-          blocks.push(emptyBlock);
+          blocks.push(newBlock);
+          return;
         }
       });
     }
@@ -370,7 +399,7 @@ const formatTimeRange = (start: string, end: string) => {
     const liEl = btn.closest("li")!;
     const skillId = Number(liEl.dataset.skillId);
     // const targetBlock = skills.find((b) => b.id === skillId);
-    if (btn.classList.contains("delete")) {
+    if (btn.dataset.action === "delete") {
       if (isNaN(skillId)) throw new Error(`skill id invalid: ${skillId}`);
       const deleted = await idbDeleteTimeSkill(skillId);
       liEl.remove();
@@ -384,7 +413,7 @@ const formatTimeRange = (start: string, end: string) => {
     const divEl = btn.closest("div")!;
     const groupId = Number(divEl.dataset.groupId);
     // const targetBlock = skills.find((b) => b.id === skillId);
-    if (btn.classList.contains("delete")) {
+    if (btn.dataset.action === "delete") {
       if (isNaN(groupId)) throw new Error(`group id invalid: ${groupId}`);
       const deleted = await idbDeleteTimeGroup(groupId);
       divEl.remove();

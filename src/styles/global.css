@@ -4,8 +4,15 @@
   --c-pending: rgb(214, 221, 114);
 }
 
-html {
-  scroll-behavior: smooth;
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+tr,
+div,
+p {
+  scroll-margin-top: 50px;
 }
 
 body,
@@ -78,7 +85,6 @@ h1 {
 
 button,
 .btn {
-  border: none;
   cursor: pointer;
   transition: background 0.2s;
   text-decoration: none;
@@ -299,6 +305,7 @@ ul.editable {
 
 textarea.auto-size {
   field-sizing: content;
+  resize: vertical;
   min-height: 3lh;
   width: 100%;
   padding: 0.2rem;
@@ -315,5 +322,14 @@ ul.todos {
   & > li {
     display: flex;
     gap: var(--size-s);
+    min-height: var(--size-s);
+
+    & > input {
+      margin: 0;
+    }
+
+    & > textarea {
+      height: 15px;
+    }
   }
 }

@@ -6,7 +6,6 @@ input[type="search"],
 input[type="tel"],
 input[type="number"],
 input[type="email"] {
-  padding: 0.5rem;
   border-width: 1px;
   border-style: solid;
   border-radius: 4px;
@@ -55,10 +54,10 @@ table {
   }
 }
 
-input[type="checkbox"] {
+/* input[type="checkbox"] {
   width: 1.5rem;
   height: 1.5rem;
-}
+} */
 
 form {
   display: grid;

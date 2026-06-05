@@ -18,3 +18,16 @@
   --br-dull: var(--size-m);
   --br-soft: var(--size-l);
 }
+
+.pad-xs {
+  padding: var(--size-xs, 0.5rem);
+}
+.pad-s {
+  padding: var(--size-s, 0.5rem);
+}
+.pad-m {
+  padding: var(--size-m, 0.5rem);
+}
+.pad-l {
+  padding: var(--size-l, 0.5rem);
+}

@@ -63,6 +63,30 @@ button[type="submit"].success {
   }
 }
 
+.anim--slide-in-left-right {
+  animation-name: slide-in-left-right;
+  animation-duration: 1s;
+  animation-timing-function: ease-out;
+  animation-delay: 0;
+  animation-iteration-count: 1;
+  animation-direction: normal;
+}
+
+@keyframes slide-in-left-right {
+  0% {
+    opacity: 0.3;
+    transform: translateX(100%);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 button.htmx-request {
   anchor-name: --submit-button;
   position: relative;

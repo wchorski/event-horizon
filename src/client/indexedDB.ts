@@ -160,9 +160,28 @@ export async function getAllTimelineTodos(): Promise<TodoPlanner[]> {
     const store = tx.objectStore(TODOS_STORE);
 
     const request = store.getAll();
+    console.log(request);
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
+  });
+}
+export async function idbCreateTimelineTodo(
+  skill: Omit<TodoPlanner, "id">,
+): Promise<TodoPlanner> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TODOS_STORE, "readwrite");
+    const store = tx.objectStore(TODOS_STORE);
+    const req = store.add(skill);
+
+    req.onsuccess = () => {
+      resolve({ ...skill, id: req.result as number });
+    };
+    req.onerror = () => {
+      console.error("IDB error:", req.error?.name, req.error?.message);
+      reject(req.error);
+    };
   });
 }
 export async function idbUpdateTimelineTodo(
@@ -198,6 +217,47 @@ export async function idbUpdateTimelineTodo(
     };
 
     req.onerror = () => reject(req.error);
+  });
+}
+export async function idbDeleteTimelineTodo(id: number) {
+  const db = await openDB();
+
+  return new Promise<any>((resolve, reject) => {
+    const tx = db.transaction(TODOS_STORE, "readwrite");
+    const store = tx.objectStore(TODOS_STORE);
+
+    const getReq = store.get(id);
+
+    getReq.onerror = () => {
+      reject(getReq.error);
+    };
+
+    getReq.onsuccess = () => {
+      const existing = getReq.result;
+
+      if (!existing) {
+        reject(new Error(`No ${TODOS_STORE} found for id ${id}`));
+        return;
+      }
+
+      const deleteReq = store.delete(id);
+
+      deleteReq.onerror = () => {
+        reject(deleteReq.error);
+      };
+
+      tx.oncomplete = () => {
+        resolve(existing);
+      };
+
+      tx.onerror = () => {
+        reject(tx.error);
+      };
+
+      tx.onabort = () => {
+        reject(tx.error);
+      };
+    };
   });
 }
 

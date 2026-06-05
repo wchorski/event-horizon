@@ -5,15 +5,17 @@ import type {
   BlockPlannerInput,
   GroupPlanner,
   SkillPlanner,
+  TodoPlanner,
 } from "@ty/Schema";
 
-const DB_NAME = "planner-db";
+const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
-const BLOCKS_STORE = "blocks";
-const GROUPS_STORE = "groups";
-const SKILLS_STORE = "skills";
+export const BLOCKS_STORE = "blocks";
+export const GROUPS_STORE = "groups";
+export const SKILLS_STORE = "skills";
+export const TODOS_STORE = "todos";
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -49,6 +51,12 @@ export function openDB(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(SKILLS_STORE)) {
         db.createObjectStore(SKILLS_STORE, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+      }
+      if (!db.objectStoreNames.contains(TODOS_STORE)) {
+        db.createObjectStore(TODOS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
@@ -140,6 +148,56 @@ export async function idbDeleteBlockPlan(id: number) {
       console.error("Error deleting Block:", event?.target?.errorCode);
       reject(req.error);
     };
+  });
+}
+
+//* TODOS
+export async function getAllTimelineTodos(): Promise<TodoPlanner[]> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TODOS_STORE, "readonly");
+    const store = tx.objectStore(TODOS_STORE);
+
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+export async function idbUpdateTimelineTodo(
+  id: number,
+  updates: Partial<TodoPlanner>,
+) {
+  const coerced = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => [
+      key,
+      isIdField(key) && value !== ""
+        ? Number(value)
+        : isTimeField(key) && typeof value === "string"
+          ? formatTimeToMinutes(value)
+          : value,
+    ]),
+  ) as Partial<TodoPlanner>;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TODOS_STORE, "readwrite");
+    const store = tx.objectStore(TODOS_STORE);
+    const req = store.get(id);
+
+    req.onsuccess = () => {
+      const existing = req.result;
+      if (!existing) return reject(new Error(`Todo ${id} not found`));
+
+      const merged = { ...existing, ...coerced };
+      const putReq = store.put(merged);
+
+      putReq.onsuccess = () =>
+        resolve({ ...merged, id: putReq.result as number });
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    req.onerror = () => reject(req.error);
   });
 }
 

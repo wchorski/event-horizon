@@ -115,6 +115,7 @@ const formatTimeRange = (start: string, end: string) => {
 <script>
   import {
     getAllBlockPlans,
+    getAllTimelineTodos,
     getAllSkillPlans,
     getAllGroupPlans,
     dbCreateBlockPlan,
@@ -126,6 +127,7 @@ const formatTimeRange = (start: string, end: string) => {
     idbUpdateTimeGroup,
     idbCreateTimelineGroup,
     idbDeleteTimeGroup,
+    idbUpdateTimelineTodo,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initPlannerDB";
   import {
@@ -147,10 +149,11 @@ const formatTimeRange = (start: string, end: string) => {
   async function renderFromDB() {
     await seedIfEmpty();
 
-    const [blocks, skills, groups] = await Promise.all([
+    const [blocks, skills, groups, todos] = await Promise.all([
       getAllBlockPlans(),
       getAllSkillPlans(),
       getAllGroupPlans(),
+      getAllTimelineTodos(),
     ]);
 
     const tbody = document.getElementById("time-block-list")!;
@@ -158,7 +161,16 @@ const formatTimeRange = (start: string, end: string) => {
     blocks.sort((a, b) => {
       return a.start - b.start;
     });
-    blocks.forEach((b) => tbody.append(...timeBlockRow(b, skills, groups)));
+    blocks.forEach((b) =>
+      tbody.append(
+        ...timeBlockRow(
+          b,
+          skills,
+          groups,
+          todos.filter((t) => t.block_id === b.id),
+        ),
+      ),
+    );
 
     groupList.replaceChildren(); // clear before re-render
     groups.forEach((g) =>
@@ -314,7 +326,7 @@ const formatTimeRange = (start: string, end: string) => {
   );
   const debouncedSaveTodo = debounce(
     async (blockId: number, field: string, value: string) => {
-      await idbUpdateTimeTodo(blockId, { [field]: value });
+      await idbUpdateTimelineTodo(blockId, { [field]: value });
     },
     500,
   );

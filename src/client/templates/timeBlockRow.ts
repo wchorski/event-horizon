@@ -62,6 +62,7 @@ function createTextArea(
 
 function createTodoEl(todo: TodoPlanner): HTMLLIElement {
   const li = document.createElement("li");
+  li.dataset.todoId = String(todo.id)
   li.classList.add("todo");
 
   const tdbCheckbox = Object.assign(document.createElement("input"), {
@@ -178,6 +179,7 @@ export function timeBlockRow(
   block: BlockPlanner,
   skills: Skill[],
   groups: GroupPlanner[],
+  todos: TodoPlanner[]|undefined,
 ): HTMLTableRowElement[] {
   // const fragment = document.createDocumentFragment();
   const { id, start, end, desc, skill_id, group_id, note } = block;
@@ -240,7 +242,7 @@ export function timeBlockRow(
 
   tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 
-  const trSub = createSubRowTodos(block.todos || [], block.id);
+  const trSub = createSubRowTodos(todos || [], block.id);
   // fragment.append(tr, trSub);
   return [tr, trSub];
 }

@@ -2,6 +2,7 @@
 interface Params {
   id: string;
 }
+import CheckboxCorner from "@components/form/CheckboxCorner.astro";
 import InputField from "@components/form/InputField.astro";
 import TimelineGraph from "@components/TimelineGraph.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
@@ -53,6 +54,7 @@ const formatTimeRange = (start: string, end: string) => {
     <header class="flex">
       <h1>Planner</h1>
       <p class="sub-text">{id}</p>
+      <CheckboxCorner />
     </header>
 
     <TimelineGraph blocks={[]} skills={skills} />
@@ -85,7 +87,7 @@ const formatTimeRange = (start: string, end: string) => {
       <h2>Skills</h2>
       <ul id="skills-list" class="unstyled grid gap-m editable"></ul>
       <br />
-      <button id="create-skill-item" class="btn">+ add skill</button>
+      <button id="create-skill-item" class="btn ghost">+ add skill</button>
     </div>
   </main>
 </BaseLayout>
@@ -122,7 +124,7 @@ const formatTimeRange = (start: string, end: string) => {
     SkillPlanner,
     TodoPlanner,
   } from "@ty/Schema";
-  import { base64, base64url, bigint, undefined } from "astro:schema";
+
   import { debounce } from "@lib/wait";
   import { editableListItemElement } from "@client/templates/editableListItemElement";
   import { BLOCKS_STORE } from "@client/indexedDB";
@@ -135,7 +137,7 @@ const formatTimeRange = (start: string, end: string) => {
   const groupCreateBtn = document.getElementById("create-group-item")!;
 
   async function renderFromDB() {
-    await seedIfEmpty();
+    await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
 
     const [blocks, skills, groups, todos] = await Promise.all([
       getAllBlockPlans(),
@@ -236,8 +238,8 @@ const formatTimeRange = (start: string, end: string) => {
 
         if (btnAction === "delete" && btnType === TODOS_STORE) {
           const todoLi = btn.closest("li")!;
-          const todoId = Number(todoLi.dataset.todoId)
-          if(isNaN(todoId)) throw new Error(`todo id is invalid: ${todoId}`)
+          const todoId = Number(todoLi.dataset.todoId);
+          if (isNaN(todoId)) throw new Error(`todo id is invalid: ${todoId}`);
           todoLi.remove();
           const arrIndex = todos.findIndex((t) => t.id === todoId);
           if (arrIndex !== -1) {
@@ -260,7 +262,7 @@ const formatTimeRange = (start: string, end: string) => {
           const newTodo = await idbCreateTimelineTodo(emptyTodo);
           const todoEl = createTodoEl(newTodo);
           const todoList = btn.closest("td")!.querySelector("ul.todos");
-          console.log(todoList);
+          console.log({ todoList });
           todoList?.appendChild(todoEl);
           return;
         }
@@ -444,7 +446,15 @@ const formatTimeRange = (start: string, end: string) => {
   // selects feel snappier with instant save on "change" instead
   table.addEventListener("change", (e) => {
     const target = e.target as HTMLSelectElement;
-    if (!target.matches("select")) return;
+    if (!target.matches("select, input[type='checkbox']")) return;
+
+    const todoItem = target.closest("li[data-todo-id]");
+    if (todoItem) {
+      const todoId = Number((todoItem as HTMLElement).dataset.todoId);
+      const field = target.name as keyof TodoPlanner;
+      debouncedSaveTodo(todoId, field, target.value);
+      return;
+    }
 
     const row = target.closest("tr")!;
     const blockId = Number(row.dataset.blockId);

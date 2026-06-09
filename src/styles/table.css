@@ -176,6 +176,9 @@ table.timeline-schedule {
       border: none;
     }
   }
+  & tr.time-block-todos > td {
+    padding-inline-start: var(--size-xl);
+  }
   & tr:hover td.actions {
     opacity: 1;
   }

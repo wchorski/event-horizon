@@ -1,4 +1,4 @@
-import { isIdField, isTimeField } from "@lib/regex";
+import { isCheckboxField, isIdField, isTimeField } from "@lib/regex";
 import { formatTimeToMinutes } from "@lib/timeFormatters";
 import type {
   BlockPlanner,
@@ -10,7 +10,7 @@ import type {
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export const BLOCKS_STORE = "blocks";
 export const GROUPS_STORE = "groups";
@@ -120,7 +120,6 @@ export async function idbUpdateTimeBlock(
 
       const merged = { ...existing, ...coerced };
       const putReq = store.put(merged);
-      console.log(merged);
 
       putReq.onsuccess = () =>
         resolve({ ...merged, id: putReq.result as number });
@@ -160,7 +159,6 @@ export async function getAllTimelineTodos(): Promise<TodoPlanner[]> {
     const store = tx.objectStore(TODOS_STORE);
 
     const request = store.getAll();
-    console.log(request);
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -190,14 +188,16 @@ export async function idbUpdateTimelineTodo(
 ) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
-      key,
-      isIdField(key) && value !== ""
-        ? Number(value)
-        : isTimeField(key) && typeof value === "string"
-          ? formatTimeToMinutes(value)
-          : value,
+        key,
+        isIdField(key) && value !== ""
+            ? Number(value)
+            : isTimeField(key) && typeof value === "string"
+            ? formatTimeToMinutes(value)
+            : isCheckboxField(key) && typeof value === "string"
+            ? value === "true" || value === "on"
+            : value,
     ]),
-  ) as Partial<TodoPlanner>;
+) as Partial<TodoPlanner>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(TODOS_STORE, "readwrite");

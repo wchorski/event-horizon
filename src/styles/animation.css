@@ -191,3 +191,27 @@ dialog.closing {
     transform: translateY(12px);
   }
 }
+
+details[open] {
+  summary {
+    color: var(--c-primary);
+  }
+  li {
+    animation-name: fall-in;
+    animation-duration: 200ms;
+    animation-timing-function: ease-in;
+    animation-delay: 0;
+    animation-iteration-count: 1;
+    animation-direction: normal;
+    animation-delay: calc(100ms * sibling-index());
+  }
+}
+
+@keyframes fall-in {
+  0% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}

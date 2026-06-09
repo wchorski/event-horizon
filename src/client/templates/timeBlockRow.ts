@@ -3,6 +3,7 @@ import { createElement } from "@client/elementRenders";
 import { BLOCKS_STORE, TODOS_STORE } from "@client/indexedDB";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import type { BlockPlanner, GroupPlanner, TodoPlanner } from "@ty/Schema";
+import { checkboxCornerEl } from "./checkboxCorner";
 
 interface Skill {
   id: number;
@@ -70,11 +71,8 @@ export function createTodoEl(todo: TodoPlanner): HTMLLIElement {
   li.dataset.todoId = String(todo.id);
   li.classList.add("todo", "anim--slide-in-left-right");
 
-  const tdbCheckbox = Object.assign(document.createElement("input"), {
-    type: "checkbox",
-    name: "tbd",
-    value: todo.tbd,
-  });
+  // TODO replace witht
+  const tdbCheckbox = checkboxCornerEl(todo.tbd)
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
     type: "text",
@@ -111,6 +109,13 @@ function createSubRowTodos(
   const tdSub = document.createElement("td");
   tdSub.colSpan = 999; // span all columns
 
+  const details = document.createElement("details");
+  details.open = true;
+  const summary = document.createElement("summary");
+  summary.classList.add("ghost");
+  // const spanCount = document.createElement("span");
+  summary.textContent = `${todos.length} todo${todos.length > 1 ? "s" : ""}`;
+
   const ul = document.createElement("ul");
   ul.className = "todos";
 
@@ -131,7 +136,8 @@ function createSubRowTodos(
   // addBtn.dataset.action = "create";
   // addBtn.dataset.type = TODOS_STORE;
 
-  tdSub.append(ul, addBtn);
+  details.append(summary, ul, addBtn);
+  tdSub.append(details);
   trSub.appendChild(tdSub);
 
   return trSub;
@@ -163,13 +169,13 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   insertBelowBtn.dataset.type = BLOCKS_STORE;
   insertBelowBtn.title = "insert row below";
 
-  const toggleTodosBtn = document.createElement("button");
-  toggleTodosBtn.className = "toggle-todos";
-  toggleTodosBtn.dataset.id = id;
-  toggleTodosBtn.setAttribute("aria-expanded", "false");
-  toggleTodosBtn.textContent = "☰";
+  // const toggleTodosBtn = document.createElement("button");
+  // toggleTodosBtn.className = "toggle-todos";
+  // toggleTodosBtn.dataset.id = id;
+  // toggleTodosBtn.setAttribute("aria-expanded", "false");
+  // toggleTodosBtn.textContent = "☰";
 
-  return [insertAboveBtn, deleteRowBtn, insertBelowBtn, toggleTodosBtn];
+  return [insertAboveBtn, deleteRowBtn, insertBelowBtn];
 }
 
 function createSelectEl(
@@ -220,7 +226,7 @@ export function timeBlockRow(
   const { id, start, end, desc, skill_id, group_id, note } = block;
 
   const tr = document.createElement("tr");
-  tr.id = `timeline-block-anchor-${id}`
+  tr.id = `timeline-block-anchor-${id}`;
   tr.dataset.blockId = String(id);
   tr.classList.add("time-block-row", "anim--slide-in-left-right");
 
@@ -261,7 +267,7 @@ export function timeBlockRow(
     groups.map((g) => ({ label: g.name, value: String(g.id) })),
     "group_id",
     group_id,
-    "xs"
+    "xs",
   );
   groupLink.href = `#${group_id}`;
   groupLink.textContent = String(group_id);

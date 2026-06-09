@@ -85,7 +85,7 @@ export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 export type TodoPlanner = {
   id: number;
   block_id: number;
-  tbd?: boolean;
+  tbd: boolean;
   text: string;
   note: string;
   order: number;

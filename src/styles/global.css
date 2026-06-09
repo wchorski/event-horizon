@@ -280,7 +280,7 @@ ul.unstyled {
 
 .timeline-planner-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 3fr 1fr;
 
   & > table {
     height: fit-content;
@@ -313,16 +313,27 @@ textarea.auto-size {
 
 ul.todos {
   padding-inline-start: 0;
-  display: grid;
   gap: var(--size-s);
+  display: grid;
   & input {
     font-size: small;
   }
 
+  .corner-checkbox,
+  input[name="text"] {
+    grid-area: 1/1;
+  }
+
+  input[name="text"] {
+    padding-inline-start: var(--size-s);
+  }
+
   & > li {
-    display: flex;
+    display: grid;
+    grid-template-columns: 4fr 2fr 0.5fr;
     gap: var(--size-s);
     min-height: var(--size-s);
+    overflow: hidden;
 
     & > input {
       margin: 0;

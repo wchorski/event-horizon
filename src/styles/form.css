@@ -190,6 +190,59 @@ form .hide {
 .separator legend {
   padding: 0 0.75rem;
   color: var(--c-seperator);
-  margin: 0 auto; /* ✅ CENTER IT */
-  width: max-content; /* ✅ prevent stretching */
+  margin: 0 auto;
+  width: max-content;
+}
+
+.corner-checkbox {
+  --color-checked: goldenrod;
+  --color-unchecked: grey;
+  --color-hover: rgb(116, 170, 181);
+  --size: 15px;
+  width: var(--size);
+  height: 50%;
+  cursor: pointer;
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.corner-checkbox input {
+  display: none;
+}
+
+.corner-checkbox-bg {
+  width: 100%;
+  /* height: 100%; */
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  background: var(--color-unchecked);
+  transition: background 0.18s ease;
+}
+
+.corner-checkbox:hover .corner-checkbox-bg {
+  background: var(--color-hover);
+}
+.corner-checkbox:has(input:checked) .corner-checkbox-bg {
+  background: var(--color-checked);
+}
+
+.corner-checkbox-icon {
+  place-self: start;
+  padding: 12% 0 0 12%;
+  width: 28%;
+  height: 28%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: black;
+  font-size: calc(var(--size) * 0.25);
+  font-weight: 500;
+  line-height: 1;
+  z-index: 10;
+}
+
+.corner-checkbox:has(input:checked) .corner-checkbox-icon {
+  opacity: 1;
 }

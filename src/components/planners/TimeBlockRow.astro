@@ -2,11 +2,11 @@
 // components/planners/TimeBlockRow.astro
 import InputField from "@components/form/InputField.astro";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-import type { BlockPlanner, SkillPlanner } from "@ty/Schema";
+import type { TimelineMoment, TimelineSkill } from "@ty/Schema";
 
 interface Props {
-  block: BlockPlanner;
-  skills: SkillPlanner[];
+  block: TimelineMoment;
+  skills: TimelineSkill[];
 }
 
 const { block, skills } = Astro.props;
@@ -123,14 +123,14 @@ const { block, skills } = Astro.props;
 const { start, end, desc, skill_id, group_id, id, note } = block;
 ---
 
-<tr class={`time-block-row`}>
+<tr class={`time-moment-row`}>
   <td>
     <InputField
       value={formatTimeMinutesToClockString(start)}
       type={"time"}
       name={"start"}
       id="timeline-start"
-      model="time-block"
+      model="time-moment"
       data-id={id}
       label=""
     />
@@ -138,8 +138,8 @@ const { start, end, desc, skill_id, group_id, id, note } = block;
       value={formatTimeMinutesToClockString(end)}
       type={"time"}
       name={"end"}
-      id={`timeline-block-${id}-start`}
-      model="time-block"
+      id={`timeline-moment-${id}-start`}
+      model="time-moment"
       data-id={id}
       label=""
     />
@@ -151,9 +151,9 @@ const { start, end, desc, skill_id, group_id, id, note } = block;
       value={desc}
       type={"text"}
       name="desc"
-      id={`timeline-block-${id}-desc`}
+      id={`timeline-moment-${id}-desc`}
       data-id={id}
-      model="time-block"
+      model="time-moment"
     />
   </td>
   <td>

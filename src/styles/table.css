@@ -17,7 +17,7 @@ table {
 }
 
 th {
-  padding-block: 0.75rem;
+  padding-inline: 0.75rem;
   text-align: left;
   font-size: 0.75rem;
   font-weight: 600;
@@ -45,7 +45,7 @@ td {
   padding-inline: 0.5rem;
 }
 td {
-  padding-block: 0.5rem;
+  padding-inline: 0.5rem;
 }
 
 table.color-alternate tbody > tr:not(.row-error):nth-of-type(odd) {
@@ -75,7 +75,7 @@ tr[data-status="creating"] {
   left: 0;
   bottom: -3.5rem;
   width: 90%;
-  position-try-fallbacks: flip-block;
+  position-try-fallbacks: flip-moment;
 
   display: flex;
   align-items: center;
@@ -125,7 +125,7 @@ td[data-key="id"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: inline-block;
+    display: inline-moment;
     width: 6ch;
     direction: rtl;
   }
@@ -148,13 +148,13 @@ data[value="null"]::before {
 
 table.timeline-schedule {
 
-  & tr.time-block-row {
+  & tr.time-moment-row {
     border-top: solid 1px var(--c-seperator);
   }
   & td {
-    padding-block: 0.2rem;
+    padding-inline: 0.2rem;
   }
-  & tr.time-block-row td {
+  & tr.time-moment-row td {
     padding-top: var(--size-m);
   }
   & td.actions {
@@ -165,7 +165,7 @@ table.timeline-schedule {
     & button.insert {
       grid-column: 1;
     }
-    & button.delete, button.toggle-todos {
+    & button.delete {
       grid-column: 2;
     }
 
@@ -176,7 +176,7 @@ table.timeline-schedule {
       border: none;
     }
   }
-  & tr.time-block-todos > td {
+  & tr.time-moment-steps > td {
     padding-inline-start: var(--size-xl);
   }
   & tr:hover td.actions {

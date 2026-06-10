@@ -5,7 +5,8 @@ export function editableListItemElement(name: string) {
   nameInputEl.value = name;
 
   const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "delete";
+  deleteBtn.textContent = "␡";
+  deleteBtn.title = "delete";
   deleteBtn.classList.add("delete");
 
   const liEl = document.createElement("li");

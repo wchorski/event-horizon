@@ -1,21 +1,21 @@
 import { isCheckboxField, isIdField, isTimeField } from "@lib/regex";
 import { formatTimeToMinutes } from "@lib/timeFormatters";
 import type {
-  BlockPlanner,
-  BlockPlannerInput,
-  GroupPlanner,
-  SkillPlanner,
-  TodoPlanner,
+  TimelineMoment,
+  TimelineMomentInput,
+  TimelineGroup,
+  TimelineSkill,
+  MomentStep,
 } from "@ty/Schema";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
-export const BLOCKS_STORE = "blocks";
+export const MOMENTS_STORE = "moments";
 export const GROUPS_STORE = "groups";
 export const SKILLS_STORE = "skills";
-export const TODOS_STORE = "todos";
+export const STEPS_STORE = "steps";
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -31,8 +31,8 @@ export function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = request.result;
 
-      if (!db.objectStoreNames.contains(BLOCKS_STORE)) {
-        const store = db.createObjectStore(BLOCKS_STORE, {
+      if (!db.objectStoreNames.contains(MOMENTS_STORE)) {
+        const store = db.createObjectStore(MOMENTS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
@@ -55,8 +55,8 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
       }
-      if (!db.objectStoreNames.contains(TODOS_STORE)) {
-        db.createObjectStore(TODOS_STORE, {
+      if (!db.objectStoreNames.contains(STEPS_STORE)) {
+        db.createObjectStore(STEPS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
@@ -65,13 +65,13 @@ export function openDB(): Promise<IDBDatabase> {
   });
 }
 
-//* BLOCKS
-export async function getAllBlockPlans(): Promise<BlockPlanner[]> {
+//* MOMENTS
+export async function idbGetAllMoments(): Promise<TimelineMoment[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(BLOCKS_STORE, "readonly");
-    const store = tx.objectStore(BLOCKS_STORE);
+    const tx = db.transaction(MOMENTS_STORE, "readonly");
+    const store = tx.objectStore(MOMENTS_STORE);
 
     const request = store.getAll();
 
@@ -79,24 +79,24 @@ export async function getAllBlockPlans(): Promise<BlockPlanner[]> {
     request.onerror = () => reject(request.error);
   });
 }
-export async function dbCreateBlockPlan(
-  block: Omit<BlockPlanner, "id">,
-): Promise<BlockPlanner> {
+export async function idbCreateMoment(
+  moment: Omit<TimelineMoment, "id">,
+): Promise<TimelineMoment> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(BLOCKS_STORE, "readwrite");
-    const store = tx.objectStore(BLOCKS_STORE);
-    const req = store.add(block);
+    const tx = db.transaction(MOMENTS_STORE, "readwrite");
+    const store = tx.objectStore(MOMENTS_STORE);
+    const req = store.add(moment);
 
     req.onsuccess = () => {
-      resolve({ ...block, id: req.result as number });
+      resolve({ ...moment, id: req.result as number });
     };
     req.onerror = () => reject(req.error);
   });
 }
-export async function idbUpdateTimeBlock(
+export async function idbUpdateMoment(
   id: number,
-  updates: Partial<BlockPlannerInput>,
+  updates: Partial<TimelineMomentInput>,
 ) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -107,11 +107,11 @@ export async function idbUpdateTimeBlock(
           ? formatTimeToMinutes(value)
           : value,
     ]),
-  ) as Partial<BlockPlanner>;
+  ) as Partial<TimelineMoment>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(BLOCKS_STORE, "readwrite");
-    const store = tx.objectStore(BLOCKS_STORE);
+    const tx = db.transaction(MOMENTS_STORE, "readwrite");
+    const store = tx.objectStore(MOMENTS_STORE);
     const req = store.get(id);
 
     req.onsuccess = () => {
@@ -129,34 +129,34 @@ export async function idbUpdateTimeBlock(
     req.onerror = () => reject(req.error);
   });
 }
-export async function idbDeleteBlockPlan(id: number) {
+export async function idbDeleteMoment(id: number) {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(BLOCKS_STORE, "readwrite");
-    const store = tx.objectStore(BLOCKS_STORE);
+    const tx = db.transaction(MOMENTS_STORE, "readwrite");
+    const store = tx.objectStore(MOMENTS_STORE);
     const req = store.delete(id);
 
     req.onsuccess = () => {
-      console.log("block deleted with ID: ", id);
+      console.log("moment deleted with ID: ", id);
       resolve(true);
     };
 
     req.onerror = (event) => {
       // @ts-ignore
-      console.error("Error deleting Block:", event?.target?.errorCode);
+      console.error("Error deleting moment:", event?.target?.errorCode);
       reject(req.error);
     };
   });
 }
 
-//* TODOS
-export async function getAllTimelineTodos(): Promise<TodoPlanner[]> {
+//* STEP
+export async function idbGetAllSteps(): Promise<MomentStep[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(TODOS_STORE, "readonly");
-    const store = tx.objectStore(TODOS_STORE);
+    const tx = db.transaction(STEPS_STORE, "readonly");
+    const store = tx.objectStore(STEPS_STORE);
 
     const request = store.getAll();
 
@@ -164,13 +164,13 @@ export async function getAllTimelineTodos(): Promise<TodoPlanner[]> {
     request.onerror = () => reject(request.error);
   });
 }
-export async function idbCreateTimelineTodo(
-  skill: Omit<TodoPlanner, "id">,
-): Promise<TodoPlanner> {
+export async function idbCreateStep(
+  skill: Omit<MomentStep, "id">,
+): Promise<MomentStep> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(TODOS_STORE, "readwrite");
-    const store = tx.objectStore(TODOS_STORE);
+    const tx = db.transaction(STEPS_STORE, "readwrite");
+    const store = tx.objectStore(STEPS_STORE);
     const req = store.add(skill);
 
     req.onsuccess = () => {
@@ -182,9 +182,9 @@ export async function idbCreateTimelineTodo(
     };
   });
 }
-export async function idbUpdateTimelineTodo(
+export async function idbUpdateStep(
   id: number,
-  updates: Partial<TodoPlanner>,
+  updates: Partial<MomentStep>,
 ) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -197,18 +197,19 @@ export async function idbUpdateTimelineTodo(
             ? value === "true" || value === "on"
             : value,
     ]),
-) as Partial<TodoPlanner>;
+) as Partial<MomentStep>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(TODOS_STORE, "readwrite");
-    const store = tx.objectStore(TODOS_STORE);
+    const tx = db.transaction(STEPS_STORE, "readwrite");
+    const store = tx.objectStore(STEPS_STORE);
     const req = store.get(id);
 
     req.onsuccess = () => {
       const existing = req.result;
-      if (!existing) return reject(new Error(`Todo ${id} not found`));
+      if (!existing) return reject(new Error(`step.id ${id} not found`));
 
       const merged = { ...existing, ...coerced };
+      console.log({merged});
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -219,12 +220,12 @@ export async function idbUpdateTimelineTodo(
     req.onerror = () => reject(req.error);
   });
 }
-export async function idbDeleteTimelineTodo(id: number) {
+export async function idbDeleteStep(id: number) {
   const db = await openDB();
 
   return new Promise<any>((resolve, reject) => {
-    const tx = db.transaction(TODOS_STORE, "readwrite");
-    const store = tx.objectStore(TODOS_STORE);
+    const tx = db.transaction(STEPS_STORE, "readwrite");
+    const store = tx.objectStore(STEPS_STORE);
 
     const getReq = store.get(id);
 
@@ -236,7 +237,7 @@ export async function idbDeleteTimelineTodo(id: number) {
       const existing = getReq.result;
 
       if (!existing) {
-        reject(new Error(`No ${TODOS_STORE} found for id ${id}`));
+        reject(new Error(`No ${STEPS_STORE} found for id ${id}`));
         return;
       }
 
@@ -262,7 +263,7 @@ export async function idbDeleteTimelineTodo(id: number) {
 }
 
 //* GROUPS
-export async function getAllGroupPlans(): Promise<GroupPlanner[]> {
+export async function idbGetAllGroupPlans(): Promise<TimelineGroup[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
@@ -276,8 +277,8 @@ export async function getAllGroupPlans(): Promise<GroupPlanner[]> {
   });
 }
 export async function idbCreateTimelineGroup(
-  group: Omit<GroupPlanner, "id">,
-): Promise<GroupPlanner> {
+  group: Omit<TimelineGroup, "id">,
+): Promise<TimelineGroup> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(GROUPS_STORE, "readwrite");
@@ -295,7 +296,7 @@ export async function idbCreateTimelineGroup(
 }
 export async function idbUpdateTimeGroup(
   id: number,
-  updates: Partial<GroupPlanner>,
+  updates: Partial<TimelineGroup>,
 ) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -306,7 +307,7 @@ export async function idbUpdateTimeGroup(
           ? formatTimeToMinutes(value)
           : value,
     ]),
-  ) as Partial<GroupPlanner>;
+  ) as Partial<TimelineGroup>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(GROUPS_STORE, "readwrite");
@@ -371,7 +372,7 @@ export async function idbDeleteTimeGroup(id: number) {
 }
 
 //* SKILLS
-export async function getAllSkillPlans(): Promise<SkillPlanner[]> {
+export async function idbGetAllSkill(): Promise<TimelineSkill[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
@@ -385,8 +386,8 @@ export async function getAllSkillPlans(): Promise<SkillPlanner[]> {
   });
 }
 export async function idbCreateTimelineSkill(
-  skill: Omit<SkillPlanner, "id">,
-): Promise<SkillPlanner> {
+  skill: Omit<TimelineSkill, "id">,
+): Promise<TimelineSkill> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(SKILLS_STORE, "readwrite");
@@ -404,7 +405,7 @@ export async function idbCreateTimelineSkill(
 }
 export async function idbUpdateTimeSkill(
   id: number,
-  updates: Partial<SkillPlanner>,
+  updates: Partial<TimelineSkill>,
 ) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -415,7 +416,7 @@ export async function idbUpdateTimeSkill(
           ? formatTimeToMinutes(value)
           : value,
     ]),
-  ) as Partial<SkillPlanner>;
+  ) as Partial<TimelineSkill>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(SKILLS_STORE, "readwrite");

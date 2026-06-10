@@ -1,9 +1,9 @@
 ---
-import type { BlockPlanner, GroupPlanner } from "@ty/Schema";
+import type { TimelineMoment, TimelineGroup } from "@ty/Schema";
 
 interface Props {
-  group: GroupPlanner;
-  relatedBlocks: BlockPlanner[];
+  group: TimelineGroup;
+  relatedBlocks: TimelineMoment[];
 }
 const { group, relatedBlocks } = Astro.props;
 const { name, id } = group;

@@ -81,7 +81,8 @@ docker compose up --remove-orphans
 </details>
 
 #todo
-
+- [ ] create `Timeline` schema that combines Moments, Steps, Groups, Skills into one identifiable.
+- [ ] ability to import and export a `Timeline` or templates
 - [ ] use the db.select() thoughtfully to not just grab ALL data
 - [ ] how to create `virtual` fields (like an `event.location_info` pulls the location.name location.address in a short one liner without having to make a join or api)
 - [ ] db exporter data to .json file

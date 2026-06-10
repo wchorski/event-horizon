@@ -126,7 +126,7 @@ button.htmx-request {
 }
 
 anchored-box .message span {
-  display: inline-block;
+  display: inline-moment;
 }
 
 @keyframes vibrate {
@@ -193,9 +193,6 @@ dialog.closing {
 }
 
 details[open] {
-  summary {
-    color: var(--c-primary);
-  }
   li {
     animation-name: fall-in;
     animation-duration: 200ms;

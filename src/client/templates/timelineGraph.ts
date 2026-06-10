@@ -1,6 +1,6 @@
 // src/client/templates/timelineGraph.ts
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-import type { BlockPlanner } from "@ty/Schema";
+import type { TimelineMoment } from "@ty/Schema";
 
 interface Skill {
   id: number;
@@ -11,7 +11,7 @@ interface TimelineGraphOptions {
   start?: number; // viewport start hour
   end?: number; // viewport end hour
   skills: Skill[];
-  blocks: BlockPlanner[];
+  blocks: TimelineMoment[];
 }
 
 const stepMinutes = 15;
@@ -35,7 +35,7 @@ function computeTicks(viewStartMin: number, viewEndMin: number, cols: number) {
 }
 
 function computeBlockFormats(
-  blocks: BlockPlanner[],
+  blocks: TimelineMoment[],
   viewStartMin: number,
   viewEndMin: number,
   maxLine: number,
@@ -79,13 +79,13 @@ function createYAxis(skill: Skill, row: number): HTMLDivElement {
 }
 
 function createTimeBlock(
-  block: BlockPlanner,
+  block: TimelineMoment,
   c1: number,
   c2: number,
   r: number,
 ): HTMLDivElement {
   const wrapper = document.createElement("div");
-  wrapper.className = "time-block";
+  wrapper.className = "time-moment";
   wrapper.style.setProperty("--c1", String(c1));
   wrapper.style.setProperty("--c2", String(c2));
   wrapper.style.setProperty("--r", String(r));
@@ -93,13 +93,13 @@ function createTimeBlock(
 
   const title = document.createElement("div");
   const titleLink = document.createElement("a");
-  title.className = "time-block__title";
+  title.className = "time-moment__title";
   titleLink.textContent = block.desc;
-  titleLink.href = `#timeline-block-anchor-${block.id}`;
+  titleLink.href = `#timeline-moment-anchor-${block.id}`;
   title.appendChild(titleLink);
 
   const meta = document.createElement("div");
-  meta.className = "time-block__meta";
+  meta.className = "time-moment__meta";
   meta.textContent = `${formatTimeMinutesToClockString(block.start, true)}–${formatTimeMinutesToClockString(block.end, true)}`;
 
   wrapper.appendChild(title);

@@ -88,7 +88,7 @@ button,
   cursor: pointer;
   transition: background 0.2s;
   text-decoration: none;
-  display: inline-block;
+  display: inline-moment;
   border-radius: 4px;
 }
 
@@ -126,7 +126,7 @@ button:disabled {
 }
 
 .htmx-indicator {
-  display: inline-block;
+  display: inline-moment;
   margin-left: 0.5rem;
   color: #666;
 }
@@ -160,7 +160,7 @@ button:disabled {
 }
 
 hr {
-  margin-block: 2rem;
+  margin-moment: 2rem;
 }
 
 .callout {
@@ -225,7 +225,7 @@ code[aria-readonly="true"]::before {
   padding-inline: 0.1rem;
   border-radius: 0.3rem;
   margin-right: 0.2rem;
-  display: inline-block;
+  display: inline-moment;
 }
 
 dl.kv {
@@ -249,7 +249,7 @@ dl.kv {
 .true,
 .false {
   &::after {
-    display: inline-block;
+    display: inline-moment;
     margin-left: 2px;
   }
 }
@@ -271,14 +271,14 @@ dl.kv {
 ul.unstyled {
   list-style: none;
   padding-inline-start: 0;
-  margin-block: 0;
+  margin-moment: 0;
 }
 
 .display.none {
   display: none;
 }
 
-.timeline-planner-grid {
+.timeline-grid {
   display: grid;
   grid-template-columns: 3fr 1fr;
 
@@ -311,7 +311,7 @@ textarea.auto-size {
   padding: 0.2rem;
 }
 
-ul.todos {
+ul.steps {
   padding-inline-start: 0;
   gap: var(--size-s);
   display: grid;
@@ -343,4 +343,8 @@ ul.todos {
       height: 15px;
     }
   }
+}
+
+details > summary {
+  cursor: pointer;
 }

@@ -6,7 +6,7 @@
    - rows 1..N = skill lanes
    - last row = x-axis labels
 */
-.timeline-grid {
+.timeline-graph-grid {
   /* knobs */
   --y-axis-w: 180px;
   --lane-h: 2.75rem;
@@ -82,7 +82,7 @@
 }
 
 /* Time block placement uses GRID LINES (not cells) */
-.time-block {
+.time-moment {
   /* grid-column uses line-based placement (c1/c2 are time-grid lines) */
   grid-column: calc(var(--c1) + 1) / calc(var(--c2) + 1); /* [1](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/grid-column) */
   grid-row: var(--r);
@@ -105,7 +105,7 @@
   z-index: 2;
 }
 
-.time-block__title {
+.time-moment__title {
   font-weight: 600;
   font-size: 0.95rem;
   line-height: 1.1;
@@ -115,7 +115,7 @@
   text-overflow: ellipsis;
 }
 
-.time-block__meta {
+.time-moment__meta {
   font-size: 0.78rem;
   color: rgba(255,255,255,0.75);
 

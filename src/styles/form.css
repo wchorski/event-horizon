@@ -47,7 +47,7 @@ table {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: inline-block;
+    display: inline-moment;
     width: 6ch;
     direction: rtl;
     align-self: center;

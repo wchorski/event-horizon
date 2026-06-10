@@ -1,4 +1,4 @@
-import type { BLOCKS_STORE } from "@client/indexedDB";
+import type { MOMENTS_STORE } from "@client/indexedDB";
 import {
   BookingAssignment,
   Role,
@@ -82,7 +82,7 @@ export type UserCreditFlat = {
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 
-export type TodoPlanner = {
+export type MomentStep = {
   id: number;
   block_id: number;
   tbd: boolean;
@@ -91,7 +91,7 @@ export type TodoPlanner = {
   order: number;
 };
 
-export type BlockPlanner = {
+export type TimelineMoment = {
   id: number;
   desc: string;
   group_id: number;
@@ -102,7 +102,7 @@ export type BlockPlanner = {
   tbd?: boolean;
   // todo_id: number
 };
-export type BlockPlannerInput = {
+export type TimelineMomentInput = {
   id: string;
   desc: string;
   group_id: string;
@@ -112,27 +112,27 @@ export type BlockPlannerInput = {
   end: string; // minutes (can exceed 1440)
   tbd?: boolean;
 };
-export type GroupPlanner = {
+export type TimelineGroup = {
   id: number;
   name: string;
 };
 
-export type SkillPlanner = {
+export type TimelineSkill = {
   name: string;
   id: number;
 };
 
-export type Planner = {
-  blocks: BlockPlanner[];
-  groups: GroupPlanner[];
-  skills: SkillPlanner[];
+export type Timeline = {
+  blocks: TimelineMoment[];
+  groups: TimelineGroup[];
+  skills: TimelineSkill[];
 };
 
 import {
-  BLOCKS_STORE,
+  MOMENTS_STORE,
   GROUPS_STORE,
   SKILLS_STORE,
-  TODOS_STORE,
+  STEPS_STORE,
 } from "@client/indexedDB";
 export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";

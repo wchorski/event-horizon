@@ -1,16 +1,16 @@
 ---
-// partials/planners/time-blocks-rows.astro
+// partials/planners/time-moments-rows.astro
 export const partial = true;
 
 import TimeBlockRow from "@components/planners/TimeBlockRow.astro";
-import type { BlockPlanner, SkillPlanner } from "@ty/Schema";
+import type { TimelineMoment, TimelineSkill } from "@ty/Schema";
 
 if (Astro.request.method !== "POST") {
   return new Response("Method not allowed", { status: 405 });
 }
 
-let blocks: BlockPlanner[] | null = null;
-let skills: SkillPlanner[] | null = null;
+let blocks: TimelineMoment[] | null = null;
+let skills: TimelineSkill[] | null = null;
 let error: unknown | null = null;
 
 try {

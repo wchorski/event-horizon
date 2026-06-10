@@ -5,12 +5,12 @@ interface Props {
   /** viewport end hour (can be > 24 if you want a multi-day viewport) */
   end?: number; // HOURS
   skills: { name: string; id: number }[];
-  blocks: BlockPlanner[];
+  blocks: TimelineMoment[];
 }
 
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import "@styles/timeline-graph.css";
-import type { BlockPlanner } from "@ty/Schema";
+import type { TimelineMoment } from "@ty/Schema";
 
 const { start = 0, end = 24, blocks, skills } = Astro.props;
 
@@ -75,7 +75,7 @@ const blockFormat = blocks
 ---
 
 <div
-  class="timeline-grid"
+  class="timeline-graph-grid"
   style={`
     --cols:${cols};
     --lanes:${lanes};
@@ -103,12 +103,12 @@ const blockFormat = blocks
   {
     blockFormat.map(({ item, c1, c2, r }) => (
       <div
-        class="time-block"
+        class="time-moment"
         style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
         title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}–${formatTimeMinutesToClockString(item.end, true)} • skill:${item.skill_id}`}
       >
-        <div class="time-block__title">{item.desc}</div>
-        <div class="time-block__meta">
+        <div class="time-moment__title">{item.desc}</div>
+        <div class="time-moment__meta">
           {formatTimeMinutesToClockString(item.start, true)}–
           {formatTimeMinutesToClockString(item.end, true)}
         </div>

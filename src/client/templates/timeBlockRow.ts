@@ -1,52 +1,38 @@
 // src/client/templates/timeBlockRow.ts
 import { createElement } from "@client/elementRenders";
-import { BLOCKS_STORE, TODOS_STORE } from "@client/indexedDB";
+import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-import type { BlockPlanner, GroupPlanner, TodoPlanner } from "@ty/Schema";
+import type { TimelineMoment, TimelineGroup, MomentStep, TimelineSkill } from "@ty/Schema";
 import { checkboxCornerEl } from "./checkboxCorner";
-
-interface Skill {
-  id: number;
-  name: string;
-}
-interface Block {
-  id: number;
-  start: number;
-  end: number;
-  desc: string;
-  skill_id: number;
-  group_id: number;
-  note: string;
-}
 
 function createTimeInput(
   name: string,
   value: string,
-  blockId: number,
+  momentId: number,
 ): HTMLInputElement {
   const input = document.createElement("input");
   input.type = "time";
   input.name = name;
   input.value = value;
-  input.id = `timeline-block-${blockId}-${name}`;
-  input.dataset.id = String(blockId);
-  input.dataset.model = "time-block";
+  input.id = `timeline-moment-${momentId}-${name}`;
+  input.dataset.id = String(momentId);
+  input.dataset.model = "time-moment";
   return input;
 }
 
 function createTextInput(
   name: string,
   value: string,
-  blockId: number,
+  momentId: number,
   padSize?: "xs" | "s" | "m" | "l",
 ): HTMLInputElement {
   const input = document.createElement("input");
   input.type = "text";
   input.name = name;
   input.value = value;
-  input.id = `timeline-block-${blockId}-${name}`;
-  input.dataset.id = String(blockId);
-  input.dataset.model = "time-block";
+  input.id = `timeline-moment-${momentId}-${name}`;
+  input.dataset.id = String(momentId);
+  input.dataset.model = "time-moment";
   if (padSize) input.classList.add(`pad-${padSize}`);
 
   return input;
@@ -54,87 +40,77 @@ function createTextInput(
 function createTextArea(
   name: string,
   value: string,
-  blockId: number,
+  momentId: number,
 ): HTMLTextAreaElement {
   const el = document.createElement("textarea");
   el.name = name;
   el.value = value;
-  el.id = `timeline-block-${blockId}-${name}`;
+  el.id = `timeline-moment-${momentId}-${name}`;
   el.classList.add("auto-size");
-  el.dataset.id = String(blockId);
-  el.dataset.model = "time-block";
+  el.dataset.id = String(momentId);
+  el.dataset.model = "time-moment";
   return el;
 }
 
-export function createTodoEl(todo: TodoPlanner): HTMLLIElement {
+export function createStepEl(step: MomentStep): HTMLLIElement {
   const li = document.createElement("li");
-  li.dataset.todoId = String(todo.id);
-  li.classList.add("todo", "anim--slide-in-left-right");
+  li.dataset.stepId = String(step.id);
+  li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
-  const tdbCheckbox = checkboxCornerEl(todo.tbd)
+  const tdbCheckbox = checkboxCornerEl(step.tbd)
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
     type: "text",
-    value: todo.text,
+    value: step.text,
   });
   const noteTextarea = Object.assign(document.createElement("textarea"), {
     name: "note",
-    value: todo.note,
+    value: step.note,
   });
   const deleteBtn = createElement(
     "button",
-    { className: "delete", textContent: "delete" },
-    { action: "delete", type: TODOS_STORE },
+    { className: "delete", textContent: "␡", title: "delete" },
+    { action: "delete", type: STEPS_STORE },
   );
-  // const deleteBtn = Object.assign(document.createElement("button"), {
-  //   className: "delete",
-  //   textContent: "delete",
-  //   dataset: { action: "delete", type: "todo" },
-  // });
+  
   li.append(tdbCheckbox, textInput, noteTextarea, deleteBtn);
   return li;
 }
 
-function createSubRowTodos(
-  todos: TodoPlanner[],
+function createSubRowSteps(
+  steps: MomentStep[],
   parentId: number,
 ): HTMLTableRowElement {
   const trSub = document.createElement("tr");
-  trSub.className = "time-block-todos";
-  trSub.classList.add("time-block-todos", "anim--slide-in-left-right");
-  trSub.dataset.blockId = String(parentId);
+  trSub.className = "time-moment-steps";
+  trSub.classList.add("time-moment-steps", "anim--slide-in-left-right");
+  trSub.dataset.momentId = String(parentId);
   // trSub.hidden = true;
 
   const tdSub = document.createElement("td");
   tdSub.colSpan = 999; // span all columns
 
   const details = document.createElement("details");
-  details.open = true;
-  const summary = document.createElement("summary");
-  summary.classList.add("ghost");
-  // const spanCount = document.createElement("span");
-  summary.textContent = `${todos.length} todo${todos.length > 1 ? "s" : ""}`;
+  // details.open = true;
+  const summary = createElement("summary", {
+    className: 'ghost',
+    textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`
+  });
 
   const ul = document.createElement("ul");
-  ul.className = "todos";
+  ul.className = "steps";
 
-  todos.forEach((item) => {
-    ul.appendChild(createTodoEl(item));
+  steps.forEach((item) => {
+    ul.appendChild(createStepEl(item));
   });
 
   // const addBtn = document.createElement("button");
   const addBtn = createElement(
     "button",
-    { className: "add-todo-item ghost", textContent: "+ add item" },
-    { blockId: String(parentId), action: "create", type: TODOS_STORE },
+    { className: "ghost", textContent: "+ add item" },
+    { momentId: String(parentId), action: "create", type: STEPS_STORE },
   );
-  // addBtn.className = "add-todo-item";
-  // addBtn.classList.add("ghost");
-  // addBtn.dataset.blockId = String(parentId);
-  // addBtn.textContent = "+ add item";
-  // addBtn.dataset.action = "create";
-  // addBtn.dataset.type = TODOS_STORE;
 
   details.append(summary, ul, addBtn);
   tdSub.append(details);
@@ -148,17 +124,18 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   const insertBelowBtn = document.createElement("button");
   const deleteRowBtn = document.createElement("button");
 
-  deleteRowBtn.dataset.blockId = id;
-  deleteRowBtn.textContent = "delete";
+  deleteRowBtn.dataset.momentId = id;
+  deleteRowBtn.textContent = "␡";
+  deleteRowBtn.title = "delete";
   deleteRowBtn.dataset.action = "delete";
-  deleteRowBtn.dataset.type = BLOCKS_STORE;
+  deleteRowBtn.dataset.type = MOMENTS_STORE;
   deleteRowBtn.classList.add("delete");
   deleteRowBtn.title = "delete this row";
 
   insertAboveBtn.textContent = "+↑";
   insertAboveBtn.dataset.action = "insert";
   insertAboveBtn.dataset.direction = "above";
-  insertAboveBtn.dataset.type = BLOCKS_STORE;
+  insertAboveBtn.dataset.type = MOMENTS_STORE;
   insertAboveBtn.classList.add("insert", "above");
   insertAboveBtn.title = "insert row above";
 
@@ -166,20 +143,14 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   insertBelowBtn.classList.add("insert", "below");
   insertBelowBtn.dataset.action = "insert";
   insertBelowBtn.dataset.direction = "below";
-  insertBelowBtn.dataset.type = BLOCKS_STORE;
+  insertBelowBtn.dataset.type = MOMENTS_STORE;
   insertBelowBtn.title = "insert row below";
-
-  // const toggleTodosBtn = document.createElement("button");
-  // toggleTodosBtn.className = "toggle-todos";
-  // toggleTodosBtn.dataset.id = id;
-  // toggleTodosBtn.setAttribute("aria-expanded", "false");
-  // toggleTodosBtn.textContent = "☰";
 
   return [insertAboveBtn, deleteRowBtn, insertBelowBtn];
 }
 
 function createSelectEl(
-  blockId: number,
+  momentId: number,
   options: { label: string; value: string }[],
   fieldName: string,
   selectedId?: number,
@@ -187,7 +158,7 @@ function createSelectEl(
 ): HTMLSelectElement {
   const select = document.createElement("select");
   select.name = fieldName;
-  select.dataset.id = String(blockId);
+  select.dataset.id = String(momentId);
   if (padSize) select.classList.add(`pad-${padSize}`);
 
   options.forEach((skill) => {
@@ -202,8 +173,8 @@ function createSelectEl(
 }
 
 export function createEmptyBlock(
-  partial?: Partial<BlockPlanner>,
-): Omit<BlockPlanner, "id"> {
+  partial?: Partial<TimelineMoment>,
+): Omit<TimelineMoment, "id"> {
   return {
     start: 0,
     end: 0,
@@ -217,18 +188,18 @@ export function createEmptyBlock(
 }
 
 export function timeBlockRow(
-  block: BlockPlanner,
-  skills: Skill[],
-  groups: GroupPlanner[],
-  todos: TodoPlanner[] | undefined,
+  moment: TimelineMoment,
+  skills: TimelineSkill[],
+  groups: TimelineGroup[],
+  steps: MomentStep[] | undefined,
 ): HTMLTableRowElement[] {
   // const fragment = document.createDocumentFragment();
-  const { id, start, end, desc, skill_id, group_id, note } = block;
+  const { id, start, end, desc, skill_id, group_id, note } = moment;
 
   const tr = document.createElement("tr");
-  tr.id = `timeline-block-anchor-${id}`;
-  tr.dataset.blockId = String(id);
-  tr.classList.add("time-block-row", "anim--slide-in-left-right");
+  tr.id = `timeline-moment-anchor-${id}`;
+  tr.dataset.momentId = String(id);
+  tr.classList.add("time-moment-row", "anim--slide-in-left-right");
 
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
@@ -286,7 +257,7 @@ export function timeBlockRow(
 
   tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 
-  const trSub = createSubRowTodos(todos || [], block.id);
+  const trSub = createSubRowSteps(steps || [], moment.id);
   // fragment.append(tr, trSub);
   return [tr, trSub];
 }

@@ -1,7 +1,7 @@
-import type { BlockPlanner, GroupPlanner, SkillPlanner, TodoPlanner } from "@ty/Schema";
-import { BLOCKS_STORE, GROUPS_STORE, openDB, SKILLS_STORE, TODOS_STORE } from "./indexedDB";
+import type { TimelineMoment, TimelineGroup, TimelineSkill, MomentStep } from "@ty/Schema";
+import { MOMENTS_STORE, GROUPS_STORE, openDB, SKILLS_STORE, STEPS_STORE } from "./indexedDB";
 
-const todos_template: TodoPlanner[] = [
+const steps_template: MomentStep[] = [
   {
     id: 101,
     block_id: 10,
@@ -100,7 +100,7 @@ const todos_template: TodoPlanner[] = [
   },
 ];
 
-const blocks_template: BlockPlanner[] = [
+const moments_template: TimelineMoment[] = [
   {
     id: 1,
     start: 960,
@@ -211,7 +211,7 @@ const blocks_template: BlockPlanner[] = [
   },
 ];
 
-const groups_template: GroupPlanner[] = [
+const groups_template: TimelineGroup[] = [
   {
     id: 1,
     name: "Ceremony",
@@ -234,7 +234,7 @@ const groups_template: GroupPlanner[] = [
   },
 ];
 
-const skills_template: SkillPlanner[] = [
+const skills_template: TimelineSkill[] = [
   { name: "MC Announcement", id: 1 },
   { name: "Song Cue", id: 2 },
   { name: "Music Playlist", id: 3 },
@@ -245,14 +245,14 @@ export async function seedIfEmpty() {
   const db = await openDB();
 
   const tx = db.transaction(
-    [BLOCKS_STORE, GROUPS_STORE, SKILLS_STORE, TODOS_STORE],
+    [MOMENTS_STORE, GROUPS_STORE, SKILLS_STORE, STEPS_STORE],
     "readwrite",
   );
 
-  const blocksStore = tx.objectStore(BLOCKS_STORE);
+  const momentsStore = tx.objectStore(MOMENTS_STORE);
   const groupsStore = tx.objectStore(GROUPS_STORE);
   const skillsStore = tx.objectStore(SKILLS_STORE);
-  const todosStore = tx.objectStore(TODOS_STORE);
+  const stepsStore = tx.objectStore(STEPS_STORE);
 
   function countStore(store: IDBObjectStore): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -262,16 +262,16 @@ export async function seedIfEmpty() {
     });
   }
 
-  const [blocksCount, groupsCount, skillsCount, todosCount] = await Promise.all([
-    countStore(blocksStore),
+  const [momentsCount, groupsCount, skillsCount, stepsCount] = await Promise.all([
+    countStore(momentsStore),
     countStore(groupsStore),
     countStore(skillsStore),
-    countStore(todosStore),
+    countStore(stepsStore),
   ]);
 
-  if (blocksCount === 0) {
+  if (momentsCount === 0) {
     console.log("Seeding blocks...");
-    blocks_template.forEach((b) => blocksStore.add(b));
+    moments_template.forEach((b) => momentsStore.add(b));
   }
 
   if (groupsCount === 0) {
@@ -284,9 +284,9 @@ export async function seedIfEmpty() {
     skills_template.forEach((s) => skillsStore.add(s));
   }
 
-  if (todosCount === 0) {
+  if (stepsCount === 0) {
     console.log("Seeding todos...");
-    todos_template.forEach((t) => todosStore.add(t));
+    steps_template.forEach((t) => stepsStore.add(t));
   }
 
   // Wait for the whole transaction to finish

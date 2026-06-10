@@ -140,10 +140,13 @@ button,
   border-color: color-mix(in srgb, currentColor 50%, rgb(112, 112, 112));
 
   &.delete {
-    color: red;
     background-color: var(--c-txt-bg);
+    color: var(--c-ghost);
+  }
+  &.delete:hover {
     outline: solid 1px var(--c-error);
     border-color: var(--c-error);
+    color: white;
   }
 }
 
@@ -190,6 +193,10 @@ textarea {
   background-color: var(--c-input-bg);
   color: var(--c-txt);
   border-color: var(--c-seperator-light);
+
+  &:hover {
+    border-color: var(--c-accent);
+  }
 }
 
 form {
@@ -209,4 +216,17 @@ label.form-field {
   color: var(--c-ghost);
   border-color: var(--c-seperator);
   border-width: 2px;
+}
+
+details {
+  & > summary {
+    opacity: 0.6;
+    color: var(--c-ghost);
+  }
+}
+details[open] {
+  & > summary {
+    opacity: 1;
+    color: var(--c-ghost);
+  }
 }

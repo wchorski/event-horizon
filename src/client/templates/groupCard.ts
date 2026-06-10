@@ -15,7 +15,8 @@ export function groupCard(group: Group, blocks: Block[]): HTMLDivElement {
   card.id = String(group.id);
 
   const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "delete";
+  deleteBtn.textContent = "␡";
+  deleteBtn.title = "delete";
   deleteBtn.classList.add("delete");
   const headerEl = document.createElement("header");
   headerEl.classList.add("flex-align-center", "gap-s");

@@ -11,7 +11,7 @@ interface TimelineGraphOptions {
   start?: number; // viewport start hour
   end?: number; // viewport end hour
   skills: Skill[];
-  blocks: TimelineMoment[];
+  moments: TimelineMoment[];
 }
 
 const stepMinutes = 15;
@@ -122,9 +122,9 @@ function createXTick(tick: { time: number; colLine: number }): HTMLDivElement {
 
 // --- Main render function ---
 
-export function renderTimelineGraph(
+export function uiTimelineGraph(
   container: HTMLElement,
-  { start = 0, end = 24, skills, blocks }: TimelineGraphOptions,
+  { start = 0, end = 24, skills, moments }: TimelineGraphOptions,
 ): void {
   const viewStartMin = start * 60;
   const viewEndMin = end * 60;
@@ -135,7 +135,7 @@ export function renderTimelineGraph(
 
   const ticks = computeTicks(viewStartMin, viewEndMin, cols);
   const blockFormats = computeBlockFormats(
-    blocks,
+    moments,
     viewStartMin,
     viewEndMin,
     maxLine,

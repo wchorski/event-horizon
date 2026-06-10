@@ -84,23 +84,44 @@ export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 
 export type MomentStep = {
   id: number;
-  block_id: number;
+  moment_id: number;
   tbd: boolean;
   text: string;
   note: string;
   order: number;
 };
 
+export type Timeline = {
+  id: string;
+  summary: string;
+  date: Date;
+  date_civil: string;
+  timezone: string;
+  start: number;
+  end: number;
+  date_modified: Date;
+  date_created: Date;
+  rev: number;
+};
+
+export type TimelineData = Timeline & {
+  moments: TimelineMoment[];
+  steps: MomentStep[];
+  groups: TimelineGroup[];
+  skills: TimelineSkill[];
+};
+
 export type TimelineMoment = {
   id: number;
   desc: string;
-  group_id: number;
-  skill_id: number;
   note: string;
   start: number; // minutes (can exceed 1440)
   end: number; // minutes (can exceed 1440)
   tbd?: boolean;
-  // todo_id: number
+  group_id: number;
+  skill_id: number;
+  timeline_uuid: string;
+  // step_id: number
 };
 export type TimelineMomentInput = {
   id: string;
@@ -115,17 +136,13 @@ export type TimelineMomentInput = {
 export type TimelineGroup = {
   id: number;
   name: string;
+  timeline_uuid: string;
 };
 
 export type TimelineSkill = {
   name: string;
   id: number;
-};
-
-export type Timeline = {
-  blocks: TimelineMoment[];
-  groups: TimelineGroup[];
-  skills: TimelineSkill[];
+  timeline_uuid: string;
 };
 
 import {
@@ -137,3 +154,4 @@ import {
 export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
+export type TimelineBtnAction = "save" | "import" | "export"

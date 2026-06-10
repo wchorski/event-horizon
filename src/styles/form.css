@@ -195,9 +195,9 @@ form .hide {
 }
 
 .corner-checkbox {
-  --color-checked: goldenrod;
-  --color-unchecked: grey;
-  --color-hover: rgb(116, 170, 181);
+  --color-checked: var(--c-accent, goldenrod);
+  --color-unchecked: var(--c-seperator, grey);
+  --color-hover: var(--c-primary, rgb(116, 170, 181));
   --size: 15px;
   width: var(--size);
   height: 50%;

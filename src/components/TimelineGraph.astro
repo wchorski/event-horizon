@@ -5,14 +5,14 @@ interface Props {
   /** viewport end hour (can be > 24 if you want a multi-day viewport) */
   end?: number; // HOURS
   skills: { name: string; id: number }[];
-  blocks: TimelineMoment[];
+  moments: TimelineMoment[];
 }
 
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 import "@styles/timeline-graph.css";
 import type { TimelineMoment } from "@ty/Schema";
 
-const { start = 0, end = 24, blocks, skills } = Astro.props;
+const { start = 0, end = 24, moments, skills } = Astro.props;
 
 /** grid resolution */
 const stepMinutes = 15;
@@ -53,7 +53,7 @@ for (let t = firstTick; t <= viewEndMin; t += tickEvery) {
  * - convert minutes -> grid line numbers (c1/c2)
  * - map skill_id -> row number
  */
-const blockFormat = blocks
+const momentFormat = moments
   .filter((item) => item.end > viewStartMin && item.start < viewEndMin)
   .map((item) => {
     const clampedStart = Math.max(item.start, viewStartMin);
@@ -72,6 +72,7 @@ const blockFormat = blocks
 
     return { item, c1, c2, r };
   });
+
 ---
 
 <div
@@ -84,7 +85,6 @@ const blockFormat = blocks
   id={"timeline"}
   data-start={start}
   data-end={end}
-  data-skills={JSON.stringify(skills)}
 >
   {
     ticks.map((t) => (
@@ -101,7 +101,7 @@ const blockFormat = blocks
   }
 
   {
-    blockFormat.map(({ item, c1, c2, r }) => (
+    momentFormat.map(({ item, c1, c2, r }) => (
       <div
         class="time-moment"
         style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
@@ -131,15 +131,13 @@ const blockFormat = blocks
   const timeline = document.getElementById("timeline")!;
 
   //* LOCAL SYNC
-  import { renderTimelineGraph } from "@client/templates/timelineGraph";
-
-  const skills = JSON.parse(timeline.dataset.skills ?? "[]");
+  import { uiTimelineGraph } from "@client/templates/timelineGraph";
   const start = Number(timeline.dataset.start ?? 0);
   const end = Number(timeline.dataset.end ?? 24);
 
   document.addEventListener("timeline:load", (e: Event) => {
-    const { blocks } = (e as CustomEvent).detail;
-    renderTimelineGraph(timeline, { start, end, skills, blocks });
+    const { moments, skills } = (e as CustomEvent).detail;
+    uiTimelineGraph(timeline, { start, end, skills, moments });
   });
 
   //* SCROLL TO START

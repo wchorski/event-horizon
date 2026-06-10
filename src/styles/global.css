@@ -160,7 +160,7 @@ button:disabled {
 }
 
 hr {
-  margin-moment: 2rem;
+  margin-block: 2rem;
 }
 
 .callout {
@@ -271,7 +271,7 @@ dl.kv {
 ul.unstyled {
   list-style: none;
   padding-inline-start: 0;
-  margin-moment: 0;
+  margin-block: 0;
 }
 
 .display.none {

@@ -173,6 +173,7 @@ function createSelectEl(
 }
 
 export function createEmptyBlock(
+  timeline_uuid: string,
   partial?: Partial<TimelineMoment>,
 ): Omit<TimelineMoment, "id"> {
   return {
@@ -183,6 +184,7 @@ export function createEmptyBlock(
     group_id: 0,
     note: "",
     tbd: false,
+    timeline_uuid,
     ...partial,
   };
 }

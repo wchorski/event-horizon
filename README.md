@@ -81,6 +81,8 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] Timeline `save` button will commit data to server, increment revision
+- [ ] allow undo and redo (or restore to previous revision)
 - [ ] create `Timeline` schema that combines Moments, Steps, Groups, Skills into one identifiable.
 - [ ] ability to import and export a `Timeline` or templates
 - [ ] use the db.select() thoughtfully to not just grab ALL data

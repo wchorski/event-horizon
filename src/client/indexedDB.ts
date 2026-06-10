@@ -6,13 +6,15 @@ import type {
   TimelineGroup,
   TimelineSkill,
   MomentStep,
+  Timeline,
 } from "@ty/Schema";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 6;
+const DB_VERSION = 9;
 
 export const MOMENTS_STORE = "moments";
+export const TIMELINES_STORE = "timelines";
 export const GROUPS_STORE = "groups";
 export const SKILLS_STORE = "skills";
 export const STEPS_STORE = "steps";
@@ -31,6 +33,13 @@ export function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = request.result;
 
+      if (!db.objectStoreNames.contains(TIMELINES_STORE)) {
+        db.createObjectStore(TIMELINES_STORE, {
+          keyPath: "id",
+          // autoIncrement: true,
+        });
+      }
+
       if (!db.objectStoreNames.contains(MOMENTS_STORE)) {
         const store = db.createObjectStore(MOMENTS_STORE, {
           keyPath: "id",
@@ -40,40 +49,156 @@ export function openDB(): Promise<IDBDatabase> {
         // useful later
         store.createIndex("group_id", "group_id", { unique: false });
         store.createIndex("skill_id", "skill_id", { unique: false });
+        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
       }
 
       if (!db.objectStoreNames.contains(GROUPS_STORE)) {
-        db.createObjectStore(GROUPS_STORE, {
+        const store = db.createObjectStore(GROUPS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
+
+        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
       }
 
       if (!db.objectStoreNames.contains(SKILLS_STORE)) {
-        db.createObjectStore(SKILLS_STORE, {
+        const store = db.createObjectStore(SKILLS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
+        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
       }
       if (!db.objectStoreNames.contains(STEPS_STORE)) {
-        db.createObjectStore(STEPS_STORE, {
+        const store = db.createObjectStore(STEPS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
+        store.createIndex("moment_id", "moment_id", { unique: false });
       }
     };
   });
 }
 
+// * TIMELINES
+export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
+  Timeline & {
+    moments: TimelineMoment[];
+    steps: MomentStep[];
+    groups: TimelineGroup[];
+    skills: TimelineSkill[];
+  }
+> {
+  const db = await openDB();
+
+  // Run both queries in parallel — they share a multi-store transaction
+  const [timeline, moments, groups, skills] = await Promise.all([
+    new Promise<Timeline>((resolve, reject) => {
+      const tx = db.transaction(TIMELINES_STORE, "readonly");
+      const request = tx.objectStore(TIMELINES_STORE).get(timeline_uuid);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }),
+    new Promise<TimelineMoment[]>((resolve, reject) => {
+      const tx = db.transaction(MOMENTS_STORE, "readonly");
+      const index = tx.objectStore(MOMENTS_STORE).index("timeline_uuid");
+      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }),
+    new Promise<TimelineGroup[]>((resolve, reject) => {
+      const tx = db.transaction(GROUPS_STORE, "readonly");
+      const index = tx.objectStore(GROUPS_STORE).index("timeline_uuid");
+      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }),
+    new Promise<TimelineSkill[]>((resolve, reject) => {
+      const tx = db.transaction(SKILLS_STORE, "readonly");
+      const index = tx.objectStore(SKILLS_STORE).index("timeline_uuid");
+      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    }),
+  ]);
+
+  if (!timeline) throw new Error(`Timeline not found: ${timeline_uuid}`);
+
+  const momentIds = new Set(moments.map((m) => m.id));
+
+  const steps = await new Promise<MomentStep[]>((resolve, reject) => {
+    const tx = db.transaction(STEPS_STORE, "readonly");
+    const index = tx.objectStore(STEPS_STORE).index("moment_id");
+
+    const allSteps: MomentStep[] = [];
+    // Query steps for each moment in parallel
+    let remaining = momentIds.size;
+    if (remaining === 0) return resolve([]);
+
+    for (const momentId of momentIds) {
+      const request = index.getAll(momentId);
+      request.onsuccess = () => {
+        allSteps.push(...request.result);
+        if (--remaining === 0) resolve(allSteps);
+      };
+      request.onerror = () => reject(request.error);
+    }
+  });
+
+  return { ...timeline, moments, steps, groups, skills };
+}
+export async function idbUpdateTimeline(
+  uuid: string,
+  updates: Partial<Timeline>,
+) {
+  const coerced = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => [
+      key,
+      isIdField(key) && value !== ""
+        ? Number(value)
+        : isTimeField(key) && typeof value === "string"
+          ? formatTimeToMinutes(value)
+          : value,
+    ]),
+  ) as Partial<Timeline>;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TIMELINES_STORE, "readwrite");
+    const store = tx.objectStore(TIMELINES_STORE);
+    const req = store.get(uuid);
+
+    req.onsuccess = () => {
+      const existing = req.result;
+      if (!existing) return reject(new Error(`Timeline ${uuid} not found`));
+
+      const merged = {
+        ...existing,
+        ...coerced,
+        modified_at: Date.now(),
+        revision: (existing.revision ?? 0) + 1,
+      };
+      console.log({merged});
+      const putReq = store.put(merged);
+
+      putReq.onsuccess = () =>
+        resolve({ ...merged, id: putReq.result as number });
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    req.onerror = () => reject(req.error);
+  });
+}
+
 //* MOMENTS
-export async function idbGetAllMoments(): Promise<TimelineMoment[]> {
+export async function idbGetAllMoments(
+  timeline_uuid?: string,
+): Promise<TimelineMoment[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(MOMENTS_STORE, "readonly");
     const store = tx.objectStore(MOMENTS_STORE);
 
-    const request = store.getAll();
+    const request = store.getAll(timeline_uuid);
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -182,22 +307,19 @@ export async function idbCreateStep(
     };
   });
 }
-export async function idbUpdateStep(
-  id: number,
-  updates: Partial<MomentStep>,
-) {
+export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
-        key,
-        isIdField(key) && value !== ""
-            ? Number(value)
-            : isTimeField(key) && typeof value === "string"
-            ? formatTimeToMinutes(value)
-            : isCheckboxField(key) && typeof value === "string"
+      key,
+      isIdField(key) && value !== ""
+        ? Number(value)
+        : isTimeField(key) && typeof value === "string"
+          ? formatTimeToMinutes(value)
+          : isCheckboxField(key) && typeof value === "string"
             ? value === "true" || value === "on"
             : value,
     ]),
-) as Partial<MomentStep>;
+  ) as Partial<MomentStep>;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readwrite");
@@ -209,7 +331,6 @@ export async function idbUpdateStep(
       if (!existing) return reject(new Error(`step.id ${id} not found`));
 
       const merged = { ...existing, ...coerced };
-      console.log({merged});
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>

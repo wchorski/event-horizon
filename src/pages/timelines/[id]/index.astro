@@ -10,15 +10,6 @@ export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
 
-// TODO move to skills pulled from idb
-const skills = [
-  // { name: "Misc", id: 0 },
-  { name: "MC Announcement", id: 1 },
-  { name: "Song Cue", id: 2 },
-  { name: "Music Playlist", id: 3 },
-  { name: "Misc", id: 4 },
-];
-
 // const vendors = [
 //   {
 //     name: "DJ",
@@ -50,12 +41,32 @@ const formatTimeRange = (start: string, end: string) => {
 
 <BaseLayout>
   <main>
-    <header class="flex">
-      <h1>Timeline</h1>
-      <p class="sub-text">{id}</p>
+    <header class="flex space-between">
+      <div>
+        <h1>Timeline</h1>
+        <details>
+          <summary>{id}</summary>
+          <dl class="kv meta ghost">
+            <dd>created</dd>
+            <dt>***</dt>
+            <dd>modified</dd>
+            <dt>***</dt>
+            <dd>revision</dd>
+            <dt>***</dt>
+          </dl>
+        </details>
+      </div>
+      <menu id="timeline-action-menu" data-timelineUUID={id} class="flex gap-s">
+        <button data-action="save">Save</button>
+        <button data-action="export">Export</button>
+        <label>
+          <span>Import</span>
+          <input type="file" data-action="import" />
+        </label>
+      </menu>
     </header>
 
-    <TimelineGraph blocks={[]} skills={skills} />
+    <TimelineGraph moments={[]} skills={[]} />
 
     <hr />
 
@@ -64,7 +75,6 @@ const formatTimeRange = (start: string, end: string) => {
         <thead>
           <tr>
             <th>time</th>
-
             <th>desc</th>
             <th>skill</th>
             <th>group</th>
@@ -108,6 +118,8 @@ const formatTimeRange = (start: string, end: string) => {
     idbUpdateStep,
     idbCreateStep,
     idbDeleteStep,
+    idbGetSingleTimelineData,
+    idbUpdateTimeline,
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initTimelineDB";
   import {
@@ -121,41 +133,68 @@ const formatTimeRange = (start: string, end: string) => {
     BtnDirection,
     TimelineSkill,
     MomentStep,
+    Timeline,
+    TimelineBtnAction,
+    TimelineData,
   } from "@ty/Schema";
 
   import { debounce } from "@lib/wait";
   import { editableListItemElement } from "@client/templates/editableListItemElement";
   import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
-
+  import { downloadAsJSON } from "@client/downloadOnClient";
 
   const table = document.querySelector("#timeline-moment-table")!;
   const skillList = document.getElementById("skills-list")!;
   const groupList = document.getElementById("time-groups-list")!;
   const skillCreateBtn = document.getElementById("create-skill-item")!;
   const groupCreateBtn = document.getElementById("create-group-item")!;
+  let timelineData: Timeline | null = null;
 
-  async function renderFromDB() {
-    await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
+  const timeline_uuid = window.location.pathname.split("/").at(-1);
 
-    const [blocks, skills, groups, steps] = await Promise.all([
-      idbGetAllMoments(),
-      idbGetAllSkill(),
-      idbGetAllGroupPlans(),
-      idbGetAllSteps(),
-    ]);
+  async function fetchIdbData() {
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
+    try {
+      await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
+      return await idbGetSingleTimelineData(timeline_uuid);
+    } catch (error) {
+      throw new Error(`fetchIdbData, ${error}`);
+    }
+  }
+
+  function renderUI(tmlnData: TimelineData) {
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
+
+    // await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
+
+    // const [moments, skills, groups, steps] = await Promise.all([
+    //   idbGetAllMoments(),
+    //   idbGetAllSkill(),
+    //   idbGetAllGroupPlans(),
+    //   idbGetAllSteps(),
+    // ]);
+    // const tmlnData = await idbGetSingleTimelineData(timeline_uuid);
+    timelineData = tmlnData;
+    const { moments, skills, groups, steps } = tmlnData;
 
     const tbody = document.getElementById("time-moment-list")!;
     tbody.replaceChildren(); // clear existing
-    blocks.sort((a, b) => {
+    moments.sort((a, b) => {
       return a.start - b.start;
     });
-    blocks.forEach((b) =>
+    moments.forEach((b) =>
       tbody.append(
         ...timeBlockRow(
           b,
           skills,
           groups,
-          steps.filter((t) => t.block_id === b.id),
+          steps.filter((t) => t.moment_id === b.id),
         ),
       ),
     );
@@ -165,7 +204,7 @@ const formatTimeRange = (start: string, end: string) => {
       groupList.appendChild(
         groupCard(
           g,
-          blocks.filter((b) => b.group_id === g.id),
+          moments.filter((b) => b.group_id === g.id),
         ),
       ),
     );
@@ -179,17 +218,25 @@ const formatTimeRange = (start: string, end: string) => {
       skillList.appendChild(li);
     });
 
+    // TODO hoist event listeners so it isn't rerendred
     skillCreateBtn.addEventListener("pointerup", async (e) => {
-      const emptySkill = await idbCreateTimelineSkill({ name: "" });
+      const emptySkill = await idbCreateTimelineSkill({
+        name: "",
+        timeline_uuid,
+      });
       const li = editableListItemElement(emptySkill.name);
       li.dataset.skillId = String(emptySkill.id);
       skillList.appendChild(li);
     });
+    // TODO hoist event listeners so it isn't rerendred
     groupCreateBtn.addEventListener("pointerup", async (e) => {
-      const newGroup = await idbCreateTimelineGroup({ name: "" });
+      const newGroup = await idbCreateTimelineGroup({
+        name: "",
+        timeline_uuid,
+      });
       const div = groupCard(
         newGroup,
-        blocks.filter((b) => b.group_id === newGroup.id),
+        moments.filter((b) => b.group_id === newGroup.id),
       );
       div.dataset.groupId = String(newGroup.id);
       groupList.appendChild(div);
@@ -198,7 +245,7 @@ const formatTimeRange = (start: string, end: string) => {
     // Notify TimelineGraph with the loaded blocks
     document.dispatchEvent(
       new CustomEvent("timeline:load", {
-        detail: { blocks, skills },
+        detail: { moments, skills },
       }),
     );
 
@@ -206,6 +253,11 @@ const formatTimeRange = (start: string, end: string) => {
     initAddRow(skills);
 
     function initAddRow(skills: TimelineSkill[]) {
+      if (!timeline_uuid)
+        throw new Error(
+          `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+        );
+
       table.addEventListener("click", async (e) => {
         const target = e.target as HTMLElement;
 
@@ -221,13 +273,13 @@ const formatTimeRange = (start: string, end: string) => {
         const btnDirection = btn.dataset.direction as BtnDirection | undefined;
         // const stepId = Number(liEl?.dataset.stepId);
 
-        const targetBlock = blocks.find((b) => b.id === momentId);
+        const targetBlock = moments.find((b) => b.id === momentId);
 
         if (btnAction === "delete" && btnType === MOMENTS_STORE) {
           rowEl.remove();
-          const arrIndex = blocks.findIndex((b) => b.id === momentId);
+          const arrIndex = moments.findIndex((b) => b.id === momentId);
           if (arrIndex !== -1) {
-            blocks.splice(arrIndex, 1);
+            moments.splice(arrIndex, 1);
           }
 
           await idbDeleteMoment(momentId);
@@ -252,7 +304,7 @@ const formatTimeRange = (start: string, end: string) => {
           const emptyStep: Omit<MomentStep, "id"> = {
             text: "",
             tbd: false,
-            block_id: momentId,
+            moment_id: momentId,
             note: "",
             order: 1,
           };
@@ -280,7 +332,7 @@ const formatTimeRange = (start: string, end: string) => {
             console.log("❌ Direction not supported");
           }
 
-          const emptyBlock = createEmptyBlock({
+          const emptyBlock = createEmptyBlock(timeline_uuid, {
             start: newStart,
             end: newEnd,
           });
@@ -306,7 +358,7 @@ const formatTimeRange = (start: string, end: string) => {
             console.log("❌ Direction not supported");
           }
 
-          blocks.push(newBlock);
+          moments.push(newBlock);
           return;
         }
       });
@@ -344,7 +396,9 @@ const formatTimeRange = (start: string, end: string) => {
     // document.getElementById("time-groups-list")!.innerHTML = groupsHTML;
   }
 
-  renderFromDB().catch(console.error);
+  const tmlnData = await fetchIdbData();
+
+  renderUI(tmlnData);
 
   const debouncedSaveBlock = debounce(
     async (momentId: number, field: string, value: string) => {
@@ -469,5 +523,72 @@ const formatTimeRange = (start: string, end: string) => {
 
     el.addEventListener("input", resize);
     resize();
+  });
+
+  const timelineActionMenu = document.getElementById("timeline-action-menu");
+  if (!timeline_uuid)
+    throw new Error(
+      `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+    );
+  timelineActionMenu?.addEventListener("click", async (e) => {
+    const target = e.target as HTMLButtonElement;
+    if (!target.matches("button")) return;
+    const action = target.dataset.action as TimelineBtnAction | undefined;
+    if (!action) throw new Error("TimelineBtnAction not defined");
+
+    switch (action) {
+      case "save":
+        return await idbUpdateTimeline(timeline_uuid, {});
+
+      case "import":
+        return console.log("import");
+
+      case "export":
+        console.log("export");
+        const timelineData = await idbGetSingleTimelineData(timeline_uuid);
+        const { summary, rev, date_modified } = timelineData;
+        return downloadAsJSON(
+          timelineData,
+          `${summary} rev-${rev} ${date_modified}`,
+        );
+
+      default:
+        throw new Error(`TimelineBtnAction not supported: ${action}`);
+    }
+  });
+  timelineActionMenu?.addEventListener("change", async (e) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.matches("input")) return;
+    const action = target.dataset.action as TimelineBtnAction | undefined;
+    if (!action) throw new Error("TimelineBtnAction not defined");
+
+    const file = target.files?.[0];
+    if (!file) return;
+
+    // Validate it's JSON by extension + type
+    if (!file.name.endsWith(".json") || file.type !== "application/json") {
+      alert("Please select a valid .json file");
+      return;
+    }
+
+    if (action === "import") {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text) as TimelineData;
+
+        // Validate shape before writing — at minimum check required fields
+        if (!data.id || !data.summary) {
+          throw new Error("Invalid timeline format");
+        }
+
+        // await importTimelineData(data);
+        renderUI(data);
+      } catch (err) {
+        console.error("Import failed:", err);
+        alert("Failed to import: invalid or corrupted file");
+      } finally {
+        target.value = ""; // reset so the same file can be re-imported
+      }
+    }
   });
 </script>

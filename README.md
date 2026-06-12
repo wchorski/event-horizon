@@ -81,6 +81,7 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] printable version CSS
 - [ ] check light mode
 - [x] Timeline `commit` button will commit data to server, increment revision
 - [ ] allow undo and redo (or restore to previous revision)

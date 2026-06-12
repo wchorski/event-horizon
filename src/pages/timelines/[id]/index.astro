@@ -59,6 +59,8 @@ const formatTimeRange = (start: string, end: string) => {
         <menu id="timeline-action-menu" data-timelineUUID={id} class="gap-s">
           <button data-action="commit">Commit Rev</button>
           <button data-action="export">Export JSON</button>
+          <a href={`./${id}/print`} target="_blank" data-action="print">Print</a
+          >
           <label>
             <span>Import JSON</span>
             <input type="file" data-action="import" />
@@ -115,10 +117,6 @@ const formatTimeRange = (start: string, end: string) => {
 
 <script>
   import {
-    idbGetAllMoments,
-    idbGetAllSteps,
-    idbGetAllSkill,
-    idbGetAllGroupPlans,
     idbCreateMoment,
     idbDeleteMoment,
     idbUpdateMoment,
@@ -136,10 +134,10 @@ const formatTimeRange = (start: string, end: string) => {
   } from "@client/indexedDB";
   import { seedIfEmpty } from "@client/initTimelineDB";
   import {
-    createEmptyBlock,
+    createEmptyMoment,
     createStepEl,
-    timeBlockRow as timeMomentRowEl,
-  } from "@client/templates/timeBlockRow";
+    timeMomentRowEl,
+  } from "@client/templates/timeMomentRow";
   import { groupCard } from "@client/templates/groupCard";
   import type {
     BtnAction,
@@ -190,7 +188,7 @@ const formatTimeRange = (start: string, end: string) => {
     }
   }
 
-  function renderTimelineMetadata(timeline: Timeline) {
+  function renderTimelineUI(timeline: Timeline) {
     const { summary, date_civil, timezone, date_created, date_modified, rev } =
       timeline;
     const summaryInput = pageHeader?.querySelector(
@@ -396,14 +394,14 @@ const formatTimeRange = (start: string, end: string) => {
           console.log("❌ Direction not supported");
         }
 
-        const emptyBlock = createEmptyBlock(timeline_uuid, {
+        const emptyMoment = createEmptyMoment(timeline_uuid, {
           start: newStart,
           end: newEnd,
         });
-        const newBlock = await idbCreateMoment(emptyBlock);
-        // const newRow = timeBlockRow(newBlock, skills, groups);
+        const newMoment = await idbCreateMoment(emptyMoment);
+        // const newRow = timeMomentRow(newBlock, skills, groups);
         const [newRow, newSubRow] = timeMomentRowEl(
-          newBlock,
+          newMoment,
           skills,
           groups,
           [],
@@ -422,7 +420,7 @@ const formatTimeRange = (start: string, end: string) => {
           console.log("❌ Direction not supported");
         }
 
-        moments.push(newBlock);
+        moments.push(newMoment);
         renderGraphUI(moments, skills);
         return;
       }
@@ -438,12 +436,13 @@ const formatTimeRange = (start: string, end: string) => {
     ...tmlnData,
     id: timeline_uuid,
   });
-  renderTimelineMetadata(tmlnData);
+  renderTimelineUI(tmlnData);
   renderSkillsUI(skills);
   renderGroupsUI(groups, moments);
   renderTableUI(tmlnData);
   renderUI(tmlnData);
 
+  // TODO move all render ui funcs here
   timelineStore.subscribe((state) => {
     renderGraphUI(state.moments, state.skills);
   });
@@ -479,6 +478,7 @@ const formatTimeRange = (start: string, end: string) => {
   const debouncedSaveTimeline = debounce(
     async (uuid: string, field: string, value: string) => {
       await idbUpdateTimeline(uuid, { [field]: value });
+      // TODO timelineStore.update for header text
     },
     500,
   );
@@ -607,11 +607,15 @@ const formatTimeRange = (start: string, end: string) => {
       case "commit":
         console.log("POST to server DB");
         const updated = await idbUpdateTimeline(timeline_uuid, {});
-        renderTimelineMetadata(updated);
+        // TODO move to timelineStore.update for reactivity
+        renderTimelineUI(updated);
         return;
 
       case "import":
         return console.log("import");
+
+      case "print":
+        return console.log("print");
 
       case "export":
         console.log("export");

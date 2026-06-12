@@ -176,7 +176,6 @@ export async function idbUpdateTimeline(
         date_modified: new Date(),
         rev: existing.rev + 1,
       };
-      console.log({updates, coerced, existing});
       
       const putReq = store.put(merged);
 

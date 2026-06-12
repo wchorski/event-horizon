@@ -1,4 +1,4 @@
-// src/client/templates/timeBlockRow.ts
+// src/client/templates/timeMomentRow.ts
 import { createElement } from "@client/elementRenders";
 import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
@@ -83,7 +83,6 @@ function createSubRowSteps(
   parentId: number,
 ): HTMLTableRowElement {
   const trSub = document.createElement("tr");
-  trSub.className = "time-moment-steps";
   trSub.classList.add("time-moment-steps", "anim--slide-in-left-right");
   trSub.dataset.momentId = String(parentId);
   // trSub.hidden = true;
@@ -172,7 +171,7 @@ function createSelectEl(
   return select;
 }
 
-export function createEmptyBlock(
+export function createEmptyMoment(
   timeline_uuid: string,
   partial?: Partial<TimelineMoment>,
 ): Omit<TimelineMoment, "id"> {
@@ -180,8 +179,8 @@ export function createEmptyBlock(
     start: 0,
     end: 0,
     desc: "",
-    skill_id: 0,
-    group_id: 0,
+    skill_id: 1,
+    group_id: 1,
     note: "",
     tbd: false,
     timeline_uuid,
@@ -189,7 +188,7 @@ export function createEmptyBlock(
   };
 }
 
-export function timeBlockRow(
+export function timeMomentRowEl(
   moment: TimelineMoment,
   skills: TimelineSkill[],
   groups: TimelineGroup[],

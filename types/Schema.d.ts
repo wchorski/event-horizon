@@ -154,4 +154,4 @@ import {
 export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
-export type TimelineBtnAction = "commit" | "import" | "export"
+export type TimelineBtnAction = "commit" | "import" | "export" | "print"

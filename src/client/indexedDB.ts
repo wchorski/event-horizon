@@ -121,7 +121,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
     }),
   ]);
 
-  if (!timeline) throw new Error(`Timeline not found: ${timeline_uuid}`);
+  if (!timeline) throw new Error(`Timeline "${timeline_uuid}" not found. Import the JSON backup or start a new template`);
 
   const momentIds = new Set(moments.map((m) => m.id));
 
@@ -176,7 +176,7 @@ export async function idbUpdateTimeline(
         modified_at: Date.now(),
         revision: (existing.revision ?? 0) + 1,
       };
-      console.log({merged});
+      
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>

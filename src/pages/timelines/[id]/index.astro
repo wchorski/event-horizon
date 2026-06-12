@@ -2,10 +2,9 @@
 interface Params {
   id: string;
 }
-import CheckboxCorner from "@components/form/CheckboxCorner.astro";
+
 import TimelineGraph from "@components/TimelineGraph.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
-import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
 export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
@@ -41,9 +40,34 @@ const formatTimeRange = (start: string, end: string) => {
 
 <BaseLayout>
   <main>
-    <header class="flex space-between">
+    <div class="callout error flex-align-center gap-s">
+      <p id="banner-message"></p>
+    </div>
+    <header id="page-header" class="flex gap-s space-between">
+      <div id="timeline-data-inputs">
+        <h1 id="page-title" class="flex gap-m">
+          <input type="text" name="summary" value="temporary" />
+          <span class="sub-text">rev</span>
+          <span id="timeline-revision">#</span>
+        </h1>
+        <div class="grid gap-s">
+          <input type="date" name="date_civil" />
+          <input type="text" name="timezone" placeholder="timezone" />
+        </div>
+      </div>
       <div>
-        <h1>Timeline</h1>
+        <menu
+          id="timeline-action-menu"
+          data-timelineUUID={id}
+          class="flex gap-s"
+        >
+          <button data-action="save">Save</button>
+          <button data-action="export">Export</button>
+          <label>
+            <span>Import JSON</span>
+            <input type="file" data-action="import" />
+          </label>
+        </menu>
         <details>
           <summary>{id}</summary>
           <dl class="kv meta ghost">
@@ -56,15 +80,8 @@ const formatTimeRange = (start: string, end: string) => {
           </dl>
         </details>
       </div>
-      <menu id="timeline-action-menu" data-timelineUUID={id} class="flex gap-s">
-        <button data-action="save">Save</button>
-        <button data-action="export">Export</button>
-        <label>
-          <span>Import</span>
-          <input type="file" data-action="import" />
-        </label>
-      </menu>
     </header>
+    <hr />
 
     <TimelineGraph moments={[]} skills={[]} />
 
@@ -125,7 +142,7 @@ const formatTimeRange = (start: string, end: string) => {
   import {
     createEmptyBlock,
     createStepEl,
-    timeBlockRow,
+    timeBlockRow as timeMomentRowEl,
   } from "@client/templates/timeBlockRow";
   import { groupCard } from "@client/templates/groupCard";
   import type {
@@ -136,6 +153,8 @@ const formatTimeRange = (start: string, end: string) => {
     Timeline,
     TimelineBtnAction,
     TimelineData,
+    TimelineMoment,
+    TimelineGroup,
   } from "@ty/Schema";
 
   import { debounce } from "@lib/wait";
@@ -143,12 +162,16 @@ const formatTimeRange = (start: string, end: string) => {
   import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
   import { downloadAsJSON } from "@client/downloadOnClient";
 
-  const table = document.querySelector("#timeline-moment-table")!;
+  const timelineInputs = document.getElementById("timeline-data-inputs")!;
+  const timelineRevSpan = document.getElementById("timeline-revision")!;
+  const table = document.getElementById("timeline-moment-table")!;
+  const tbody = document.getElementById("time-moment-list")!;
   const skillList = document.getElementById("skills-list")!;
   const groupList = document.getElementById("time-groups-list")!;
   const skillCreateBtn = document.getElementById("create-skill-item")!;
   const groupCreateBtn = document.getElementById("create-group-item")!;
-  let timelineData: Timeline | null = null;
+  const bannerMsgP = document.getElementById("banner-message")!;
+  // let timelineData: Timeline | null = null;
 
   const timeline_uuid = window.location.pathname.split("/").at(-1);
 
@@ -161,44 +184,31 @@ const formatTimeRange = (start: string, end: string) => {
       await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
       return await idbGetSingleTimelineData(timeline_uuid);
     } catch (error) {
+      bannerMsgP.textContent = String(error);
       throw new Error(`fetchIdbData, ${error}`);
     }
   }
 
-  function renderUI(tmlnData: TimelineData) {
-    if (!timeline_uuid)
-      throw new Error(
-        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
-      );
+  function renderTimelineMetadata(timeline: Timeline) {
+    const { summary, date_civil, timezone } = timeline;
+    const summaryInput = timelineInputs?.querySelector(
+      'input[name="summary"]',
+    ) as HTMLInputElement;
+    const dateCivilInput = timelineInputs?.querySelector(
+      'input[name="date_civil"]',
+    ) as HTMLInputElement;
+    const timezoneInput = timelineInputs?.querySelector(
+      'input[name="timezone"]',
+    ) as HTMLInputElement;
+    if (!summaryInput || !dateCivilInput || !timezoneInput)
+      throw new Error("timeline input not found");
+    summaryInput.value = summary;
+    dateCivilInput.value = date_civil;
+    timezoneInput.value = timezone;
+    timelineRevSpan.textContent = String(timeline.rev);
+  }
 
-    // await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
-
-    // const [moments, skills, groups, steps] = await Promise.all([
-    //   idbGetAllMoments(),
-    //   idbGetAllSkill(),
-    //   idbGetAllGroupPlans(),
-    //   idbGetAllSteps(),
-    // ]);
-    // const tmlnData = await idbGetSingleTimelineData(timeline_uuid);
-    timelineData = tmlnData;
-    const { moments, skills, groups, steps } = tmlnData;
-
-    const tbody = document.getElementById("time-moment-list")!;
-    tbody.replaceChildren(); // clear existing
-    moments.sort((a, b) => {
-      return a.start - b.start;
-    });
-    moments.forEach((b) =>
-      tbody.append(
-        ...timeBlockRow(
-          b,
-          skills,
-          groups,
-          steps.filter((t) => t.moment_id === b.id),
-        ),
-      ),
-    );
-
+  function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
     groupList.replaceChildren(); // clear before re-render
     groups.forEach((g) =>
       groupList.appendChild(
@@ -209,25 +219,11 @@ const formatTimeRange = (start: string, end: string) => {
       ),
     );
 
-    skillList.replaceChildren();
-    skills.forEach((s) => {
-      // const li = document.createElement("li");
-      // li.textContent = s.name;
-      const li = editableListItemElement(s.name);
-      li.dataset.skillId = String(s.id);
-      skillList.appendChild(li);
-    });
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
 
-    // TODO hoist event listeners so it isn't rerendred
-    skillCreateBtn.addEventListener("pointerup", async (e) => {
-      const emptySkill = await idbCreateTimelineSkill({
-        name: "",
-        timeline_uuid,
-      });
-      const li = editableListItemElement(emptySkill.name);
-      li.dataset.skillId = String(emptySkill.id);
-      skillList.appendChild(li);
-    });
     // TODO hoist event listeners so it isn't rerendred
     groupCreateBtn.addEventListener("pointerup", async (e) => {
       const newGroup = await idbCreateTimelineGroup({
@@ -241,163 +237,184 @@ const formatTimeRange = (start: string, end: string) => {
       div.dataset.groupId = String(newGroup.id);
       groupList.appendChild(div);
     });
+  }
 
-    // Notify TimelineGraph with the loaded blocks
+  function renderSkillsUI(skills: TimelineSkill[]) {
+    skillList.replaceChildren();
+    skills.forEach((s) => {
+      // const li = document.createElement("li");
+      // li.textContent = s.name;
+      const li = editableListItemElement(s.name);
+      li.dataset.skillId = String(s.id);
+      skillList.appendChild(li);
+    });
+
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
+
+    // TODO hoist event listeners so it isn't rerendred
+    skillCreateBtn.addEventListener("pointerup", async (e) => {
+      const emptySkill = await idbCreateTimelineSkill({
+        name: "",
+        timeline_uuid,
+      });
+      const li = editableListItemElement(emptySkill.name);
+      li.dataset.skillId = String(emptySkill.id);
+      skillList.appendChild(li);
+    });
+  }
+
+  function renderTableUI(tmlnData: TimelineData) {
+    const { moments, skills, groups, steps } = tmlnData;
+    tbody.replaceChildren(); // clear existing
+    moments.sort((a, b) => {
+      return a.start - b.start;
+    });
+    moments.forEach((b) =>
+      tbody.append(
+        ...timeMomentRowEl(
+          b,
+          skills,
+          groups,
+          steps.filter((t) => t.moment_id === b.id),
+        ),
+      ),
+    );
+  }
+
+  function renderGraphUI() {
     document.dispatchEvent(
       new CustomEvent("timeline:load", {
         detail: { moments, skills },
       }),
     );
+  }
 
-    // ✅ wire add-row button after skills are loaded
-    initAddRow(skills);
+  function renderUI(tmlnData: TimelineData) {
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
 
-    function initAddRow(skills: TimelineSkill[]) {
-      if (!timeline_uuid)
-        throw new Error(
-          `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+    const { moments, skills, groups, steps } = tmlnData;
+
+    renderGraphUI();
+
+    // TODO move event listener outside of this render func
+    table.addEventListener("click", async (e) => {
+      const target = e.target as HTMLElement;
+
+      const btn = target.closest("button"); // handles clicks on child elements too
+      if (!btn) return;
+      const rowEl = btn.closest("tr")!;
+      // const liEl = btn.closest("li");
+      // console.log({liEl});
+      const momentId = Number(rowEl.dataset.momentId);
+      if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
+      const btnType = btn.dataset.type;
+      const btnAction = btn.dataset.action as BtnAction;
+      const btnDirection = btn.dataset.direction as BtnDirection | undefined;
+      // const stepId = Number(liEl?.dataset.stepId);
+
+      const targetBlock = moments.find((b) => b.id === momentId);
+
+      if (btnAction === "delete" && btnType === MOMENTS_STORE) {
+        rowEl.remove();
+        const arrIndex = moments.findIndex((b) => b.id === momentId);
+        if (arrIndex !== -1) {
+          moments.splice(arrIndex, 1);
+        }
+
+        await idbDeleteMoment(momentId);
+        return;
+      }
+
+      if (btnAction === "delete" && btnType === STEPS_STORE) {
+        const stepLi = btn.closest("li")!;
+        const stepId = Number(stepLi.dataset.stepId);
+        if (isNaN(stepId)) throw new Error(`step.id is invalid: ${stepId}`);
+        stepLi.remove();
+        const arrIndex = steps.findIndex((t) => t.id === stepId);
+        if (arrIndex !== -1) {
+          steps.splice(arrIndex, 1);
+        }
+
+        await idbDeleteStep(stepId);
+        return;
+      }
+
+      if (!isNaN(momentId) && btnAction === "create") {
+        const emptyStep: Omit<MomentStep, "id"> = {
+          text: "",
+          tbd: false,
+          moment_id: momentId,
+          note: "",
+          order: 1,
+        };
+
+        const newStep = await idbCreateStep(emptyStep);
+        const stepEl = createStepEl(newStep);
+        const stepList = btn.closest("td")!.querySelector("ul.steps");
+        stepList?.appendChild(stepEl);
+        return;
+      }
+      if (btnAction === "insert") {
+        // TODO get start and end from targed row
+        // insert into createEmptyBlock
+
+        let newStart = 0;
+        let newEnd = 0;
+
+        if (btnDirection === "above") {
+          newStart = targetBlock ? targetBlock.start - 15 : 0;
+          newEnd = targetBlock ? targetBlock.start : 0;
+        } else if (btnDirection === "below") {
+          newStart = targetBlock ? targetBlock.end : 0;
+          newEnd = targetBlock ? targetBlock.end + 15 : 0;
+        } else {
+          console.log("❌ Direction not supported");
+        }
+
+        const emptyBlock = createEmptyBlock(timeline_uuid, {
+          start: newStart,
+          end: newEnd,
+        });
+        const newBlock = await idbCreateMoment(emptyBlock);
+        // const newRow = timeBlockRow(newBlock, skills, groups);
+        const [newRow, newSubRow] = timeMomentRowEl(
+          newBlock,
+          skills,
+          groups,
+          [],
         );
 
-      table.addEventListener("click", async (e) => {
-        const target = e.target as HTMLElement;
-
-        const btn = target.closest("button"); // handles clicks on child elements too
-        if (!btn) return;
-        const rowEl = btn.closest("tr")!;
-        // const liEl = btn.closest("li");
-        // console.log({liEl});
-        const momentId = Number(rowEl.dataset.momentId);
-        if (isNaN(momentId)) throw new Error(`block id invalid: ${momentId}`);
-        const btnType = btn.dataset.type;
-        const btnAction = btn.dataset.action as BtnAction;
-        const btnDirection = btn.dataset.direction as BtnDirection | undefined;
-        // const stepId = Number(liEl?.dataset.stepId);
-
-        const targetBlock = moments.find((b) => b.id === momentId);
-
-        if (btnAction === "delete" && btnType === MOMENTS_STORE) {
-          rowEl.remove();
-          const arrIndex = moments.findIndex((b) => b.id === momentId);
-          if (arrIndex !== -1) {
-            moments.splice(arrIndex, 1);
-          }
-
-          await idbDeleteMoment(momentId);
-          return;
+        if (btnDirection === "above") {
+          rowEl.insertAdjacentElement("beforebegin", newRow);
+          newRow.insertAdjacentElement("afterend", newSubRow);
+        } else if (btn.dataset.direction === "below") {
+          const existingSubRow = rowEl.nextElementSibling;
+          existingSubRow
+            ? existingSubRow.insertAdjacentElement("afterend", newRow)
+            : rowEl.insertAdjacentElement("afterend", newRow);
+          newRow.insertAdjacentElement("afterend", newSubRow);
+        } else {
+          console.log("❌ Direction not supported");
         }
 
-        if (btnAction === "delete" && btnType === STEPS_STORE) {
-          const stepLi = btn.closest("li")!;
-          const stepId = Number(stepLi.dataset.stepId);
-          if (isNaN(stepId)) throw new Error(`step.id is invalid: ${stepId}`);
-          stepLi.remove();
-          const arrIndex = steps.findIndex((t) => t.id === stepId);
-          if (arrIndex !== -1) {
-            steps.splice(arrIndex, 1);
-          }
-
-          await idbDeleteStep(stepId);
-          return;
-        }
-
-        if (!isNaN(momentId) && btnAction === "create") {
-          const emptyStep: Omit<MomentStep, "id"> = {
-            text: "",
-            tbd: false,
-            moment_id: momentId,
-            note: "",
-            order: 1,
-          };
-
-          const newStep = await idbCreateStep(emptyStep);
-          const stepEl = createStepEl(newStep);
-          const stepList = btn.closest("td")!.querySelector("ul.steps");
-          stepList?.appendChild(stepEl);
-          return;
-        }
-        if (btnAction === "insert") {
-          // TODO get start and end from targed row
-          // insert into createEmptyBlock
-
-          let newStart = 0;
-          let newEnd = 0;
-
-          if (btnDirection === "above") {
-            newStart = targetBlock ? targetBlock.start - 15 : 0;
-            newEnd = targetBlock ? targetBlock.start : 0;
-          } else if (btnDirection === "below") {
-            newStart = targetBlock ? targetBlock.end : 0;
-            newEnd = targetBlock ? targetBlock.end + 15 : 0;
-          } else {
-            console.log("❌ Direction not supported");
-          }
-
-          const emptyBlock = createEmptyBlock(timeline_uuid, {
-            start: newStart,
-            end: newEnd,
-          });
-          const newBlock = await idbCreateMoment(emptyBlock);
-          // const newRow = timeBlockRow(newBlock, skills, groups);
-          const [newRow, newSubRow] = timeBlockRow(
-            newBlock,
-            skills,
-            groups,
-            [],
-          );
-
-          if (btnDirection === "above") {
-            rowEl.insertAdjacentElement("beforebegin", newRow);
-            newRow.insertAdjacentElement("afterend", newSubRow);
-          } else if (btn.dataset.direction === "below") {
-            const existingSubRow = rowEl.nextElementSibling;
-            existingSubRow
-              ? existingSubRow.insertAdjacentElement("afterend", newRow)
-              : rowEl.insertAdjacentElement("afterend", newRow);
-            newRow.insertAdjacentElement("afterend", newSubRow);
-          } else {
-            console.log("❌ Direction not supported");
-          }
-
-          moments.push(newBlock);
-          return;
-        }
-      });
-    }
-
-    // HTMX Fetch both partials in parallel
-    // const [
-    //   blocksHTML,
-    //   // skillsHTML
-    //   groupsHTML,
-    // ] = await Promise.all([
-    //   fetch("/partials/planners/time-moment-rows", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ blocks, skills }),
-    //   }).then((r) => r.text()),
-
-    //   // fetch("/partials/planners/time-skills", {
-    //   //   method: "POST",
-    //   //   headers: { "Content-Type": "application/json" },
-    //   //   // body: JSON.stringify({  }),
-    //   // }).then(r => r.text()),
-
-    //   fetch("/partials/planners/time-group-cards", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ groups, blocks }),
-    //   }).then((r) => r.text()),
-    // ]);
-
-    // document.getElementById("time-moment-list")!.innerHTML = blocksHTML;
-    // // @ts-ignore
-    // const skillsHTML = skills.map((s) => `<li>${s.name}</li>`);
-    // document.getElementById("skills-list")!.innerHTML = skillsHTML;
-    // document.getElementById("time-groups-list")!.innerHTML = groupsHTML;
+        moments.push(newBlock);
+        return;
+      }
+    });
   }
 
   const tmlnData = await fetchIdbData();
-
+  const { skills, groups, moments } = tmlnData;
+  renderTimelineMetadata(tmlnData);
+  renderSkillsUI(skills);
+  renderGroupsUI(groups, moments);
+  renderTableUI(tmlnData);
   renderUI(tmlnData);
 
   const debouncedSaveBlock = debounce(
@@ -424,6 +441,12 @@ const formatTimeRange = (start: string, end: string) => {
     },
     500,
   );
+  const debouncedSaveTimeline = debounce(
+    async (uuid: string, field: string, value: string) => {
+      await idbUpdateTimeline(uuid, { [field]: value });
+    },
+    500,
+  );
 
   groupList.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -442,6 +465,15 @@ const formatTimeRange = (start: string, end: string) => {
     const field = target.name;
     if (!skillId || !field) return;
     debouncedSaveSkill(skillId, field, target.value);
+  });
+
+  timelineInputs?.addEventListener("input", (e) => {
+    if (!timeline_uuid) throw new Error(`timeline_uuid: ${timeline_uuid}`);
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    const field = target.name;
+    // console.log(timeline_uuid, field, target.value);
+    debouncedSaveTimeline(timeline_uuid, field, target.value);
   });
 
   skillList.addEventListener("click", async (e) => {
@@ -592,3 +624,33 @@ const formatTimeRange = (start: string, end: string) => {
     }
   });
 </script>
+
+<style>
+  main > header {
+    align-items: flex-start;
+  }
+
+  div:has(#banner-message:empty) {
+    display: none;
+  }
+
+  menu {
+    padding-inline-start: 0;
+  }
+
+  input {
+    background-color: transparent;
+    border-color: transparent;
+
+    &:hover {
+      background-color: var(--c-input-bg, rgba(128, 128, 128, 0.456));
+    }
+    &:focus {
+      border-color: initial;
+    }
+  }
+
+  input[name="summary"] {
+    font-size: var(--size-xl);
+  }
+</style>

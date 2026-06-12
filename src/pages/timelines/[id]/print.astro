@@ -15,8 +15,10 @@ if (!id) return Astro.redirect("/404");
     </div>
     <header>
       <h1>print me {id}</h1>
+      <p class="sub-text">TODO other metadata</p>
+      <button>PRINT to PDF</button>
     </header>
-    <hr />
+    
     <div class="timeline-grid gap-m" data-layout="content">
       <table id="timeline-moment-table" class="timeline-schedule">
         <thead>
@@ -42,6 +44,7 @@ if (!id) return Astro.redirect("/404");
   import { createElement } from "@client/elementRenders";
   import { idbGetSingleTimelineData } from "@client/indexedDB";
   import { timeMomentRowEl } from "@client/templates/timeMomentRow";
+  import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
   import type { MomentStep, TimelineMoment, TimelineState } from "@ty/Schema";
 
   const tbody = document.getElementById("time-moment-list")!;
@@ -79,7 +82,7 @@ if (!id) return Astro.redirect("/404");
   renderTableUI(tmlnFetch);
 
   function uiMomentRowEls(moment: TimelineMoment, steps: MomentStep[]) {
-    const { id } = moment;
+    const { id, start, end, desc, skill_id, group_id, note } = moment;
     const tr = createElement(
       "tr",
       {
@@ -97,38 +100,108 @@ if (!id) return Astro.redirect("/404");
       "note",
     ];
 
-    const cells = fields.map((key) =>
-      createElement(
-        "td",
-        {
-          textContent: String(moment[key] ?? ""),
-        },
-        {
-          fieldName: key,
-        },
-      ),
+    // TODO custom cell render start & end together with formatting
+
+    const tdStartEnd = createElement(
+      "td",
+      {},
+      {
+        fieldName: "start-end",
+      },
     );
-    tr.append(...cells);
+    const ulStartEnd = createElement("ul", {
+      className: "unstyled",
+    });
+    const liStart = createElement(
+      "li",
+      {
+        textContent: formatTimeMinutesToClockString(start, true),
+      },
+      {
+        fieldName: "start",
+      },
+    );
+    const liEnd = createElement(
+      "li",
+      {
+        textContent: formatTimeMinutesToClockString(end, true),
+      },
+      {
+        fieldName: "end",
+      },
+    );
+    ulStartEnd.append(liStart, liEnd);
+    tdStartEnd.append(ulStartEnd);
+    const tdDesc = createElement(
+      "td",
+      {
+        textContent: desc,
+      },
+      {
+        fieldName: "desc",
+      },
+    );
+    const tdSkill = createElement(
+      "td",
+      {
+        textContent: skills.find((s) => s.id === skill_id)?.name,
+      },
+      {
+        fieldName: "skill_name",
+      },
+    );
+    const tdGroup = createElement(
+      "td",
+      {
+        textContent: groups.find((g) => g.id === group_id)?.name,
+      },
+      {
+        fieldName: "group_name",
+      },
+    );
+    const tdNote = createElement(
+      "td",
+      {
+        textContent: note,
+      },
+      {
+        fieldName: "note",
+      },
+    );
+    // const cells = fields.map((key) =>
+    //   createElement(
+    //     "td",
+    //     {
+    //       textContent: String(moment[key] ?? ""),
+    //     },
+    //     {
+    //       fieldName: key,
+    //     },
+    //   ),
+    // );
+    tr.append(tdStartEnd, tdDesc, tdSkill, tdGroup, tdNote);
 
     const trSub = createElement("tr", {
       id: `timeline-moment-anchor-${id}`,
       className: `time-moment-steps`,
     });
-    const stepsCell = createElement("td", { colSpan: 999 });
-    const stepsDetails = createElement("details", { open: true });
-    const stepsSummary = createElement("summary", {
-      className: "ghost",
-      textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`,
-    });
-    const stepsList = createElement("ol", { className: "steps" });
-    const stepItems = steps.map((s) =>
-      createElement("li", { textContent: s.text || "-- blank --" }),
-    );
+    if (steps.length > 0) {
+      const stepsCell = createElement("td", { colSpan: 999 });
+      const stepsDetails = createElement("details", { open: true });
+      const stepsSummary = createElement("summary", {
+        className: "ghost",
+        textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`,
+      });
+      const stepsList = createElement("ol", { className: "steps" });
+      const stepItems = steps.map((s) =>
+        createElement("li", { textContent: s.text || "-- blank --" }),
+      );
 
-    stepsList.append(...stepItems);
-    stepsDetails.append(stepsSummary, stepsList);
-    stepsCell.append(stepsDetails);
-    trSub.append(stepsCell);
+      stepsList.append(...stepItems);
+      stepsDetails.append(stepsSummary, stepsList);
+      stepsCell.append(stepsDetails);
+      trSub.append(stepsCell);
+    }
 
     return [tr, trSub];
   }
@@ -162,5 +235,8 @@ if (!id) return Astro.redirect("/404");
 <style>
   div:has(#banner-message:empty) {
     display: none;
+  }
+  :global(td[data-field-name="note"]) {
+    max-width: 15ch;
   }
 </style>

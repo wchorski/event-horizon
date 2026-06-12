@@ -43,8 +43,8 @@ const formatTimeRange = (start: string, end: string) => {
     <div class="callout error flex-align-center gap-s">
       <p id="banner-message"></p>
     </div>
-    <header id="page-header" class="flex gap-s space-between">
-      <div id="timeline-data-inputs">
+    <header id="page-header" class="flex gap-l space-between">
+      <div>
         <h1 id="page-title" class="flex gap-m">
           <input type="text" name="summary" value="temporary" />
           <span class="sub-text">rev</span>
@@ -56,13 +56,9 @@ const formatTimeRange = (start: string, end: string) => {
         </div>
       </div>
       <div>
-        <menu
-          id="timeline-action-menu"
-          data-timelineUUID={id}
-          class="flex gap-s"
-        >
-          <button data-action="save">Save</button>
-          <button data-action="export">Export</button>
+        <menu id="timeline-action-menu" data-timelineUUID={id} class="gap-s">
+          <button data-action="commit">Commit Rev</button>
+          <button data-action="export">Export JSON</button>
           <label>
             <span>Import JSON</span>
             <input type="file" data-action="import" />
@@ -72,11 +68,11 @@ const formatTimeRange = (start: string, end: string) => {
           <summary>{id}</summary>
           <dl class="kv meta ghost">
             <dd>created</dd>
-            <dt>***</dt>
+            <dt data-field="date_created">***</dt>
             <dd>modified</dd>
-            <dt>***</dt>
+            <dt data-field="date_modified">***</dt>
             <dd>revision</dd>
-            <dt>***</dt>
+            <dt data-field="rev">***</dt>
           </dl>
         </details>
       </div>
@@ -152,7 +148,7 @@ const formatTimeRange = (start: string, end: string) => {
     MomentStep,
     Timeline,
     TimelineBtnAction,
-    TimelineData,
+    TimelineState,
     TimelineMoment,
     TimelineGroup,
   } from "@ty/Schema";
@@ -161,8 +157,13 @@ const formatTimeRange = (start: string, end: string) => {
   import { editableListItemElement } from "@client/templates/editableListItemElement";
   import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
   import { downloadAsJSON } from "@client/downloadOnClient";
+  import {
+    prettyDateToLocale,
+    prettyPlainCivilDateFull,
+  } from "@lib/formatters";
+  import { createStore } from "@client/stores";
 
-  const timelineInputs = document.getElementById("timeline-data-inputs")!;
+  const pageHeader = document.getElementById("page-header")!;
   const timelineRevSpan = document.getElementById("timeline-revision")!;
   const table = document.getElementById("timeline-moment-table")!;
   const tbody = document.getElementById("time-moment-list")!;
@@ -171,7 +172,7 @@ const formatTimeRange = (start: string, end: string) => {
   const skillCreateBtn = document.getElementById("create-skill-item")!;
   const groupCreateBtn = document.getElementById("create-group-item")!;
   const bannerMsgP = document.getElementById("banner-message")!;
-  // let timelineData: Timeline | null = null;
+  // let timelineData: TimelineData | null = null;
 
   const timeline_uuid = window.location.pathname.split("/").at(-1);
 
@@ -190,22 +191,40 @@ const formatTimeRange = (start: string, end: string) => {
   }
 
   function renderTimelineMetadata(timeline: Timeline) {
-    const { summary, date_civil, timezone } = timeline;
-    const summaryInput = timelineInputs?.querySelector(
+    const { summary, date_civil, timezone, date_created, date_modified, rev } =
+      timeline;
+    const summaryInput = pageHeader?.querySelector(
       'input[name="summary"]',
     ) as HTMLInputElement;
-    const dateCivilInput = timelineInputs?.querySelector(
+    const dateCivilInput = pageHeader?.querySelector(
       'input[name="date_civil"]',
     ) as HTMLInputElement;
-    const timezoneInput = timelineInputs?.querySelector(
+    const timezoneInput = pageHeader?.querySelector(
       'input[name="timezone"]',
     ) as HTMLInputElement;
-    if (!summaryInput || !dateCivilInput || !timezoneInput)
-      throw new Error("timeline input not found");
+    const dateCreatedEl = pageHeader?.querySelector(
+      'dt[data-field="date_created"]',
+    );
+    const dateModifiedEl = pageHeader?.querySelector(
+      'dt[data-field="date_modified"]',
+    );
+    const revEl = pageHeader?.querySelector('dt[data-field="rev"]');
+    if (
+      !summaryInput ||
+      !dateCivilInput ||
+      !timezoneInput ||
+      !dateCreatedEl ||
+      !dateModifiedEl ||
+      !revEl
+    )
+      throw new Error("timeline input/el not found");
     summaryInput.value = summary;
     dateCivilInput.value = date_civil;
     timezoneInput.value = timezone;
-    timelineRevSpan.textContent = String(timeline.rev);
+    timelineRevSpan.textContent = String(rev);
+    dateCreatedEl.textContent = prettyDateToLocale(date_created);
+    dateModifiedEl.textContent = prettyDateToLocale(date_modified);
+    revEl.textContent = String(rev);
   }
 
   function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
@@ -266,7 +285,7 @@ const formatTimeRange = (start: string, end: string) => {
     });
   }
 
-  function renderTableUI(tmlnData: TimelineData) {
+  function renderTableUI(tmlnData: TimelineState) {
     const { moments, skills, groups, steps } = tmlnData;
     tbody.replaceChildren(); // clear existing
     moments.sort((a, b) => {
@@ -284,7 +303,7 @@ const formatTimeRange = (start: string, end: string) => {
     );
   }
 
-  function renderGraphUI() {
+  function renderGraphUI(moments: TimelineMoment[], skills: TimelineSkill[]) {
     document.dispatchEvent(
       new CustomEvent("timeline:load", {
         detail: { moments, skills },
@@ -292,7 +311,7 @@ const formatTimeRange = (start: string, end: string) => {
     );
   }
 
-  function renderUI(tmlnData: TimelineData) {
+  function renderUI(tmlnData: TimelineState) {
     if (!timeline_uuid)
       throw new Error(
         `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
@@ -300,7 +319,7 @@ const formatTimeRange = (start: string, end: string) => {
 
     const { moments, skills, groups, steps } = tmlnData;
 
-    renderGraphUI();
+    renderGraphUI(moments, skills);
 
     // TODO move event listener outside of this render func
     table.addEventListener("click", async (e) => {
@@ -404,22 +423,38 @@ const formatTimeRange = (start: string, end: string) => {
         }
 
         moments.push(newBlock);
+        renderGraphUI(moments, skills);
         return;
       }
     });
   }
 
   const tmlnData = await fetchIdbData();
+
   const { skills, groups, moments } = tmlnData;
+  if (!timeline_uuid) throw new Error("no uuid");
+
+  const timelineStore = createStore<TimelineState>({
+    ...tmlnData,
+    id: timeline_uuid,
+  });
   renderTimelineMetadata(tmlnData);
   renderSkillsUI(skills);
   renderGroupsUI(groups, moments);
   renderTableUI(tmlnData);
   renderUI(tmlnData);
 
-  const debouncedSaveBlock = debounce(
+  timelineStore.subscribe((state) => {
+    renderGraphUI(state.moments, state.skills);
+  });
+
+  const debouncedSaveMoment = debounce(
     async (momentId: number, field: string, value: string) => {
-      await idbUpdateMoment(momentId, { [field]: value });
+      const updated = await idbUpdateMoment(momentId, { [field]: value });
+      timelineStore.update((state) => ({
+        ...state,
+        moments: state.moments.map((m) => (m.id === updated.id ? updated : m)),
+      }));
     },
     500,
   );
@@ -467,7 +502,7 @@ const formatTimeRange = (start: string, end: string) => {
     debouncedSaveSkill(skillId, field, target.value);
   });
 
-  timelineInputs?.addEventListener("input", (e) => {
+  pageHeader?.addEventListener("input", (e) => {
     if (!timeline_uuid) throw new Error(`timeline_uuid: ${timeline_uuid}`);
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!target.matches("input, textarea")) return;
@@ -523,7 +558,7 @@ const formatTimeRange = (start: string, end: string) => {
     const field = target.name;
     if (!momentId || !field) return;
 
-    debouncedSaveBlock(momentId, field, target.value);
+    debouncedSaveMoment(momentId, field, target.value);
   });
 
   // selects feel snappier with instant save on "change" instead
@@ -569,20 +604,20 @@ const formatTimeRange = (start: string, end: string) => {
     if (!action) throw new Error("TimelineBtnAction not defined");
 
     switch (action) {
-      case "save":
-        return await idbUpdateTimeline(timeline_uuid, {});
+      case "commit":
+        console.log("POST to server DB");
+        const updated = await idbUpdateTimeline(timeline_uuid, {});
+        renderTimelineMetadata(updated);
+        return;
 
       case "import":
         return console.log("import");
 
       case "export":
         console.log("export");
-        const timelineData = await idbGetSingleTimelineData(timeline_uuid);
-        const { summary, rev, date_modified } = timelineData;
-        return downloadAsJSON(
-          timelineData,
-          `${summary} rev-${rev} ${date_modified}`,
-        );
+        const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
+        const { summary, rev, date_modified } = tmlDt;
+        return downloadAsJSON(tmlDt, `${summary} rev-${rev} ${date_modified}`);
 
       default:
         throw new Error(`TimelineBtnAction not supported: ${action}`);
@@ -606,7 +641,7 @@ const formatTimeRange = (start: string, end: string) => {
     if (action === "import") {
       try {
         const text = await file.text();
-        const data = JSON.parse(text) as TimelineData;
+        const data = JSON.parse(text) as TimelineState;
 
         // Validate shape before writing — at minimum check required fields
         if (!data.id || !data.summary) {

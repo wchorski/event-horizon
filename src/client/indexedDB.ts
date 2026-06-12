@@ -149,7 +149,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
 export async function idbUpdateTimeline(
   uuid: string,
   updates: Partial<Timeline>,
-) {
+): Promise<Timeline>  {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,
@@ -167,20 +167,21 @@ export async function idbUpdateTimeline(
     const req = store.get(uuid);
 
     req.onsuccess = () => {
-      const existing = req.result;
+      const existing:Timeline = req.result;
       if (!existing) return reject(new Error(`Timeline ${uuid} not found`));
 
-      const merged = {
+      const merged:Timeline = {
         ...existing,
         ...coerced,
-        modified_at: Date.now(),
-        revision: (existing.revision ?? 0) + 1,
+        date_modified: new Date(),
+        rev: existing.rev + 1,
       };
+      console.log({updates, coerced, existing});
       
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
-        resolve({ ...merged, id: putReq.result as number });
+        resolve({ ...merged, id: putReq.result as string });
       putReq.onerror = () => reject(putReq.error);
     };
 
@@ -222,7 +223,7 @@ export async function idbCreateMoment(
 export async function idbUpdateMoment(
   id: number,
   updates: Partial<TimelineMomentInput>,
-) {
+): Promise<TimelineMoment> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,
@@ -240,10 +241,10 @@ export async function idbUpdateMoment(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing = req.result;
+      const existing:TimelineMoment = req.result;
       if (!existing) return reject(new Error(`Block ${id} not found`));
 
-      const merged = { ...existing, ...coerced };
+      const merged:TimelineMoment = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -327,10 +328,10 @@ export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing = req.result;
+      const existing:MomentStep = req.result;
       if (!existing) return reject(new Error(`step.id ${id} not found`));
 
-      const merged = { ...existing, ...coerced };
+      const merged:MomentStep = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -355,7 +356,7 @@ export async function idbDeleteStep(id: number) {
     };
 
     getReq.onsuccess = () => {
-      const existing = getReq.result;
+      const existing: MomentStep = getReq.result;
 
       if (!existing) {
         reject(new Error(`No ${STEPS_STORE} found for id ${id}`));
@@ -436,10 +437,10 @@ export async function idbUpdateTimeGroup(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing = req.result;
+      const existing:TimelineGroup = req.result;
       if (!existing) return reject(new Error(`Group ${id} not found`));
 
-      const merged = { ...existing, ...coerced };
+      const merged:TimelineGroup = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -464,7 +465,7 @@ export async function idbDeleteTimeGroup(id: number) {
     };
 
     getReq.onsuccess = () => {
-      const existing = getReq.result;
+      const existing:TimelineGroup = getReq.result;
 
       if (!existing) {
         reject(new Error(`No group found for id ${id}`));
@@ -545,10 +546,10 @@ export async function idbUpdateTimeSkill(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing = req.result;
+      const existing:TimelineSkill = req.result;
       if (!existing) return reject(new Error(`Skill ${id} not found`));
 
-      const merged = { ...existing, ...coerced };
+      const merged:TimelineSkill = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -573,7 +574,7 @@ export async function idbDeleteTimeSkill(id: number) {
     };
 
     getReq.onsuccess = () => {
-      const existing = getReq.result;
+      const existing:TimelineSkill = getReq.result;
 
       if (!existing) {
         reject(new Error(`No skill found for id ${id}`));

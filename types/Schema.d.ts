@@ -104,7 +104,7 @@ export type Timeline = {
   rev: number;
 };
 
-export type TimelineData = Timeline & {
+export type TimelineState = Timeline & {
   moments: TimelineMoment[];
   steps: MomentStep[];
   groups: TimelineGroup[];
@@ -154,4 +154,4 @@ import {
 export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
-export type TimelineBtnAction = "save" | "import" | "export"
+export type TimelineBtnAction = "commit" | "import" | "export"

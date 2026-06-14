@@ -1,10 +1,49 @@
 ---
+import { timelineTemplates } from "@client/templates/timelineTemplates";
 import BaseLayout from "@layouts/BaseLayout.astro";
 ---
 
 <BaseLayout>
   <main>
-    <h1>Timelines</h1>
-    <p>TODO: list</p>
+    <header>
+      <h1>Timelines</h1>
+      <p>Plan the moment to moment events that make up the day's agenda.</p>
+    </header>
+    <hr />
+    <h2>Starter Templates</h2>
+    <ul id="timeline-templates" class="unstyled grid gap-m">
+      {
+        timelineTemplates.map(
+          ({ id, summary, moments, steps, skills, groups }) => (
+            <li class="card">
+              <h3>{summary}</h3>
+              <a href={`timelines/${"GENERATE_NEW_ID"}`}>Start Planning</a>
+              <h4>Moments</h4>
+              <ul>
+                {moments.map((m) => (
+                  <li>{m.desc}</li>
+                ))}
+              </ul>
+              <h4>Skills</h4>
+              <ul>
+                {skills.map((s) => (
+                  <li>{s.name}</li>
+                ))}
+              </ul>
+              <h4>Groups</h4>
+              <ul>
+                {groups.map((g) => (
+                  <li>{g.name}</li>
+                ))}
+              </ul>
+            </li>
+          ),
+        )
+      }
+    </ul>
+
+    <h2>Found On Device</h2>
+    <p>Continue editing a timeline</p>
+    <p class="callout debug">TODO fetch and show found timelines</p>
   </main>
 </BaseLayout>

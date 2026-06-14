@@ -82,6 +82,7 @@ docker compose up --remove-orphans
 
 #todo
 - [ ] timeline, quickstart page w link to templates
+- [ ] fetch and show found timelines in local storage for continued editing
 - [ ] printable version CSS
 - [ ] integrate icon and color to skill editor and reflect in table and print
 - [ ] check light mode

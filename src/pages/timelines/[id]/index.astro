@@ -271,12 +271,14 @@ const formatTimeRange = (start: string, end: string) => {
 
     // TODO hoist event listeners so it isn't rerendred
     skillCreateBtn.addEventListener("pointerup", async (e) => {
-      const emptySkill = await idbCreateTimelineSkill({
+      const newSkill = await idbCreateTimelineSkill({
         name: "",
+        icon: "☘",
+        color: "grey",
         timeline_uuid,
       });
-      const li = editableListItemElement(emptySkill.name);
-      li.dataset.skillId = String(emptySkill.id);
+      const li = skillListItem(newSkill);
+      li.dataset.skillId = String(newSkill.id);
       skillList.appendChild(li);
     });
   }

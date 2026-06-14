@@ -16,7 +16,7 @@ export function skillListItem(skill: TimelineSkill) {
     type: "text",
     name: "icon",
     value: icon,
-    maxLength: 1
+    maxLength: 1,
   });
   const colorInputEl = createElement("input", {
     type: "color",
@@ -24,11 +24,15 @@ export function skillListItem(skill: TimelineSkill) {
     value: color,
   });
 
-  const deleteBtn = createElement("button", {
-    textContent: "␡",
-    title: "delete",
-    className: "delete",
-  });
+  const deleteBtn = createElement(
+    "button",
+    {
+      textContent: "␡",
+      title: "delete",
+      className: "delete",
+    },
+    { action: "delete" },
+  );
 
   const liEl = createElement("li", {
     className: "editable",

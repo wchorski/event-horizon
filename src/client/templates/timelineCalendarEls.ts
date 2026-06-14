@@ -1,5 +1,7 @@
 import type { TimelineState } from "@ty/Schema";
 
+// TODO audit this AI bullshit
+
 export function timelineCalendarEls(timelineState: TimelineState) {
   const { moments, skills } = timelineState;
 

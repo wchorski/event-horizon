@@ -2,7 +2,12 @@
 import { createElement } from "@client/elementRenders";
 import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-import type { TimelineMoment, TimelineGroup, MomentStep, TimelineSkill } from "@ty/Schema";
+import type {
+  TimelineMoment,
+  TimelineGroup,
+  MomentStep,
+  TimelineSkill,
+} from "@ty/Schema";
 import { checkboxCornerEl } from "./checkboxCorner";
 
 function createTimeInput(
@@ -58,7 +63,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
-  const tdbCheckbox = checkboxCornerEl(step.tbd)
+  const tdbCheckbox = checkboxCornerEl(step.tbd);
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
     type: "text",
@@ -73,7 +78,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
     { className: "delete", textContent: "␡", title: "delete" },
     { action: "delete", type: STEPS_STORE },
   );
-  
+
   li.append(tdbCheckbox, textInput, noteTextarea, deleteBtn);
   return li;
 }
@@ -93,8 +98,8 @@ function createSubRowSteps(
   const details = document.createElement("details");
   // details.open = true;
   const summary = createElement("summary", {
-    className: 'ghost',
-    textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`
+    className: "ghost",
+    textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`,
   });
 
   const ul = document.createElement("ul");
@@ -150,21 +155,30 @@ function createActionButtons(id: string): HTMLButtonElement[] {
 
 function createSelectEl(
   momentId: number,
-  options: { label: string; value: string }[],
+  options: { label: string; value: string; color?: string }[],
   fieldName: string,
   selectedId?: number,
   padSize?: "xs" | "s" | "m" | "l",
+  className?: string,
 ): HTMLSelectElement {
   const select = document.createElement("select");
   select.name = fieldName;
+  if (className) select.classList.add(className);
+
   select.dataset.id = String(momentId);
   if (padSize) select.classList.add(`pad-${padSize}`);
+
+  const colorStyles = options.map(
+    (skill, i) => `--color-${i + 1}: ${skill.color}`,
+  );
+  select.style = colorStyles.join(";");
 
   options.forEach((skill) => {
     const option = document.createElement("option");
     option.value = skill.value;
     option.textContent = skill.label;
     option.selected = skill.value === String(selectedId);
+
     select.appendChild(option);
   });
 
@@ -223,10 +237,15 @@ export function timeMomentRowEl(
   tdSkill.appendChild(
     createSelectEl(
       id,
-      skills.map((s) => ({ label: s.name, value: String(s.id) })),
+      skills.map((s) => ({
+        label: `${s.icon} ${s.name}`,
+        value: String(s.id),
+        color: s.color,
+      })),
       "skill_id",
       skill_id,
       "xs",
+      "color-code",
     ),
   );
 

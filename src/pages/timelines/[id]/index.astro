@@ -155,18 +155,16 @@ const formatTimeRange = (start: string, end: string) => {
   import { editableListItemElement } from "@client/templates/editableListItemElement";
   import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
   import { downloadAsJSON } from "@client/downloadOnClient";
-  import {
-    prettyDateToLocale,
-    prettyPlainCivilDateFull,
-  } from "@lib/formatters";
+  import { prettyDateToLocale } from "@lib/formatters";
   import { createStore } from "@client/stores";
+  import { skillListItem } from "@client/templates/skillListItem";
 
   const pageHeader = document.getElementById("page-header")!;
   const timelineRevSpan = document.getElementById("timeline-revision")!;
   const table = document.getElementById("timeline-moment-table")!;
   const tbody = document.getElementById("time-moment-list")!;
   const skillList = document.getElementById("skills-list")!;
-  const groupList = document.getElementById("time-groups-list")!;
+  const groupsList = document.getElementById("time-groups-list")!;
   const skillCreateBtn = document.getElementById("create-skill-item")!;
   const groupCreateBtn = document.getElementById("create-group-item")!;
   const bannerMsgP = document.getElementById("banner-message")!;
@@ -226,9 +224,9 @@ const formatTimeRange = (start: string, end: string) => {
   }
 
   function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
-    groupList.replaceChildren(); // clear before re-render
+    groupsList.replaceChildren(); // clear before re-render
     groups.forEach((g) =>
-      groupList.appendChild(
+      groupsList.appendChild(
         groupCard(
           g,
           moments.filter((b) => b.group_id === g.id),
@@ -252,7 +250,7 @@ const formatTimeRange = (start: string, end: string) => {
         moments.filter((b) => b.group_id === newGroup.id),
       );
       div.dataset.groupId = String(newGroup.id);
-      groupList.appendChild(div);
+      groupsList.appendChild(div);
     });
   }
 
@@ -261,7 +259,7 @@ const formatTimeRange = (start: string, end: string) => {
     skills.forEach((s) => {
       // const li = document.createElement("li");
       // li.textContent = s.name;
-      const li = editableListItemElement(s.name);
+      const li = skillListItem(s);
       li.dataset.skillId = String(s.id);
       skillList.appendChild(li);
     });
@@ -483,7 +481,7 @@ const formatTimeRange = (start: string, end: string) => {
     500,
   );
 
-  groupList.addEventListener("input", (e) => {
+  groupsList.addEventListener("input", (e) => {
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     if (!target.matches("input, textarea")) return;
     const cardEl = target.closest("div")!;
@@ -526,7 +524,7 @@ const formatTimeRange = (start: string, end: string) => {
     }
   });
 
-  groupList.addEventListener("click", async (e) => {
+  groupsList.addEventListener("click", async (e) => {
     const target = e.target as HTMLElement;
     const btn = target.closest("button");
     if (!btn) return;

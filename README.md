@@ -82,6 +82,7 @@ docker compose up --remove-orphans
 
 #todo
 - [ ] printable version CSS
+- [ ] integrate icon and color to skill editor and reflect in table and print
 - [ ] check light mode
 - [x] Timeline `commit` button will commit data to server, increment revision
 - [ ] allow undo and redo (or restore to previous revision)

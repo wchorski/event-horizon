@@ -143,6 +143,8 @@ export type TimelineSkill = {
   name: string;
   id: number;
   timeline_uuid: string;
+  icon?: string;
+  color?: string;
 };
 
 import {
@@ -154,4 +156,4 @@ import {
 export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
-export type TimelineBtnAction = "commit" | "import" | "export" | "print"
+export type TimelineBtnAction = "commit" | "import" | "export" | "print";

@@ -304,10 +304,28 @@ const groups_template: TimelineGroup[] = [
 ];
 
 const skills_template: TimelineSkill[] = [
-  { name: "MC Announcement", id: 1, timeline_uuid: "001" },
-  { name: "Song Cue", id: 2, timeline_uuid: "001" },
-  { name: "Music Playlist", id: 3, timeline_uuid: "001" },
-  { name: "Misc", id: 4, timeline_uuid: "001" },
+  {
+    name: "MC Announcement",
+    icon: "🎤",
+    color: "hotpink",
+    id: 1,
+    timeline_uuid: "001",
+  },
+  {
+    name: "Song Cue",
+    icon: "♪",
+    color: "limegreen",
+    id: 2,
+    timeline_uuid: "001",
+  },
+  {
+    name: "Music Playlist",
+    icon: "🎶",
+    color: "cornflowerblue",
+    id: 3,
+    timeline_uuid: "001",
+  },
+  { name: "Misc", icon: "⎑", color: "", id: 4, timeline_uuid: "001" },
 ];
 
 export async function seedIfEmpty() {

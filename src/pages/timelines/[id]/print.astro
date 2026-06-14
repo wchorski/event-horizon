@@ -13,12 +13,27 @@ if (!id) return Astro.redirect("/404");
     <div class="callout error flex-align-center gap-s">
       <p id="banner-message"></p>
     </div>
-    <header>
-      <h1>print me {id}</h1>
-      <p class="sub-text">TODO other metadata</p>
-      <button>PRINT to PDF</button>
+    <header class="flex space-between">
+      <div>
+        <h1>Timeline: {id}</h1>
+        <time
+          class="ghost"
+          datetime=""
+          id="timeline-date_civil"
+          aria-label="date_civil">***</time
+        >
+      </div>
+      <div>
+        <button>PRINT to PDF 🖨️</button>
+        <dl class="kv meta ghost">
+          <dt>rev</dt>
+          <dd id="timeline-rev">#</dd>
+          <dt>modified</dt>
+          <dd id="timeline-date_modified">***</dd>
+        </dl>
+      </div>
     </header>
-    
+
     <div class="timeline-grid gap-m" data-layout="content">
       <table id="timeline-moment-table" class="timeline-schedule">
         <thead>
@@ -44,10 +59,21 @@ if (!id) return Astro.redirect("/404");
   import { createElement } from "@client/elementRenders";
   import { idbGetSingleTimelineData } from "@client/indexedDB";
   import { timeMomentRowEl } from "@client/templates/timeMomentRow";
+  import {
+    prettyDateToLocale,
+    prettyPlainCivilDateFull,
+  } from "@lib/formatters";
   import { formatTimeMinutesToClockString } from "@lib/timeFormatters";
-  import type { MomentStep, TimelineMoment, TimelineState } from "@ty/Schema";
+  import type {
+    MomentStep,
+    TimelineGroup,
+    TimelineMoment,
+    TimelineState,
+  } from "@ty/Schema";
+  import { safeDecode } from "astro:schema";
 
   const tbody = document.getElementById("time-moment-list")!;
+  const groupsList = document.getElementById("time-groups-list")!;
   const bannerMsgP = document.getElementById("banner-message")!;
   const timeline_uuid = window.location.pathname.split("/").at(-2);
 
@@ -69,20 +95,28 @@ if (!id) return Astro.redirect("/404");
     summary,
     date_civil,
     rev,
-    date_created,
     date_modified,
-    moments,
     skills,
     groups,
+    // date_created,
+    moments,
   } = tmlnFetch;
 
   const h1 = document.querySelector("h1")!;
+  const elDate_civil = document.getElementById("timeline-date_civil")!;
+  const elDate_modified = document.getElementById("timeline-date_modified")!;
+  const elRev = document.getElementById("timeline-rev")!;
   h1.textContent = summary;
+  elDate_civil.textContent = prettyPlainCivilDateFull(date_civil);
+  elDate_modified.textContent = prettyDateToLocale(date_modified);
+  elRev.textContent = String(rev);
 
   renderTableUI(tmlnFetch);
+  uiGroupsList(groups, moments)
 
   function uiMomentRowEls(moment: TimelineMoment, steps: MomentStep[]) {
-    const { id, start, end, desc, skill_id, group_id, note } = moment;
+    const { id, start, end, desc, skill_id, group_id, note, tbd } = moment;
+    const mSkill = skills.find((s) => s.id === skill_id);
     const tr = createElement(
       "tr",
       {
@@ -92,13 +126,13 @@ if (!id) return Astro.redirect("/404");
       { momentId: String(id) },
     );
 
-    const fields: (keyof TimelineMoment)[] = [
-      "start",
-      "desc",
-      "skill_id",
-      "group_id",
-      "note",
-    ];
+    // const fields: (keyof TimelineMoment)[] = [
+    //   "start",
+    //   "desc",
+    //   "skill_id",
+    //   "group_id",
+    //   "note",
+    // ];
 
     // TODO custom cell render start & end together with formatting
 
@@ -144,7 +178,12 @@ if (!id) return Astro.redirect("/404");
     const tdSkill = createElement(
       "td",
       {
-        textContent: skills.find((s) => s.id === skill_id)?.name,
+        className: "skill_name",
+        textContent: mSkill?.name,
+        style: {
+          "--icon": `"${mSkill?.icon || "•"}"`,
+          "--color": mSkill?.color || "hsla(0, 0%, 50%, 0.257)",
+        },
       },
       {
         fieldName: "skill_name",
@@ -181,11 +220,11 @@ if (!id) return Astro.redirect("/404");
     // );
     tr.append(tdStartEnd, tdDesc, tdSkill, tdGroup, tdNote);
 
-    const trSub = createElement("tr", {
-      id: `timeline-moment-anchor-${id}`,
-      className: `time-moment-steps`,
-    });
     if (steps.length > 0) {
+      const trSub = createElement("tr", {
+        id: `timeline-moment-anchor-${id}`,
+        className: `time-moment-steps`,
+      });
       const stepsCell = createElement("td", { colSpan: 999 });
       const stepsDetails = createElement("details", { open: true });
       const stepsSummary = createElement("summary", {
@@ -194,16 +233,24 @@ if (!id) return Astro.redirect("/404");
       });
       const stepsList = createElement("ol", { className: "steps" });
       const stepItems = steps.map((s) =>
-        createElement("li", { textContent: s.text || "-- blank --" }),
+        createElement(
+          "li",
+          {
+            textContent: `${s.text}` || "-- blank --",
+          },
+          {
+            tbd: String(s.tbd),
+          },
+        ),
       );
 
       stepsList.append(...stepItems);
       stepsDetails.append(stepsSummary, stepsList);
       stepsCell.append(stepsDetails);
       trSub.append(stepsCell);
+      return [tr, trSub];
     }
-
-    return [tr, trSub];
+    return [tr];
   }
 
   function renderTableUI(tmlnData: TimelineState) {
@@ -217,7 +264,8 @@ if (!id) return Astro.redirect("/404");
         m,
         steps.filter((t) => t.moment_id === m.id),
       );
-      tbody.append(tr, trSub);
+      tbody.append(tr);
+      if (trSub) tbody.appendChild(trSub);
     });
     // moments.forEach((b) =>
     //   tbody.append(
@@ -230,13 +278,74 @@ if (!id) return Astro.redirect("/404");
     //   ),
     // );
   }
+
+  function uiGroupsList(groups: TimelineGroup[], moments: TimelineMoment[]) {
+    const groupLis = groups.map((g) => {
+      const divCard = createElement(
+        "div",
+        { className: "card" },
+        { groupId: String(g.id) },
+      );
+      const h3 = createElement("h3", { textContent: g.name });
+      const ul = createElement("ul", {});
+      const lis = moments
+        .filter((m) => m.group_id === g.id)
+        .map((m) => createElement("li", { textContent: m.desc }));
+      ul.append(...lis);
+
+      divCard.append(h3, ul);
+      return divCard;
+    });
+    groupsList.append(...groupLis);
+  }
 </script>
 
-<style>
+<style is:global>
   div:has(#banner-message:empty) {
     display: none;
   }
-  :global(td[data-field-name="note"]) {
+  td[data-field-name="note"] {
     max-width: 15ch;
+  }
+  td[data-field-name="start-end"] {
+    font-family: "Courier New", Courier, monospace;
+  }
+
+  .time-moment-row:not(:has(+ .time-moment-steps)) > td {
+    padding-bottom: var(--size-m);
+  }
+
+  li[data-tbd="true"] {
+    border-bottom: orange dotted 1px;
+    &::marker {
+      color: orange;
+    }
+    &::before {
+      content: "*TBD* ";
+      color: orange;
+    }
+  }
+
+  td[data-field-name="skill_name"]:not(:empty) {
+    --icon: "•";
+    --color: hsla(0, 0%, 50%, 0.257);
+
+    &::before {
+      content: var(--icon);
+      background-color: var(--color);
+      color: black;
+      border-radius: 30px;
+      padding: 0.3rem;
+      margin-right: 0.2rem;
+      opacity: 0.7;
+    }
+  }
+
+  ol.steps {
+    padding-inline-start: var(--size-m, 1rem);
+
+    & > li {
+      width: fit-content;
+    }
   }
 </style>

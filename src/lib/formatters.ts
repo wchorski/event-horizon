@@ -79,7 +79,7 @@ export function formatPhonePrettyManual(
   input: string | undefined | null,
   options: PrettyFormatOptions = { defaultCountryCode: "1" },
 ) {
-    if (!input || input === 'undefined' || input === 'null') {
+  if (!input || input === "undefined" || input === "null") {
     return undefined;
   }
 
@@ -142,32 +142,43 @@ export function localDateTimeToRealDate(localString: string, timezone: string) {
   return new Date(zoned.epochMilliseconds);
 }
 
+const LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_DATE_TIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 export function prettyPlainCivilDateFull(date_civil: string): string {
-  // 1️⃣ Enforce exact format shape
-  if (!LOCAL_DATE_TIME_REGEX.test(date_civil)) {
+  try {
+    // ✅ Date only
+    if (LOCAL_DATE_REGEX.test(date_civil)) {
+      const date = Temporal.PlainDate.from(date_civil);
+
+      return date.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+
+    // ✅ Date + time
+    if (LOCAL_DATE_TIME_REGEX.test(date_civil)) {
+      const dt = Temporal.PlainDateTime.from(date_civil);
+
+      return dt.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+
+    throw new Error();
+  } catch {
     throw new Error(
-      `Invalid format. Expected YYYY-MM-DDTHH:mm, received: ${date_civil}`,
+      `Invalid format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm, received: ${date_civil}`,
     );
   }
-
-  // 2️⃣ Let Temporal validate real calendar correctness
-  let plain: Temporal.PlainDateTime;
-  try {
-    plain = Temporal.PlainDateTime.from(date_civil);
-  } catch {
-    throw new Error(`Invalid calendar date/time: ${date_civil}`);
-  }
-
-  return plain.toLocaleString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 export function prettyDateToLocale(timestamp: Date) {

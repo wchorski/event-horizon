@@ -1,6 +1,5 @@
 ---
 import BaseLayout from "@layouts/BaseLayout.astro";
-
 interface Params {
   id: string;
 }
@@ -34,7 +33,7 @@ if (!id) return Astro.redirect("/404");
       </div>
     </header>
 
-    <div class="timeline-grid gap-m" data-layout="content">
+    <section class="timeline-grid gap-m" data-layout="content">
       <table id="timeline-moment-table" class="timeline-schedule">
         <thead>
           <tr>
@@ -51,14 +50,34 @@ if (!id) return Astro.redirect("/404");
         <h2 class="display none">blocks</h2>
         <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
       </aside>
-    </div>
+    </section>
+    <hr class="print-break" />
+    <section id="timeline-calendar" class="page">
+      <h2 class="display none">Timeline</h2>
+      <div class="col-headers" id="col-headers"></div>
+
+      <div class="wrap">
+        <div class="time-col" id="time-col"></div>
+        <div class="columns-area" id="columns-area"></div>
+      </div>
+
+      <div class="tooltip" id="tooltip">
+        <div class="tooltip-title" id="tt-title"></div>
+        <div class="tooltip-detail" id="tt-detail"></div>
+      </div>
+    </section>
   </main>
 </BaseLayout>
 
+<style is:global>
+  @import "@styles/timeline-calendar.css";
+</style>
+
 <script>
+  import "@client/templates/timelineCalendarEls";
   import { createElement } from "@client/elementRenders";
   import { idbGetSingleTimelineData } from "@client/indexedDB";
-  import { timeMomentRowEl } from "@client/templates/timeMomentRow";
+
   import {
     prettyDateToLocale,
     prettyPlainCivilDateFull,
@@ -70,7 +89,7 @@ if (!id) return Astro.redirect("/404");
     TimelineMoment,
     TimelineState,
   } from "@ty/Schema";
-  import { safeDecode } from "astro:schema";
+  import { timelineCalendarEls } from "@client/templates/timelineCalendarEls";
 
   const tbody = document.getElementById("time-moment-list")!;
   const groupsList = document.getElementById("time-groups-list")!;
@@ -102,6 +121,8 @@ if (!id) return Astro.redirect("/404");
     moments,
   } = tmlnFetch;
 
+  timelineCalendarEls(tmlnFetch);
+
   const h1 = document.querySelector("h1")!;
   const elDate_civil = document.getElementById("timeline-date_civil")!;
   const elDate_modified = document.getElementById("timeline-date_modified")!;
@@ -112,7 +133,7 @@ if (!id) return Astro.redirect("/404");
   elRev.textContent = String(rev);
 
   renderTableUI(tmlnFetch);
-  uiGroupsList(groups, moments)
+  uiGroupsList(groups, moments);
 
   function uiMomentRowEls(moment: TimelineMoment, steps: MomentStep[]) {
     const { id, start, end, desc, skill_id, group_id, note, tbd } = moment;
@@ -313,6 +334,10 @@ if (!id) return Astro.redirect("/404");
 
   .time-moment-row:not(:has(+ .time-moment-steps)) > td {
     padding-bottom: var(--size-m);
+  }
+
+  .time-moment-steps > td {
+    margin-bottom: 1rem;
   }
 
   li[data-tbd="true"] {

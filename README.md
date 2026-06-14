@@ -81,6 +81,7 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] timeline, quickstart page w link to templates
 - [ ] printable version CSS
 - [ ] integrate icon and color to skill editor and reflect in table and print
 - [ ] check light mode

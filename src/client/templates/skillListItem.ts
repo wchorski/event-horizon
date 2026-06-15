@@ -16,7 +16,7 @@ export function skillListItem(skill: TimelineSkill) {
     type: "text",
     name: "icon",
     value: icon,
-    maxLength: 1,
+    maxLength: 5,
   });
   const colorInputEl = createElement("input", {
     type: "color",

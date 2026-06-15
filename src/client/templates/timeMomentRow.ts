@@ -123,11 +123,26 @@ function createSubRowSteps(
   return trSub;
 }
 
-function createActionButtons(id: string): HTMLButtonElement[] {
+function createActionButtons(id: string): HTMLElement[] {
   const insertAboveBtn = document.createElement("button");
   const insertBelowBtn = document.createElement("button");
   const deleteRowBtn = document.createElement("button");
-
+  const tbdLabel = createElement("label", {
+    textContent: "tbd",
+    title: "to be determined",
+    className: "tbd",
+  });
+  const tbdCheckbox = createElement(
+    "input",
+    {
+      type: "checkbox",
+      name: "tbd",
+    },
+    {
+      action: "tbd",
+    },
+  );
+  tbdLabel.appendChild(tbdCheckbox);
   deleteRowBtn.dataset.momentId = id;
   deleteRowBtn.textContent = "␡";
   deleteRowBtn.title = "delete";
@@ -150,7 +165,7 @@ function createActionButtons(id: string): HTMLButtonElement[] {
   insertBelowBtn.dataset.type = MOMENTS_STORE;
   insertBelowBtn.title = "insert row below";
 
-  return [insertAboveBtn, deleteRowBtn, insertBelowBtn];
+  return [insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel];
 }
 
 function createSelectEl(
@@ -168,17 +183,20 @@ function createSelectEl(
   select.dataset.id = String(momentId);
   if (padSize) select.classList.add(`pad-${padSize}`);
 
-  const colorStyles = options.map(
-    (skill, i) => `--color-${i + 1}: ${skill.color}`,
-  );
-  select.style = colorStyles.join(";");
+  // const colorStyles = options.map(
+  //   (skill, i) => `--color-${i + 1}: ${skill.color}`,
+  // );
+  // select.style = colorStyles.join(";");
 
   options.forEach((skill) => {
     const option = document.createElement("option");
     option.value = skill.value;
     option.textContent = skill.label;
-    option.selected = skill.value === String(selectedId);
+    const isSelected = skill.value === String(selectedId);
+    option.selected = isSelected;
 
+    if (isSelected)
+      select.style.setProperty("--color", skill.color || "orange");
     select.appendChild(option);
   });
 
@@ -209,12 +227,13 @@ export function timeMomentRowEl(
   steps: MomentStep[] | undefined,
 ): HTMLTableRowElement[] {
   // const fragment = document.createDocumentFragment();
-  const { id, start, end, desc, skill_id, group_id, note } = moment;
+  const { id, start, end, desc, skill_id, group_id, note, tbd } = moment;
 
   const tr = document.createElement("tr");
   tr.id = `timeline-moment-anchor-${id}`;
   tr.dataset.momentId = String(id);
   tr.classList.add("time-moment-row", "anim--slide-in-left-right");
+  tr.dataset.tbd = tbd ? "true" : "false";
 
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
@@ -273,7 +292,13 @@ export function timeMomentRowEl(
   const tdActions = document.createElement("td");
   tdActions.dataset.fieldName = "actions";
   tdActions.classList.add("actions", "grid", "gap-s");
-  tdActions.append(...createActionButtons(String(id)));
+  const [insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel] =
+    createActionButtons(String(id));
+  const tbdCheckbox = tbdLabel.querySelector(
+    'input[name="tbd"]',
+  ) as HTMLInputElement;
+  tbdCheckbox.checked = moment.tbd ? true : false;
+  tdActions.append(insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel);
 
   tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 

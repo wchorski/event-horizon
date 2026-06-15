@@ -111,6 +111,13 @@ export type TimelineState = Timeline & {
   skills: TimelineSkill[];
 };
 
+export type TimelineTemplate = Omit<Timeline, id> & {
+  moments: Omit<TimelineMoment, id>[];
+  steps: Omit<MomentStep, id>[];
+  groups: Omit<TimelineGroup, id>[];
+  skills: Omit<TimelineSkill, id>[];
+};
+
 export type TimelineMoment = {
   id: number;
   desc: string;

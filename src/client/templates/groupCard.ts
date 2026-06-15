@@ -40,7 +40,7 @@ export function groupCard(group: Group, blocks: Block[]): HTMLDivElement {
     card.appendChild(ul);
   } else {
     const empty = document.createElement("p");
-    empty.textContent = "no plans set";
+    empty.textContent = "no moments set";
     empty.classList.add("faded");
     card.appendChild(empty);
   }

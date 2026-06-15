@@ -247,11 +247,11 @@ form .hide {
   opacity: 1;
 }
 
-input[maxlength="1"]{
+input[maxlength="5"]{
   max-width: 5ch;
 }
 
-/* TODO, make this scaleable */
+/* TODO, make this scaleable or remove completely */
 select.color-code {
     --color-1: rgb(177, 177, 244);
     --color-2: rgb(191, 218, 242);
@@ -262,8 +262,11 @@ select.color-code {
     --color-7: rgb(181, 149, 178);
     --color-8: rgb(183, 130, 149);
   }
+  select.color-code {
+    border-color: var(--color, orange);
+  }
 
-  select.color-code:has(option[value="1"]:checked) {
+  /* select.color-code:has(option[value="1"]:checked) {
     border-color: var(--color-1);
   }
   select.color-code:has(option[value="2"]:checked) {
@@ -286,4 +289,4 @@ select.color-code {
   }
   select.color-code:has(option[value="8"]:checked) {
     border-color: var(--color-8);
-  }
+  } */

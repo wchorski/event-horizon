@@ -147,7 +147,6 @@ data[value="null"]::before {
 }
 
 table.timeline-schedule {
-
   & tr.time-moment-row {
     border-top: solid 1px var(--c-seperator);
   }
@@ -167,6 +166,18 @@ table.timeline-schedule {
     }
     & button.delete {
       grid-column: 2;
+      grid-row: 1;
+    }
+    & label.tbd {
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    & label:has(input:checked) {
+      color: var(--c-accent);
     }
 
     & button {
@@ -194,5 +205,9 @@ table.timeline-schedule {
 
   & textarea {
     max-width: 30ch;
+  }
+
+  & tr:has(input[name="tbd"]:checked) {
+    border-left: solid 3px var(--c-accent, orange);
   }
 }

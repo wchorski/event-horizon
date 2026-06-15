@@ -143,7 +143,7 @@ if (!id) return Astro.redirect("/404");
         id: `timeline-moment-anchor-${id}`,
         className: `time-moment-row`,
       },
-      { momentId: String(id) },
+      { momentId: String(id), tbd: String(tbd) },
     );
 
     // const fields: (keyof TimelineMoment)[] = [

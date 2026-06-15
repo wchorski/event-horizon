@@ -7,7 +7,9 @@ import type {
   TimelineSkill,
   MomentStep,
   Timeline,
+  TimelineState,
 } from "@ty/Schema";
+import { uuidv7 } from "./uuidv7";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
@@ -80,6 +82,19 @@ export function openDB(): Promise<IDBDatabase> {
 }
 
 // * TIMELINES
+export async function idbGetAllTimelines(): Promise<Timeline[]> {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TIMELINES_STORE, "readonly");
+    const store = tx.objectStore(TIMELINES_STORE);
+
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
 export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
   Timeline & {
     moments: TimelineMoment[];
@@ -121,7 +136,10 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
     }),
   ]);
 
-  if (!timeline) throw new Error(`Timeline "${timeline_uuid}" not found. Import the JSON backup or start a new template`);
+  if (!timeline)
+    throw new Error(
+      `Timeline "${timeline_uuid}" not found. Import the JSON backup or start a new template`,
+    );
 
   const momentIds = new Set(moments.map((m) => m.id));
 
@@ -149,7 +167,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
 export async function idbUpdateTimeline(
   uuid: string,
   updates: Partial<Timeline>,
-): Promise<Timeline>  {
+): Promise<Timeline> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,
@@ -167,16 +185,16 @@ export async function idbUpdateTimeline(
     const req = store.get(uuid);
 
     req.onsuccess = () => {
-      const existing:Timeline = req.result;
+      const existing: Timeline = req.result;
       if (!existing) return reject(new Error(`Timeline ${uuid} not found`));
 
-      const merged:Timeline = {
+      const merged: Timeline = {
         ...existing,
         ...coerced,
         date_modified: new Date(),
         rev: existing.rev + 1,
       };
-      
+
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -186,6 +204,78 @@ export async function idbUpdateTimeline(
 
     req.onerror = () => reject(req.error);
   });
+}
+
+export async function idbCreateTimelineFromTemplate(
+  timeline: TimelineState,
+  timeline_uuid: string,
+) {
+  const { moments, steps, groups, skills, ...timelineBase } = timeline;
+
+  // 1. Insert the timeline record first (its id is a UUID, not auto-incremented,
+  //    so you may want to generate a fresh one here)
+  const tx = await openDB();
+  await new Promise<void>((resolve, reject) => {
+    const t = tx.transaction(TIMELINES_STORE, "readwrite");
+    const req = t
+      .objectStore(TIMELINES_STORE)
+      .add({ ...timelineBase, id: timeline_uuid });
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+
+  // 2. Insert groups and skills in parallel — build oldId → newId maps
+  const [groupIdMap, skillIdMap] = await Promise.all([
+    insertWithIdRemap(
+      groups.map((g) => ({ ...g, timeline_uuid })),
+      idbCreateTimelineGroup,
+    ),
+    insertWithIdRemap(
+      skills.map((s) => ({ ...s, timeline_uuid })),
+      idbCreateTimelineSkill,
+    ),
+  ]);
+
+  // 3. Insert moments (remapping group_id and skill_id), build moment id map
+  const remappedMoments = moments.map(({ id: _oldId, ...m }) => ({
+    ...m,
+    timeline_uuid,
+    group_id:
+      m.group_id != null
+        ? (groupIdMap.get(m.group_id) ?? m.group_id)
+        : m.group_id,
+    skill_id:
+      m.skill_id != null
+        ? (skillIdMap.get(m.skill_id) ?? m.skill_id)
+        : m.skill_id,
+  }));
+
+  const momentIdMap = await insertWithIdRemap(remappedMoments, idbCreateMoment);
+
+  // 4. Insert steps last (remapping moment_id)
+  const remappedSteps = steps.map(({ id: _oldId, ...s }) => ({
+    ...s,
+    moment_id: momentIdMap.get(s.moment_id) ?? s.moment_id,
+  }));
+
+  await Promise.all(remappedSteps.map((s) => idbCreateStep(s)));
+}
+
+// Helper: inserts a batch, returns a Map<oldId, newId>
+async function insertWithIdRemap<T extends { id: number }>(
+  items: T[],
+  createFn: (item: Omit<T, "id">) => Promise<T>,
+): Promise<Map<number, number>> {
+  const idMap = new Map<number, number>();
+
+  await Promise.all(
+    items.map(async ({ id: oldId, ...rest }) => {
+      const created = await createFn(rest as Omit<T, "id">);
+      idMap.set(oldId, created.id);
+    }),
+  );
+
+  return idMap;
 }
 
 //* MOMENTS
@@ -240,10 +330,10 @@ export async function idbUpdateMoment(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing:TimelineMoment = req.result;
+      const existing: TimelineMoment = req.result;
       if (!existing) return reject(new Error(`Block ${id} not found`));
 
-      const merged:TimelineMoment = { ...existing, ...coerced };
+      const merged: TimelineMoment = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -263,7 +353,6 @@ export async function idbDeleteMoment(id: number) {
     const req = store.delete(id);
 
     req.onsuccess = () => {
-      console.log("moment deleted with ID: ", id);
       resolve(true);
     };
 
@@ -327,10 +416,10 @@ export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing:MomentStep = req.result;
+      const existing: MomentStep = req.result;
       if (!existing) return reject(new Error(`step.id ${id} not found`));
 
-      const merged:MomentStep = { ...existing, ...coerced };
+      const merged: MomentStep = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -436,10 +525,10 @@ export async function idbUpdateTimeGroup(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing:TimelineGroup = req.result;
+      const existing: TimelineGroup = req.result;
       if (!existing) return reject(new Error(`Group ${id} not found`));
 
-      const merged:TimelineGroup = { ...existing, ...coerced };
+      const merged: TimelineGroup = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -464,7 +553,7 @@ export async function idbDeleteTimeGroup(id: number) {
     };
 
     getReq.onsuccess = () => {
-      const existing:TimelineGroup = getReq.result;
+      const existing: TimelineGroup = getReq.result;
 
       if (!existing) {
         reject(new Error(`No group found for id ${id}`));
@@ -545,10 +634,10 @@ export async function idbUpdateTimeSkill(
     const req = store.get(id);
 
     req.onsuccess = () => {
-      const existing:TimelineSkill = req.result;
+      const existing: TimelineSkill = req.result;
       if (!existing) return reject(new Error(`Skill ${id} not found`));
 
-      const merged:TimelineSkill = { ...existing, ...coerced };
+      const merged: TimelineSkill = { ...existing, ...coerced };
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -573,7 +662,7 @@ export async function idbDeleteTimeSkill(id: number) {
     };
 
     getReq.onsuccess = () => {
-      const existing:TimelineSkill = getReq.result;
+      const existing: TimelineSkill = getReq.result;
 
       if (!existing) {
         reject(new Error(`No skill found for id ${id}`));

@@ -11,30 +11,46 @@ import BaseLayout from "@layouts/BaseLayout.astro";
     </header>
     <hr />
     <h2>Starter Templates</h2>
-    <ul id="timeline-templates" class="unstyled grid gap-m">
+    <ul id="timeline-templates" class="unstyled grid auto-fit-max gap-m">
       {
         timelineTemplates.map(
           ({ id, summary, moments, steps, skills, groups }) => (
             <li class="card">
-              <h3>{summary}</h3>
-              <a href={`timelines/${"GENERATE_NEW_ID"}`}>Start Planning</a>
+              <header class="flex gap-m space-between">
+                <h3>{summary}</h3>
+                <button
+                  data-type="timelines"
+                  data-action="create"
+                  data-template-id={id}
+                  class="btn m"
+                >
+                  Create Timeline
+                </button>
+              </header>
+
               <h4>Moments</h4>
               <ul>
-                {moments.map((m) => (
-                  <li>{m.desc}</li>
-                ))}
+                {moments.length > 0 ? (
+                  moments.map((m) => <li>{m.desc}</li>)
+                ) : (
+                  <li class="ghost">empty</li>
+                )}
               </ul>
               <h4>Skills</h4>
               <ul>
-                {skills.map((s) => (
-                  <li>{s.name}</li>
-                ))}
+                {skills.length > 0 ? (
+                  skills.map((s) => <li>{s.name}</li>)
+                ) : (
+                  <li class="ghost">empty</li>
+                )}
               </ul>
               <h4>Groups</h4>
               <ul>
-                {groups.map((g) => (
-                  <li>{g.name}</li>
-                ))}
+                {groups.length > 0 ? (
+                  groups.map((g) => <li>{g.name}</li>)
+                ) : (
+                  <li class="ghost">empty</li>
+                )}
               </ul>
             </li>
           ),
@@ -44,6 +60,85 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 
     <h2>Found On Device</h2>
     <p>Continue editing a timeline</p>
-    <p class="callout debug">TODO fetch and show found timelines</p>
+    <ul id="existing-timelines-list" class="callout">Nothing found</ul>
   </main>
 </BaseLayout>
+
+<script>
+  import { timelineTemplates } from "@client/templates/timelineTemplates";
+  import {
+    idbCreateTimelineFromTemplate,
+    idbGetAllTimelines,
+  } from "@client/indexedDB";
+  import { uuidv7 } from "@client/uuidv7";
+  import { createElement } from "@client/elementRenders";
+  import { prettyPlainCivilDateFull } from "@lib/formatters";
+
+  function init() {
+    const list = document.getElementById("existing-timelines-list");
+    if (!list) return;
+
+    renderExistingTimelines();
+  }
+
+  init();
+
+  const templateList = document.getElementById("timeline-templates")!;
+
+  async function renderExistingTimelines() {
+    const existingTemplateList = document.getElementById(
+      "existing-timelines-list",
+    )!;
+
+    const existingTimelines = await idbGetAllTimelines();
+    existingTemplateList.replaceChildren();
+
+    if (existingTimelines.length === 0) {
+      existingTemplateList.textContent = "Nothing found";
+      return;
+    }
+
+    const liTimelines = existingTimelines.map((t) => {
+      const li = createElement("li", {});
+      const a = createElement(
+        "a",
+        {
+          href: `/timelines/${t.id}`,
+          textContent: `${t.summary} @ ${prettyPlainCivilDateFull(t.date_civil)}`,
+        },
+        {
+          astroReload: "true",
+        },
+      );
+
+      li.append(a);
+      return li;
+    });
+
+    existingTemplateList.append(...liTimelines);
+  }
+
+  templateList.addEventListener("click", async (e) => {
+    const target = e.target as HTMLButtonElement;
+
+    if (!target.matches("button")) return;
+    target.disabled = true;
+    const type = target.dataset.type;
+    const action = target.dataset.action;
+    if (action !== "create" && type !== "timelines") return;
+
+    const templateId = target.dataset.templateId;
+    const template = timelineTemplates.find((t) => t.id === templateId);
+    if (!template) throw new Error(`template not found with id ${templateId}`);
+
+    const timeline_uuid = uuidv7();
+    // console.log(timeline_uuid);
+    await idbCreateTimelineFromTemplate(template, timeline_uuid);
+    window.location.href = `/timelines/${timeline_uuid}`;
+    // target.disabled = false;
+  });
+  document.addEventListener("astro:page-load", init);
+  document.addEventListener("astro:after-swap", init);
+
+  console.log("fetch local timelines");
+</script>

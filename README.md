@@ -81,6 +81,7 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] fully utilize timelineStore object so whole UI is reactive
 - [ ] timeline, quickstart page w link to templates
 - [ ] fetch and show found timelines in local storage for continued editing
 - [ ] printable version CSS

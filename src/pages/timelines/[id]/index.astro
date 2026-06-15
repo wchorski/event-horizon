@@ -98,6 +98,16 @@ const formatTimeRange = (start: string, end: string) => {
           </tr>
         </thead>
         <tbody id="time-moment-list"></tbody>
+        <tfoot>
+          <tr>
+            <td>
+              <hr />
+              <button id="create-moment-item" class="btn ghost"
+                >+ add moment</button
+              >
+            </td>
+          </tr>
+        </tfoot>
       </table>
       <aside class="grid gap-m">
         <h2 class="display none">blocks</h2>
@@ -152,7 +162,6 @@ const formatTimeRange = (start: string, end: string) => {
   } from "@ty/Schema";
 
   import { debounce } from "@lib/wait";
-  import { editableListItemElement } from "@client/templates/editableListItemElement";
   import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
   import { downloadAsJSON } from "@client/downloadOnClient";
   import { prettyDateToLocale } from "@lib/formatters";
@@ -167,6 +176,7 @@ const formatTimeRange = (start: string, end: string) => {
   const groupsList = document.getElementById("time-groups-list")!;
   const skillCreateBtn = document.getElementById("create-skill-item")!;
   const groupCreateBtn = document.getElementById("create-group-item")!;
+  const momentCreateBtn = document.getElementById("create-moment-item")!;
   const bannerMsgP = document.getElementById("banner-message")!;
   // let timelineData: TimelineData | null = null;
 
@@ -254,6 +264,33 @@ const formatTimeRange = (start: string, end: string) => {
     });
   }
 
+  momentCreateBtn.addEventListener("pointerup", async (e) => {
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
+    const state = timelineStore.get();
+
+    // TODO don't need to do this if i have them always sorted
+    const lastMoment = state.moments.reduce((max, m) => {
+      return m.start > max.start ? m : max;
+    });
+    console.log(lastMoment);
+
+    const newMoment = await idbCreateMoment({
+      desc: "",
+      timeline_uuid,
+      note: "",
+      start: lastMoment.end || 0,
+      end: lastMoment.end + 15 || 15,
+      skill_id: skills[0].id,
+      group_id: groups[0].id,
+    });
+    const [tr] = timeMomentRowEl(newMoment, skills, groups, []);
+    tr.dataset.momentId = String(newMoment.id);
+    tbody.appendChild(tr);
+  });
+
   function renderSkillsUI(skills: TimelineSkill[]) {
     skillList.replaceChildren();
     skills.forEach((s) => {
@@ -329,6 +366,9 @@ const formatTimeRange = (start: string, end: string) => {
       // const liEl = btn.closest("li");
       // console.log({liEl});
       const momentId = Number(rowEl.dataset.momentId);
+      const trSteps = document.querySelector(
+        `tr.time-moment-steps[data-moment-id="${momentId}"`,
+      );
       if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
       const btnType = btn.dataset.type;
       const btnAction = btn.dataset.action as BtnAction;
@@ -339,11 +379,17 @@ const formatTimeRange = (start: string, end: string) => {
 
       if (btnAction === "delete" && btnType === MOMENTS_STORE) {
         rowEl.remove();
+        trSteps?.remove();
         const arrIndex = moments.findIndex((b) => b.id === momentId);
         if (arrIndex !== -1) {
           moments.splice(arrIndex, 1);
         }
 
+        const state = timelineStore.get();
+        const stepsIds = state.steps.filter((s) => s.moment_id === momentId);
+        stepsIds.forEach(async (s) => {
+          await idbDeleteStep(s.id);
+        });
         await idbDeleteMoment(momentId);
         return;
       }
@@ -558,12 +604,16 @@ const formatTimeRange = (start: string, end: string) => {
     const field = target.name;
     if (!momentId || !field) return;
 
-    debouncedSaveMoment(momentId, field, target.value);
+    // TODO quick bandaid to not allow checkbox 'on' value to be passed. this is handled in "change" event listener but needs to be ignored here
+    //@ts-ignore
+    if (!target.checked) {
+      debouncedSaveMoment(momentId, field, target.value);
+    }
   });
 
   // selects feel snappier with instant save on "change" instead
   table.addEventListener("change", (e) => {
-    const target = e.target as HTMLSelectElement;
+    const target = e.target as HTMLSelectElement | HTMLInputElement;
     if (!target.matches("select, input[type='checkbox']")) return;
 
     const stepItem = target.closest("li[data-step-id]");
@@ -579,10 +629,22 @@ const formatTimeRange = (start: string, end: string) => {
     const field = target.name;
     if (!momentId || !field) return;
 
-    idbUpdateMoment(momentId, { [field]: target.value });
+    if (field === "skill_id") {
+      const skill = skills.find((s) => s.id === Number(target.value));
+      target.style.setProperty("--color", skill?.color || "gray");
+    }
+
+    //@ts-ignore
+    if (!isNaN(target.checked)) {
+      //@ts-ignore
+      idbUpdateMoment(momentId, { [field]: target.checked });
+    } else {
+      idbUpdateMoment(momentId, { [field]: target.value });
+    }
   });
 
   document.querySelectorAll("textarea").forEach((el) => {
+    if (!el.classList.contains("resize")) return;
     const resize = () => {
       el.style.height = "auto";
       el.style.height = el.scrollHeight + "px";

@@ -94,8 +94,11 @@ button,
 
 button.m,
 .btn.m {
+  display: grid;
+  place-items: center;
   padding: 0.5rem 1rem;
   font-size: 1rem;
+  text-align: center;
 }
 
 button:has(.icon),
@@ -143,6 +146,25 @@ button:disabled {
 }
 .grid {
   display: grid;
+}
+
+.auto-fit {
+  --cell-min: clamp(180px, 25vw, 320px);
+  grid-template-columns: repeat(auto-fit, minmax(var(--cell-min), 1fr));
+}
+.auto-fit-max {
+  --cell-min: clamp(180px, 25vw, 320px);
+  --cell-max: 320px;
+
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--cell-min), var(--cell-max))
+  );
+}
+.auto-fill {
+  --cell-min: clamp(180px, 25vw, 320px);
+
+  grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
 }
 
 .space-between {

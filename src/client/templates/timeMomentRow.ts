@@ -188,6 +188,10 @@ function createSelectEl(
   // );
   // select.style = colorStyles.join(";");
 
+  const firstOption = createElement("option", {
+    textContent: "-- select --",
+  });
+  select.appendChild(firstOption);
   options.forEach((skill) => {
     const option = document.createElement("option");
     option.value = skill.value;

@@ -270,21 +270,23 @@ const formatTimeRange = (start: string, end: string) => {
         `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
       );
     const state = timelineStore.get();
+    console.log(state.moments);
 
     // TODO don't need to do this if i have them always sorted
-    const lastMoment = state.moments.reduce((max, m) => {
-      return m.start > max.start ? m : max;
-    });
+    const lastMoment =
+      state.moments.length > 0
+        ? state.moments.reduce((max, m) => (m.start > max.start ? m : max))
+        : { start: 0, end: 0 };
     console.log(lastMoment);
 
     const newMoment = await idbCreateMoment({
       desc: "",
       timeline_uuid,
       note: "",
-      start: lastMoment.end || 0,
-      end: lastMoment.end + 15 || 15,
-      skill_id: skills[0].id,
-      group_id: groups[0].id,
+      start: lastMoment.end,
+      end: lastMoment.end + 15,
+      skill_id: skills[0]?.id || 0,
+      group_id: groups[0]?.id || 0,
     });
     const [tr] = timeMomentRowEl(newMoment, skills, groups, []);
     tr.dataset.momentId = String(newMoment.id);

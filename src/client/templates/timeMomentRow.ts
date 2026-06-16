@@ -236,6 +236,8 @@ export function timeMomentRowEl(
   const tr = document.createElement("tr");
   tr.id = `timeline-moment-anchor-${id}`;
   tr.dataset.momentId = String(id);
+  // TODO animation is annoying because of reactivity
+  // tr.classList.add("time-moment-row");
   tr.classList.add("time-moment-row", "anim--slide-in-left-right");
   tr.dataset.tbd = tbd ? "true" : "false";
 

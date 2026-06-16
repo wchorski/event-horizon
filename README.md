@@ -81,13 +81,15 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] umami script in baselayout
+- [ ] commit button saves data to server
 - [ ] fully utilize timelineStore object so whole UI is reactive
 - [ ] timeline, quickstart page w link to templates
 - [ ] fetch and show found timelines in local storage for continued editing
 - [ ] printable version CSS
 - [ ] integrate icon and color to skill editor and reflect in table and print
 - [ ] check light mode
-- [x] Timeline `commit` button will commit data to server, increment revision
+- [x] Timeline `commit` button will commit data to local storage, increment revision
 - [ ] allow undo and redo (or restore to previous revision)
 - [x] create `Timeline` schema that combines Moments, Steps, Groups, Skills into one identifiable.
 - [x] ability to import and export a `Timeline` or templates JSON

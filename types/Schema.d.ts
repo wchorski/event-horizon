@@ -104,7 +104,9 @@ export type Timeline = {
   rev: number;
 };
 
-export type TimelineState = Timeline & {
+export type TimelineState = Timeline & TimelineData;
+
+export type TimelineData = {
   moments: TimelineMoment[];
   steps: MomentStep[];
   groups: TimelineGroup[];

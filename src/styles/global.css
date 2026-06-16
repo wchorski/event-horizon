@@ -377,3 +377,8 @@ details > summary {
     break-after: page;
   }
 }
+
+li[data-tdb]::before {
+  content: "*TBD*";
+  color: var(--c-accent);
+}

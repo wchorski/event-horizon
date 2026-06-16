@@ -1,14 +1,11 @@
 // src/client/templates/groupCard.ts
-interface Block {
-  desc: string;
-  group_id: number;
-}
-interface Group {
-  id: number;
-  name: string;
-}
+import { createElement } from "@client/elementRenders";
+import type { TimelineGroup, TimelineMoment } from "@ty/Schema";
 
-export function groupCard(group: Group, blocks: Block[]): HTMLDivElement {
+export function groupCard(
+  group: TimelineGroup,
+  moments: TimelineMoment[],
+): HTMLDivElement {
   const card = document.createElement("div");
   card.className = "card timeline-group";
   card.dataset.groupId = String(group.id);
@@ -18,7 +15,7 @@ export function groupCard(group: Group, blocks: Block[]): HTMLDivElement {
   deleteBtn.textContent = "␡";
   deleteBtn.title = "delete";
   deleteBtn.classList.add("delete");
-  deleteBtn.dataset.action = "delete"
+  deleteBtn.dataset.action = "delete";
   const headerEl = document.createElement("header");
   headerEl.classList.add("flex-align-center", "gap-s");
   const heading = document.createElement("h3");
@@ -30,11 +27,17 @@ export function groupCard(group: Group, blocks: Block[]): HTMLDivElement {
   headerEl.append(heading, inputEl, deleteBtn);
   card.appendChild(headerEl);
 
-  if (blocks.length > 0) {
+  if (moments.length > 0) {
     const ul = document.createElement("ul");
-    blocks.forEach((b) => {
+    moments.forEach((m) => {
       const li = document.createElement("li");
-      li.textContent = b.desc;
+      if (m.tbd) li.dataset.tdb = String(m.tbd);
+      const a = createElement("a", {
+        textContent: m.desc,
+        href: `#timeline-moment-anchor-${m.id}`,
+      });
+
+      li.append(a);
       ul.appendChild(li);
     });
     card.appendChild(ul);

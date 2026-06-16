@@ -167,6 +167,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
 export async function idbUpdateTimeline(
   uuid: string,
   updates: Partial<Timeline>,
+  isCommit: boolean,
 ): Promise<Timeline> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -192,7 +193,7 @@ export async function idbUpdateTimeline(
         ...existing,
         ...coerced,
         date_modified: new Date(),
-        rev: existing.rev + 1,
+        ...(isCommit ? { rev: existing.rev + 1 } : {}),
       };
 
       const putReq = store.put(merged);
@@ -331,9 +332,13 @@ export async function idbUpdateMoment(
 
     req.onsuccess = () => {
       const existing: TimelineMoment = req.result;
-      if (!existing) return reject(new Error(`Block ${id} not found`));
+      if (!existing) return reject(new Error(`Moment ${id} not found`));
 
       const merged: TimelineMoment = { ...existing, ...coerced };
+      // TODO maybe move into it's own 'validate' func?
+      if (merged.end <= merged.start) {
+        merged.end = merged.start + 15;
+      }
       const putReq = store.put(merged);
 
       putReq.onsuccess = () =>
@@ -507,7 +512,7 @@ export async function idbCreateTimelineGroup(
 export async function idbUpdateTimeGroup(
   id: number,
   updates: Partial<TimelineGroup>,
-) {
+): Promise<TimelineGroup> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,
@@ -616,7 +621,7 @@ export async function idbCreateTimelineSkill(
 export async function idbUpdateTimeSkill(
   id: number,
   updates: Partial<TimelineSkill>,
-) {
+): Promise<TimelineSkill> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,

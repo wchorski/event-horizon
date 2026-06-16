@@ -9,12 +9,13 @@ import {
   index,
   timestamp,
   uuid,
-  json,
   pgEnum,
   check,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
+import type { TimelineData } from "@ty/Schema";
 
 export const Role = pgTable("roles", {
   id: uuid("id")
@@ -98,7 +99,7 @@ export const Booking = pgTable(
     notes: text(),
     secret_notes: text(),
     revision: integer().notNull().default(1),
-    google_calendar: json(),
+    google_calendar: jsonb(),
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),
@@ -174,7 +175,7 @@ export const bookingAssignmentRelations = relations(
   }),
 );
 
-export const Planner = pgTable("planners", {
+export const Timeline = pgTable("timelines", {
   id: uuid("id")
     .primaryKey()
     .default(sql`uuidv7()`),
@@ -184,14 +185,20 @@ export const Planner = pgTable("planners", {
   owner_user_id: uuid()
     .notNull()
     .references(() => User.id, { onDelete: "cascade" }),
-  revision: integer().notNull().default(1),
+  rev: integer().notNull().default(1),
   date_created: timestamp().notNull().defaultNow(),
+  date: timestamp().notNull().defaultNow(),
   date_modified: timestamp().notNull().defaultNow(),
   timestamp: timestamp().notNull(),
   date_civil: text().notNull(),
   notes: text(),
   secret_notes: text(),
   color: text(),
+  summary: text(),
+  timezone: text(),
+  start: integer().notNull(),
+  end: integer().notNull(),
+  data: jsonb("data").$type<Record<string, TimelineData>>(), 
 });
 
 export const Event = pgTable(

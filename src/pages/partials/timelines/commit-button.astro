@@ -1,0 +1,91 @@
+---
+// partials/locations/:id/edit
+import { tableConfigs } from "@lib/tableConfigs";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
+import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { TEST_ADMIN_SESSION } from "@lib/auth/session";
+import type { TimelineState } from "@ty/Schema";
+import { db } from "@db/db";
+import { Timeline } from "@db/schema";
+import { eq } from "drizzle-orm";
+import { validate } from "@lib/validate";
+
+let timeline: TimelineState | null = null;
+let error = null;
+
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("ID missing in request");
+const config = tableConfigs.locations.required;
+const ctx = {
+  crud: "timelines" as CrudRegistryType,
+  config,
+  endpoint: "/attendance/locations",
+  headers: Object.keys(config),
+};
+
+if (Astro.request.method === "POST") {
+  try {
+    const formData = await Astro.request.formData();
+    if (!formData) return new Response("Bad Request", { status: 400 });
+
+    const submitFields = Object.fromEntries(
+      [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+    );
+
+    const payload = {
+      ...submitFields,
+      id,
+    };
+
+    const validId = validate.id.parse(id);
+
+    // TODO actually validate tho.
+    const validated = payload;
+
+    const [existing] = await db
+      .select()
+      .from(Timeline)
+      .where(eq(Timeline.id, validId))
+      .limit(1);
+
+    if (existing) {
+      const [updated] = await db
+        .update(Timeline)
+        .set(validated)
+        .where(eq(Timeline.id, validId))
+        .returning();
+      // if (!updated) throw new NotFoundError(`Timeline ${id} not found`);
+      timeline = updated;
+    } else {
+      const [created] = await db.insert(Timeline).values(validated).returning();
+      timeline = created;
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---
+
+{
+  error ? (
+    <div
+      id={`top-level-error-${ctx.crud}-${id}`}
+      class="row-error callout error top-level"
+    >
+      {typeof error === "string" ? error : JSON.stringify(error)}
+    </div>
+  ) : timeline ? (
+    <button>COMMIT SUCCESSFUL</button>
+  ) : (
+    <p>unknown error occured</p>
+  )
+}

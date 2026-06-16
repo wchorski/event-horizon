@@ -48,6 +48,19 @@ export function effect(fn: Effect) {
   run();
 }
 
+// One caveat with this minimal implementation: activeEffect is a single global, so it's not safe for async effects. If you await inside an effect, the finally block resets activeEffect before the async work completes. Keep effects synchronous — do your await outside and just assign the signal after:
+// typescript
+
+// // ✅ correct
+// const newMoment = await idbCreateMoment({ ... });
+// moments.value = [...moments.value, newMoment];
+
+// // ❌ don't do this
+// effect(async () => {
+//   const data = await fetchSomething();
+//   // activeEffect is already null here
+// });
+
 export function untracked<T>(fn: () => T): T {
   const prev = activeEffect;
   activeEffect = null;
@@ -62,7 +75,7 @@ type CollectionChange<T> =
   | { type: "added"; item: T }
   | { type: "inserted"; item: T; index?: number }
   | { type: "removed"; id: number }
-  | { type: "updated"; item: T; fromSelf: boolean }
+  | { type: "updated"; item: T; previous: T | undefined; fromSelf: boolean }
   | { type: "reordered" };
 
 export function collection<T extends { id: number }>(initial: T[]) {
@@ -93,8 +106,9 @@ export function collection<T extends { id: number }>(initial: T[]) {
       change.value = { type: "removed", id };
     },
     update(item: T, fromSelf = false) {
+      const previous = items.value.find((i) => i.id === item.id);
       items.value = items.value.map((i) => (i.id === item.id ? item : i));
-      change.value = { type: "updated", item, fromSelf };
+      change.value = { type: "updated", item, previous, fromSelf };
     },
     reorder() {
       change.value = { type: "reordered" };

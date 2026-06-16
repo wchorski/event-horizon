@@ -134,8 +134,7 @@ moments.onChange((change) => {
     case "updated":
       renderGraphUI(moments.value, skills.value);
       // if group assignment changed, re-render the groups UI
-      const previous = moments.value.find((m) => m.id === change.item.id);
-      if (previous?.group_id !== change.item.group_id) {
+      if (change.previous?.group_id !== change.item.group_id) {
         renderGroupsUI(groups.value, moments.value);
       }
       break;
@@ -271,10 +270,6 @@ momentCreateBtn.addEventListener("pointerup", async (e) => {
     group_id: groups.value[0]?.id || 0,
   });
   moments.add(created);
-
-  // const [tr] = timeMomentRowEl(newMoment, skills.value, groups, []);
-  // tr.dataset.momentId = String(newMoment.id);
-  // tbody.appendChild(tr);
 });
 table.addEventListener("input", (e) => {
   const target = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -501,19 +496,6 @@ skillCreateBtn.addEventListener("pointerup", async (e) => {
   skills.add(created);
 });
 
-// One caveat with this minimal implementation: activeEffect is a single global, so it's not safe for async effects. If you await inside an effect, the finally block resets activeEffect before the async work completes. Keep effects synchronous — do your await outside and just assign the signal after:
-// typescript
-
-// // ✅ correct
-// const newMoment = await idbCreateMoment({ ... });
-// moments.value = [...moments.value, newMoment];
-
-// // ❌ don't do this
-// effect(async () => {
-//   const data = await fetchSomething();
-//   // activeEffect is already null here
-// });
-
 function initTimelineUI(data: Timeline) {
   const summaryInput = pageHeader.querySelector<HTMLInputElement>(
     'input[name="summary"]',
@@ -563,7 +545,6 @@ function renderMomentsUI(
   groups: TimelineGroup[],
   steps: MomentStep[],
 ) {
-  //   const { moments, skills, groups, steps } = tmlnData;
   tbody.replaceChildren(); // clear existing
   // no sort needed here — sortedMoments computed handles it
   moments.forEach((b) =>
@@ -581,8 +562,6 @@ function renderMomentsUI(
 function renderSkillsUI(skills: TimelineSkill[]) {
   skillList.replaceChildren();
   skills.forEach((s) => {
-    // const li = document.createElement("li");
-    // li.textContent = s.name;
     const li = skillListItem(s);
     li.dataset.skillId = String(s.id);
     skillList.appendChild(li);
@@ -596,23 +575,27 @@ function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
     groupsList.appendChild(
       groupCard(
         g,
-        moments.filter((b) => b.group_id === g.id),
+        moments.filter((m) => m.group_id === g.id),
       ),
     ),
   );
+  const momentsUngrouped = moments.filter(
+    (m) => !m.group_id || !groups.find((g) => g.id === m.group_id),
+  );
+  if (momentsUngrouped.length > 0) {
+    groupsList.appendChild(
+      groupCard(
+        { name: "ungrouped", id: 0, timeline_uuid: timeline.value.id },
+        momentsUngrouped,
+      ),
+    );
+  }
 }
 
 const debouncedSaveMoment = debounce(
   async (momentId: number, field: string, value: string) => {
     const updated = await idbUpdateMoment(momentId, { [field]: value });
-    // moments.value = moments.value.map((m) =>
-    //   m.id === updated.id ? updated : m,
-    // );
     moments.update(updated);
-    // timelineStore.update((state) => ({
-    //   ...state,
-    //   moments: state.moments.map((m) => (m.id === updated.id ? updated : m)),
-    // }));
   },
   500,
 );

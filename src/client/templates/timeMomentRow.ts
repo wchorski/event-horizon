@@ -190,6 +190,7 @@ function createSelectEl(
 
   const firstOption = createElement("option", {
     textContent: "-- select --",
+    value: "0",
   });
   select.appendChild(firstOption);
   options.forEach((skill) => {

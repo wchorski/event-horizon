@@ -31,3 +31,10 @@
 .pad-l {
   padding: var(--size-l, 0.5rem);
 }
+.pad-xl {
+  padding: var(--size-xl, 0.5rem);
+}
+
+ul {
+  padding-left: var(--size-l);
+}

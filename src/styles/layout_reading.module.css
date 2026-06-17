@@ -3,6 +3,7 @@ body.layout_reading {
   /* margin-inline: auto; */
   
   & > main {
-    padding-inline: var(--size-m, 1rem);
+    padding-inline: 0;
+    /* padding-inline: var(--size-m, 1rem); */
   }
 }

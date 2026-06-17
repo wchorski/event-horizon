@@ -51,8 +51,17 @@ h1 {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
+  & > header {
+    margin-bottom: var(--size-m);
+  }
   & > :first-child {
     margin-top: 0;
+  }
+}
+
+.card.timeline-group {
+  & input {
+    border: none;
   }
 }
 
@@ -379,6 +388,6 @@ details > summary {
 }
 
 li[data-tdb]::before {
-  content: "*TBD*";
+  content: "*TBD* ";
   color: var(--c-accent);
 }

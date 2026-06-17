@@ -18,13 +18,13 @@ export function groupCard(
   deleteBtn.dataset.action = "delete";
   const headerEl = document.createElement("header");
   headerEl.classList.add("flex-align-center", "gap-s");
-  const heading = document.createElement("h3");
-  heading.textContent = `${group.id}`;
+  // const heading = document.createElement("h3");
+  // heading.textContent = `${group.id}`;
   const inputEl = document.createElement("input");
   inputEl.type = "text";
   inputEl.name = "name";
   inputEl.value = group.name;
-  headerEl.append(heading, inputEl, deleteBtn);
+  headerEl.append(inputEl, deleteBtn);
   card.appendChild(headerEl);
 
   if (moments.length > 0) {

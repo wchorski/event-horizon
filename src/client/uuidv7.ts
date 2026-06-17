@@ -1,30 +1,35 @@
 export function uuidv7() {
-  const now = Date.now(); // ms since epoch
+  const now = BigInt(Date.now()); // ms since epoch
 
-  // 48-bit timestamp + 80 bits of randomness
   const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
 
-  // Timestamp: bits 0–47
-  bytes[0] = (now / 2 ** 40) & 0xff;
-  bytes[1] = (now / 2 ** 32) & 0xff;
-  bytes[2] = (now / 2 ** 24) & 0xff;
-  bytes[3] = (now / 2 ** 16) & 0xff;
-  bytes[4] = (now / 2 ** 8) & 0xff;
-  bytes[5] = now & 0xff;
+  // --- 48-bit timestamp (big-endian) ---
+  bytes[0] = Number((now >> 40n) & 0xffn);
+  bytes[1] = Number((now >> 32n) & 0xffn);
+  bytes[2] = Number((now >> 24n) & 0xffn);
+  bytes[3] = Number((now >> 16n) & 0xffn);
+  bytes[4] = Number((now >> 8n) & 0xffn);
+  bytes[5] = Number(now & 0xffn);
 
-  // Version: top 4 bits of byte 6 = 0b0111 (7)
+  // --- 80 bits random ---
+  crypto.getRandomValues(bytes.subarray(6));
+
+  // --- version (7) ---
   bytes[6] = (bytes[6] & 0x0f) | 0x70;
 
-  // Variant: top 2 bits of byte 8 = 0b10
+  // --- variant (RFC 4122) ---
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
-  // Format as UUID string
-  return [...bytes]
-    .map((b, i) =>
-      [4, 6, 8, 10].includes(i)
-        ? `-${b.toString(16).padStart(2, "0")}`
-        : b.toString(16).padStart(2, "0"),
-    )
-    .join("");
+  // --- format ---
+  return (
+    toHex(bytes.subarray(0, 4)) + "-" +
+    toHex(bytes.subarray(4, 6)) + "-" +
+    toHex(bytes.subarray(6, 8)) + "-" +
+    toHex(bytes.subarray(8, 10)) + "-" +
+    toHex(bytes.subarray(10))
+  );
+}
+
+function toHex(bytes: Uint8Array) {
+  return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
 }

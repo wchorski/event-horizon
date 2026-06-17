@@ -14,6 +14,8 @@
     --c-accent: rgb(79, 196, 145);
     --c-error: rgb(166, 25, 25);
     --c-success: rgb(47, 141, 88);
+    --c-info: rgb(74, 140, 183);
+    --c-warning: rgb(183, 150, 66);
     --c-ghost: gray;
   }
 }
@@ -34,6 +36,8 @@
     --c-accent: rgb(79, 196, 145);
     --c-error: rgb(255 73 73);
     --c-success: rgb(47, 181, 105);
+    --c-info: rgb(74, 140, 183);
+    --c-warning: rgb(183, 150, 66);
     --c-ghost: hsl(0, 0%, 38%);
   }
 }

@@ -7,7 +7,7 @@ Event hosting platform (tickets, planning, upcoming/past promotion)
 ## spin up development postgres container
 cp .env.example .env.development
 cp .env.development .env
-pnpm db:dev:create
+pnpm db:create
 ## If any schema changes have been made
 pnpm db:generate
 

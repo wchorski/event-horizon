@@ -1,0 +1,100 @@
+---
+// partials/timelines/:id/commit
+import { tableConfigs } from "@lib/tableConfigs";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
+
+import type { TimelineInsert, TimelineState } from "@ty/Schema";
+import { db } from "@db/db";
+import { Timeline } from "@db/schema";
+import { eq, sql } from "drizzle-orm";
+import { validate } from "@lib/validate";
+
+let timeline: TimelineState | null = null;
+let error = null;
+
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("ID missing in request");
+
+if (Astro.request.method === "POST") {
+  try {
+    const body: TimelineState = await Astro.request.json();
+    if (!body) return new Response("Bad Request", { status: 400 });
+    const { moments, steps, groups, skills, ...restTimeline } = body;
+    const payload: TimelineInsert = {
+      data: {
+        moments,
+        steps,
+        groups,
+        skills,
+      },
+      ...restTimeline,
+      // TODO should i really set rev increment here or in database?
+      rev: body.rev + 1,
+      // booking_id: "NEEDS_REAL_UUID",
+      // owner_user_id: "NEEDS_REAL_UUID",
+      date: new Date(restTimeline.date), // ← gets overwritten
+      date_created: new Date(restTimeline.date_created), // ← gets overwritten
+      date_modified: new Date(),
+      timestamp: new Date(restTimeline.timestamp ?? Date.now()),
+    };
+
+    const validId = validate.id.parse(id);
+  
+
+    const [existing] = await db
+      .select()
+      .from(Timeline)
+      .where(eq(Timeline.id, validId))
+      .limit(1);
+
+    if (existing) {
+      if (body.rev < existing.rev) {
+        return new Response("Stale revision — fetch latest before committing", {
+          status: 409,
+        });
+      }
+      const [updated] = await db
+        .update(Timeline)
+        .set(payload)
+        .where(eq(Timeline.id, validId))
+        .returning();
+      // if (!updated) throw new NotFoundError(`Timeline ${id} not found`);
+
+      return new Response(`Timeline Updated (rev: ${updated.rev})`, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain",
+          "X-Rev": String(updated.rev),
+        },
+      });
+    } else {
+      const [created] = await db.insert(Timeline).values(payload).returning();
+      
+      return new Response(`New Timeline Created (rev: ${created.rev})`, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain",
+          "X-Rev": String(created.rev),
+        },
+      });
+    }
+  } catch (e) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    Astro.response.status = status;
+
+    error = err;
+    console.log(JSON.stringify(err, null, 2));
+
+    return new Response(typeof err === "string" ? err : JSON.stringify(err), {
+      status,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+} else {
+  return new Response("Method Not Allowed", { status: 405 });
+}
+---

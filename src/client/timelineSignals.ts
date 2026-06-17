@@ -65,7 +65,7 @@ async function fetchIdbData() {
     await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
     return await idbGetSingleTimelineData(timeline_uuid);
   } catch (error) {
-    bannerMsgP.textContent = String(error);
+    uiBanner(String(error), "error");
     throw new Error(`fetchIdbData, ${error}`);
   }
 }
@@ -73,7 +73,6 @@ async function fetchIdbData() {
 const tmlnData = await fetchIdbData();
 
 // const { skills, groups, moments } = tmlnData;
-if (!timeline_uuid) throw new Error("no uuid");
 
 import {
   signal,
@@ -82,6 +81,8 @@ import {
   untracked,
   collection,
 } from "@client/signals";
+import htmx from "htmx.org";
+import { createElement } from "./elementRenders";
 
 const {
   moments: m,
@@ -262,7 +263,7 @@ momentCreateBtn.addEventListener("pointerup", async (e) => {
 
   const created = await idbCreateMoment({
     desc: "",
-    timeline_uuid,
+    timeline_uuid: timeline.value.id,
     note: "",
     start: lastMoment.end,
     end: lastMoment.end + 15,
@@ -403,7 +404,7 @@ table.addEventListener("click", async (e) => {
       }
 
       const newMoment = await idbCreateMoment(
-        createEmptyMoment(timeline_uuid, { start: newStart, end: newEnd }),
+        createEmptyMoment(timeline.value.id, { start: newStart, end: newEnd }),
       );
 
       moments.insert(newMoment);
@@ -459,7 +460,7 @@ groupsList.addEventListener("click", async (e) => {
 groupCreateBtn.addEventListener("pointerup", async (e) => {
   const created = await idbCreateTimelineGroup({
     name: "",
-    timeline_uuid,
+    timeline_uuid: timeline.value.id,
   });
   groups.add(created);
 });
@@ -490,7 +491,7 @@ skillCreateBtn.addEventListener("pointerup", async (e) => {
     name: "",
     icon: "☘",
     color: "grey",
-    timeline_uuid,
+    timeline_uuid: timeline.value.id,
   });
 
   skills.add(created);
@@ -592,6 +593,20 @@ function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
   }
 }
 
+function uiBanner(
+  message: string,
+  type: "success" | "error" | "info" = "info",
+  autoClear = false,
+) {
+  bannerMsgP.dataset.state = type;
+  bannerMsgP.textContent = message;
+  if (autoClear) setTimeout(uiBannerClear, 3000);
+}
+function uiBannerClear() {
+  delete bannerMsgP.dataset.state;
+  bannerMsgP.textContent = "";
+}
+
 const debouncedSaveMoment = debounce(
   async (momentId: number, field: string, value: string) => {
     const updated = await idbUpdateMoment(momentId, { [field]: value });
@@ -621,8 +636,117 @@ const debouncedSaveGroup = debounce(
 );
 const debouncedSaveTimeline = debounce(
   async (uuid: string, field: string, value: string) => {
-    const updated = await idbUpdateTimeline(uuid, { [field]: value }, false);
+    const updated = await idbUpdateTimeline(uuid, { [field]: value });
     timeline.value = updated;
   },
   500,
 );
+
+const timelineActionMenu = document.getElementById("timeline-action-menu")!;
+
+timelineActionMenu.addEventListener("click", async (e) => {
+  const btn = (e.target as HTMLElement).closest("button");
+  if (!btn) return;
+  const action = btn.dataset.action as TimelineBtnAction | undefined;
+  if (!action) throw new Error("TimelineBtnAction not defined");
+
+  switch (action) {
+    case "commit":
+      console.log("POST to server DB");
+
+      const response = await fetch(
+        `/partials/timelines/${timeline.value.id}/commit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...timeline.value,
+            moments: moments.value,
+            steps: steps.value,
+            groups: groups.value,
+            skills: skills.value,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        uiBanner(`Commit failed: ${response.statusText}`, "error");
+        return;
+      }
+
+      // let htmx handle the swap from the html response
+      const text = await response.text();
+      const newRev = Number(response.headers.get("X-Rev"));
+
+      const updated = await idbUpdateTimeline(
+        timeline.value.id,
+        { rev: newRev }
+      );
+      timeline.value = updated;
+
+      uiBanner(text, "success");
+      // console.log(btn.getAttribute("hx-target"));
+      // htmx.swap(btn.getAttribute("hx-target") ?? btn, html, {
+      //   swapStyle: btn.dataset.hxSwap ?? "innerHTML",
+      //   swapDelay: 0,
+      //   settleDelay: 20,
+      // });
+      return;
+
+    case "import":
+      return console.log("import");
+
+    case "print":
+      return console.log("print");
+
+    case "export":
+      console.log("export");
+      // const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
+      const { summary, rev, date_modified } = timeline.value;
+      return downloadAsJSON(
+        timeline.value,
+        `${summary} rev-${rev} ${date_modified}`,
+      );
+
+    default:
+      throw new Error(`TimelineBtnAction not supported: ${action}`);
+  }
+});
+timelineActionMenu.addEventListener("change", async (e) => {
+  const target = e.target as HTMLInputElement;
+  if (!target.matches('input[type="file"')) return;
+  const action = target.dataset.action as TimelineBtnAction | undefined;
+  if (!action) throw new Error("TimelineBtnAction not defined");
+
+  const file = target.files?.[0];
+  if (!file) return;
+
+  // Validate it's JSON by extension + type
+  if (!file.name.endsWith(".json") || file.type !== "application/json") {
+    alert("Please select a valid .json file");
+    return;
+  }
+
+  if (action === "import") {
+    try {
+      const text = await file.text();
+      const { moments, steps, groups, skills, ...restTimeline } = JSON.parse(
+        text,
+      ) as TimelineState;
+
+      // Validate shape before writing — at minimum check required fields
+      if (!restTimeline.id || !restTimeline.summary) {
+        throw new Error("Invalid timeline format");
+      }
+
+      // await importTimelineData(data);
+      // TODO how to i pass onto collection/signals?
+      moments.values = moments;
+    } catch (err) {
+      console.error("Import failed:", err);
+      alert("Failed to import: invalid or corrupted file");
+    } finally {
+      target.value = ""; // reset so the same file can be re-imported
+    }
+  }
+});

@@ -40,9 +40,7 @@ const formatTimeRange = (start: string, end: string) => {
 
 <BaseLayout>
   <main>
-    <div class="callout error flex-align-center gap-s">
-      <p id="banner-message"></p>
-    </div>
+    <p id="banner-message"></p>
     <header id="page-header" class="flex gap-l space-between">
       <div>
         <h1 id="page-title" class="flex gap-m">
@@ -57,7 +55,9 @@ const formatTimeRange = (start: string, end: string) => {
       </div>
       <div>
         <menu id="timeline-action-menu" data-timelineUUID={id} class="gap-s">
-          <button data-action="commit">Commit Rev</button>
+          <button data-action="commit" hx-target={"#banner-message"}>
+            Commit Rev
+          </button>
           <button data-action="export">Export JSON</button>
           <a href={`./${id}/print`} target="_blank" data-action="print">Print</a
           >
@@ -132,6 +132,7 @@ const formatTimeRange = (start: string, end: string) => {
 
 <script>
   import "@client/timelineSignals";
+  // todo remove below if good with imelineSignals
   // import {
   //   idbCreateMoment,
   //   idbDeleteMoment,
@@ -662,86 +663,41 @@ const formatTimeRange = (start: string, end: string) => {
   //   el.addEventListener("input", resize);
   //   resize();
   // });
-
-  // const timelineActionMenu = document.getElementById("timeline-action-menu");
-  // if (!timeline_uuid)
-  //   throw new Error(
-  //     `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
-  //   );
-  // timelineActionMenu?.addEventListener("click", async (e) => {
-  //   const target = e.target as HTMLButtonElement;
-  //   if (!target.matches("button")) return;
-  //   const action = target.dataset.action as TimelineBtnAction | undefined;
-  //   if (!action) throw new Error("TimelineBtnAction not defined");
-
-  //   switch (action) {
-  //     case "commit":
-  //       console.log("POST to server DB");
-  //       const updated = await idbUpdateTimeline(timeline_uuid, {});
-  //       // TODO move to timelineStore.update for reactivity
-  //       renderTimelineUI(updated);
-  //       return;
-
-  //     case "import":
-  //       return console.log("import");
-
-  //     case "print":
-  //       return console.log("print");
-
-  //     case "export":
-  //       console.log("export");
-  //       const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
-  //       const { summary, rev, date_modified } = tmlDt;
-  //       return downloadAsJSON(tmlDt, `${summary} rev-${rev} ${date_modified}`);
-
-  //     default:
-  //       throw new Error(`TimelineBtnAction not supported: ${action}`);
-  //   }
-  // });
-  // timelineActionMenu?.addEventListener("change", async (e) => {
-  //   const target = e.target as HTMLInputElement;
-  //   if (!target.matches("input")) return;
-  //   const action = target.dataset.action as TimelineBtnAction | undefined;
-  //   if (!action) throw new Error("TimelineBtnAction not defined");
-
-  //   const file = target.files?.[0];
-  //   if (!file) return;
-
-  //   // Validate it's JSON by extension + type
-  //   if (!file.name.endsWith(".json") || file.type !== "application/json") {
-  //     alert("Please select a valid .json file");
-  //     return;
-  //   }
-
-  //   if (action === "import") {
-  //     try {
-  //       const text = await file.text();
-  //       const data = JSON.parse(text) as TimelineState;
-
-  //       // Validate shape before writing — at minimum check required fields
-  //       if (!data.id || !data.summary) {
-  //         throw new Error("Invalid timeline format");
-  //       }
-
-  //       // await importTimelineData(data);
-  //       renderUI(data);
-  //     } catch (err) {
-  //       console.error("Import failed:", err);
-  //       alert("Failed to import: invalid or corrupted file");
-  //     } finally {
-  //       target.value = ""; // reset so the same file can be re-imported
-  //     }
-  //   }
-  // });
 </script>
 
 <style>
-  main > header {
-    align-items: flex-start;
+  #banner-message {
+    display: none;
+    /* margin: 0; */
+    padding: var(--size-m);
+    border-left-width: var(--size-xs);
+    border-left-style: solid;
+    border-left-color: var(--c-txt);
+    border-radius: var(--size-m);
   }
 
-  div:has(#banner-message:empty) {
-    display: none;
+  #banner-message[data-state] {
+    display: block;
+  }
+
+  #banner-message[data-state="success"] {
+    background-color: color-mix(in srgb, var(--c-success) 10%, transparent);
+    border-left-color: var(--c-success);
+    color: var(--c-success);
+  }
+
+  #banner-message[data-state="error"] {
+    background-color: color-mix(in srgb, var(--c-error) 10%, transparent);
+    border-left-color: var(--c-error);
+    color: var(--c-error);
+  }
+
+  #banner-message[data-state="info"] {
+    background-color: color-mix(in srgb, var(--c-success) 10%, transparent);
+    border-left-color: var(--c-info);
+  }
+  main > header {
+    align-items: flex-start;
   }
 
   menu {

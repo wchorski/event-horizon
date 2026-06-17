@@ -10,6 +10,7 @@ import {
   bookingStatusEnum,
   assignmentsRoleEnum,
   BookingContractorWithRole,
+  Timeline,
 } from "@db/schema";
 
 export const models = {
@@ -38,6 +39,8 @@ export type BookingInsert = typeof Booking.$inferInsert;
 export type BookingSelect = typeof Booking.$inferSelect;
 export type BookingAssignmentInsert = typeof BookingAssignment.$inferInsert;
 export type BookingAssignmentSelect = typeof BookingAssignment.$inferSelect;
+export type TimelineInsert = typeof Timeline.$inferSelect;
+export type TimelineSelect = typeof Timeline.$inferSelect;
 export type UserCreditSelect = {
   ticket: TicketSelect;
   user: UserSelect;

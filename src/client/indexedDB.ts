@@ -167,7 +167,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
 export async function idbUpdateTimeline(
   uuid: string,
   updates: Partial<Timeline>,
-  isCommit: boolean,
+  // isCommit: boolean,
 ): Promise<Timeline> {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
@@ -193,7 +193,8 @@ export async function idbUpdateTimeline(
         ...existing,
         ...coerced,
         date_modified: new Date(),
-        ...(isCommit ? { rev: existing.rev + 1 } : {}),
+        // TODO don't need if getting from db
+        // ...(isCommit ? { rev: existing.rev + 1 } : {}),
       };
 
       const putReq = store.put(merged);

@@ -13,7 +13,7 @@ export const timelineTemplates: TimelineState[] = [
     timezone: "America/Chicago",
     start: 0,
     end: 0,
-    rev: 1,
+    rev: 0,
     moments: [
       {
         id: 1,
@@ -296,7 +296,7 @@ export const timelineTemplates: TimelineState[] = [
     timezone: "America/Chicago",
     start: 0,
     end: 0,
-    rev: 1,
+    rev: 0,
     moments: [
       {
         desc: "Cocktail Hour",
@@ -528,7 +528,7 @@ export const timelineTemplates: TimelineState[] = [
     timezone: "America/Chicago",
     start: 0,
     end: 0,
-    rev: 1,
+    rev: 0,
     moments: [
       {
         desc: "Arriving Background Music",
@@ -676,7 +676,7 @@ export const timelineTemplates: TimelineState[] = [
     timezone: "America/Chicago",
     start: 0,
     end: 0,
-    rev: 1,
+    rev: 0,
     moments: [],
     steps: [],
     groups: [],

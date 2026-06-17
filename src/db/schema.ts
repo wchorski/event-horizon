@@ -180,10 +180,10 @@ export const Timeline = pgTable("timelines", {
     .primaryKey()
     .default(sql`uuidv7()`),
   booking_id: uuid()
-    .notNull()
+    // .notNull()
     .references(() => Booking.id, { onDelete: "cascade" }),
   owner_user_id: uuid()
-    .notNull()
+    // .notNull()
     .references(() => User.id, { onDelete: "cascade" }),
   rev: integer().notNull().default(1),
   date_created: timestamp().notNull().defaultNow(),

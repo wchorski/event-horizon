@@ -8,8 +8,10 @@ import type {
   MomentStep,
   Timeline,
   TimelineState,
+  InsertableTimelineGraph,
 } from "@ty/Schema";
 import { uuidv7 } from "./uuidv7";
+import type { buildFromTemplate } from "./templates/timelineTemplates";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
@@ -208,59 +210,144 @@ export async function idbUpdateTimeline(
   });
 }
 
-export async function idbCreateTimelineFromTemplate(
-  timeline: TimelineState,
-  timeline_uuid: string,
-) {
-  const { moments, steps, groups, skills, ...timelineBase } = timeline;
-
-  // 1. Insert the timeline record first (its id is a UUID, not auto-incremented,
-  //    so you may want to generate a fresh one here)
-  const tx = await openDB();
-  await new Promise<void>((resolve, reject) => {
-    const t = tx.transaction(TIMELINES_STORE, "readwrite");
-    const req = t
-      .objectStore(TIMELINES_STORE)
-      .add({ ...timelineBase, id: timeline_uuid });
-    req.onsuccess = () => resolve();
+function addAndGetKey<T>(store: IDBObjectStore, value: T): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const req = store.add(value);
+    req.onsuccess = () => resolve(req.result as number);
     req.onerror = () => reject(req.error);
   });
+}
 
-  // 2. Insert groups and skills in parallel — build oldId → newId maps
-  const [groupIdMap, skillIdMap] = await Promise.all([
-    insertWithIdRemap(
-      groups.map((g) => ({ ...g, timeline_uuid })),
-      idbCreateTimelineGroup,
-    ),
-    insertWithIdRemap(
-      skills.map((s) => ({ ...s, timeline_uuid })),
-      idbCreateTimelineSkill,
-    ),
-  ]);
+function putValue<T>(store: IDBObjectStore, value: T): Promise<IDBValidKey> {
+  return new Promise((resolve, reject) => {
+    const req = store.put(value);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
-  // 3. Insert moments (remapping group_id and skill_id), build moment id map
-  const remappedMoments = moments.map(({ id: _oldId, ...m }) => ({
-    ...m,
-    timeline_uuid,
-    group_id:
-      m.group_id != null
-        ? (groupIdMap.get(m.group_id) ?? m.group_id)
-        : m.group_id,
-    skill_id:
-      m.skill_id != null
-        ? (skillIdMap.get(m.skill_id) ?? m.skill_id)
-        : m.skill_id,
-  }));
+export async function idbInsertTimelineGraph(graph: InsertableTimelineGraph) {
+  const db = await openDB();
 
-  const momentIdMap = await insertWithIdRemap(remappedMoments, idbCreateMoment);
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(
+      [TIMELINES_STORE, GROUPS_STORE, SKILLS_STORE, MOMENTS_STORE, STEPS_STORE],
+      "readwrite",
+    );
 
-  // 4. Insert steps last (remapping moment_id)
-  const remappedSteps = steps.map(({ id: _oldId, ...s }) => ({
-    ...s,
-    moment_id: momentIdMap.get(s.moment_id) ?? s.moment_id,
-  }));
+    const timelinesStore = tx.objectStore(TIMELINES_STORE);
+    const groupsStore = tx.objectStore(GROUPS_STORE);
+    const skillsStore = tx.objectStore(SKILLS_STORE);
+    const momentsStore = tx.objectStore(MOMENTS_STORE);
+    const stepsStore = tx.objectStore(STEPS_STORE);
 
-  await Promise.all(remappedSteps.map((s) => idbCreateStep(s)));
+    const { groups, skills, moments, steps, ...timelineBase } = graph;
+
+    const groupIdMap = new Map<number, number>();
+    const skillIdMap = new Map<number, number>();
+    const momentIdMap = new Map<number, number>();
+
+    // --- helper to wrap IDB requests ---
+    const reqToPromise = <T = any>(req: IDBRequest<T>) =>
+      new Promise<T>((res, rej) => {
+        req.onsuccess = () => res(req.result);
+        req.onerror = () => rej(req.error);
+      });
+
+    (async () => {
+      try {
+        // ✅ timeline (use put)
+        await reqToPromise(
+          timelinesStore.put({
+            ...timelineBase,
+            id: graph.id,
+          }),
+        );
+
+        // ✅ groups
+        for (const g of groups) {
+          const { source_id, ...groupToInsert } = g;
+          const newId = (await reqToPromise(
+            groupsStore.add(groupToInsert),
+          )) as number;
+
+          groupIdMap.set(source_id, newId);
+        }
+
+        // ✅ skills
+        for (const s of skills) {
+          const { source_id, ...skillToInsert } = s;
+          const newId = (await reqToPromise(
+            skillsStore.add(skillToInsert),
+          )) as number;
+
+          skillIdMap.set(source_id, newId);
+        }
+
+        // ✅ moments
+        for (const m of moments) {
+          const {
+            source_id,
+            source_group_id,
+            source_skill_id,
+            ...momentToInsert
+          } = m;
+
+          const newGroupId = groupIdMap.get(source_group_id);
+          const newSkillId = skillIdMap.get(source_skill_id);
+
+          if (newGroupId == null) {
+            throw new Error(
+              `Missing group remap for source_group_id=${source_group_id}`,
+            );
+          }
+
+          if (newSkillId == null) {
+            throw new Error(
+              `Missing skill remap for source_skill_id=${source_skill_id}`,
+            );
+          }
+
+          const newId = (await reqToPromise(
+            momentsStore.add({
+              ...momentToInsert,
+              group_id: newGroupId,
+              skill_id: newSkillId,
+            }),
+          )) as number;
+
+          momentIdMap.set(source_id, newId);
+        }
+
+        // ✅ steps
+        for (const s of steps) {
+          const { source_moment_id, ...stepToInsert } = s;
+
+          const newMomentId = momentIdMap.get(source_moment_id);
+
+          if (newMomentId == null) {
+            throw new Error(
+              `Missing moment remap for source_moment_id=${source_moment_id}`,
+            );
+          }
+
+          await reqToPromise(
+            stepsStore.add({
+              ...stepToInsert,
+              moment_id: newMomentId,
+            }),
+          );
+        }
+      } catch (err) {
+        tx.abort();
+        reject(err);
+      }
+    })();
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
 }
 
 // Helper: inserts a batch, returns a Map<oldId, newId>

@@ -14,6 +14,7 @@ import {
   idbDeleteStep,
   idbGetSingleTimelineData,
   idbUpdateTimeline,
+  idbInsertTimelineGraph,
 } from "@client/indexedDB";
 import { seedIfEmpty } from "@client/initTimelineDB";
 import {
@@ -32,13 +33,13 @@ import type {
   TimelineState,
   TimelineMoment,
   TimelineGroup,
+  TimelineSelect,
 } from "@ty/Schema";
 
 import { debounce } from "@lib/wait";
 import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { downloadAsJSON } from "@client/downloadOnClient";
 import { prettyDateToLocale } from "@lib/formatters";
-import { createStore } from "@client/stores";
 import { skillListItem } from "@client/templates/skillListItem";
 
 const pageHeader = document.getElementById("page-header")!;
@@ -56,21 +57,69 @@ const bannerMsgP = document.getElementById("banner-message")!;
 
 const timeline_uuid = window.location.pathname.split("/").at(-1);
 
-async function fetchIdbData() {
+async function fetchData() {
   if (!timeline_uuid)
     throw new Error(
       `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
     );
   try {
+    // TODO preven user from default seed. force them to pick from a preset/template
     await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
+    const local = await idbGetSingleTimelineData(timeline_uuid);
+
+    // check server for a newer version
+    const response = await fetch(`/api/timelines/${timeline_uuid}`);
+    if (response.ok) {
+      const server: TimelineSelect = await response.json();
+
+      if (
+        server.rev > local.rev
+        // server date is a string not Date object
+        // && server.date_modified < local.date_modified
+      ) {
+        const {
+          data,
+          booking_id,
+          owner_user_id,
+          timestamp,
+          color,
+          ...restOfServer
+        } = server;
+
+        if (data) {
+          // wipe and rebuild all IDB stores from server state
+
+          const template = buildInsertableTimelineGraph(
+            {
+              ...restOfServer,
+              moments: data.moments,
+              steps: data.steps,
+              groups: data.groups,
+              skills: data.skills,
+            },
+            timeline_uuid,
+          );
+
+          await idbInsertTimelineGraph(template);
+        } else {
+          // server has no jsonb data yet — just sync top-level fields
+          await idbUpdateTimeline(timeline_uuid, {
+            ...restOfServer,
+            rev: server.rev,
+            date_modified: new Date(server.date_modified),
+          });
+        }
+      }
+    }
+
     return await idbGetSingleTimelineData(timeline_uuid);
   } catch (error) {
     uiBanner(String(error), "error");
-    throw new Error(`fetchIdbData, ${error}`);
+    throw new Error(`fetchData, ${error}`);
   }
 }
 
-const tmlnData = await fetchIdbData();
+const tmlnData = await fetchData();
 
 // const { skills, groups, moments } = tmlnData;
 
@@ -81,8 +130,7 @@ import {
   untracked,
   collection,
 } from "@client/signals";
-import htmx from "htmx.org";
-import { createElement } from "./elementRenders";
+import { buildInsertableTimelineGraph } from "./templates/timelineTemplates";
 
 const {
   moments: m,
@@ -101,11 +149,6 @@ const steps = collection<MomentStep>(st);
 const sortedMoments = computed(() =>
   [...moments.value].sort((a, b) => a.start - b.start),
 );
-// const momentIds = computed(() =>
-//   sortedMoments.value
-//     .map((m) => `${m.id}:${m.skill_id}:${m.group_id}`)
-//     .join(","),
-// );
 
 initTimelineUI(timeline.value);
 renderMomentsUI(sortedMoments.value, skills.value, groups.value, steps.value);
@@ -373,6 +416,7 @@ table.addEventListener("click", async (e) => {
         moment_id: momentId,
         note: "",
         order: 1,
+        timeline_uuid: timeline.value.id,
       });
       steps.add(newStep);
       // Step UI is nested inside the row so append directly —
@@ -510,9 +554,9 @@ function initTimelineUI(data: Timeline) {
   if (!summaryInput || !dateCivilInput || !timezoneInput)
     throw new Error("timeline inputs not found");
 
-  summaryInput.value = data.summary;
-  dateCivilInput.value = data.date_civil;
-  timezoneInput.value = data.timezone;
+  summaryInput.value = data.summary || "";
+  dateCivilInput.value = data.date_civil || "";
+  timezoneInput.value = data.timezone || "";
   uiTimelineMeta(data);
 }
 function uiTimelineMeta(data: Timeline) {
@@ -678,10 +722,9 @@ timelineActionMenu.addEventListener("click", async (e) => {
       const text = await response.text();
       const newRev = Number(response.headers.get("X-Rev"));
 
-      const updated = await idbUpdateTimeline(
-        timeline.value.id,
-        { rev: newRev }
-      );
+      const updated = await idbUpdateTimeline(timeline.value.id, {
+        rev: newRev,
+      });
       timeline.value = updated;
 
       uiBanner(text, "success");
@@ -714,7 +757,7 @@ timelineActionMenu.addEventListener("click", async (e) => {
 });
 timelineActionMenu.addEventListener("change", async (e) => {
   const target = e.target as HTMLInputElement;
-  if (!target.matches('input[type="file"')) return;
+  if (!target.matches('input[type="file"]')) return;
   const action = target.dataset.action as TimelineBtnAction | undefined;
   if (!action) throw new Error("TimelineBtnAction not defined");
 
@@ -730,18 +773,21 @@ timelineActionMenu.addEventListener("change", async (e) => {
   if (action === "import") {
     try {
       const text = await file.text();
-      const { moments, steps, groups, skills, ...restTimeline } = JSON.parse(
-        text,
-      ) as TimelineState;
+      const base = JSON.parse(text) as TimelineState;
 
       // Validate shape before writing — at minimum check required fields
-      if (!restTimeline.id || !restTimeline.summary) {
+      if (!base.id || !base.summary) {
         throw new Error("Invalid timeline format");
       }
 
-      // await importTimelineData(data);
-      // TODO how to i pass onto collection/signals?
-      moments.values = moments;
+      const template = buildInsertableTimelineGraph(base, timeline.value.id);
+
+      if (!template)
+        throw new Error(`template not created with id ${timeline.value.id}`);
+
+      // console.log(timeline_uuid);
+
+      await idbInsertTimelineGraph(template);
     } catch (err) {
       console.error("Import failed:", err);
       alert("Failed to import: invalid or corrupted file");

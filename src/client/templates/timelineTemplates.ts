@@ -1,8 +1,85 @@
-import type { TimelineState } from "@ty/Schema";
+import type { InsertableTimelineGraph, TimelineState } from "@ty/Schema";
 
 const now = new Date();
 
-export const timelineTemplates: TimelineState[] = [
+export const buildFromTemplate = (
+  base: TimelineState,
+  timeline_uuid: string,
+) => {
+  return {
+    ...base,
+    id: timeline_uuid,
+
+    groups: base.groups.map((g) => ({
+      ...g,
+      timeline_uuid,
+      source_id: g.id,
+      id: undefined, // let IDB generate
+    })),
+
+    skills: base.skills.map((s) => ({
+      ...s,
+      timeline_uuid,
+      source_id: s.id,
+      id: undefined,
+    })),
+
+    moments: base.moments.map((m) => ({
+      ...m,
+      timeline_uuid,
+      source_id: m.id,
+      source_group_id: m.group_id,
+      source_skill_id: m.skill_id,
+      id: undefined,
+    })),
+
+    steps: base.steps.map((s) => ({
+      ...s,
+      timeline_uuid,
+      source_id: s.id,
+      source_moment_id: s.moment_id,
+      id: undefined,
+    })),
+  };
+};
+export function buildInsertableTimelineGraph(
+  base: TimelineState,
+  timeline_uuid: string,
+): InsertableTimelineGraph {
+  return {
+    ...base,
+    id: timeline_uuid,
+
+    groups: base.groups.map(({ id, ...g }) => ({
+      ...g,
+      timeline_uuid,
+      source_id: id,
+    })),
+
+    skills: base.skills.map(({ id, ...s }) => ({
+      ...s,
+      timeline_uuid,
+      source_id: id,
+    })),
+
+    moments: base.moments.map(({ id, group_id, skill_id, ...m }) => ({
+      ...m,
+      timeline_uuid,
+      source_id: id,
+      source_group_id: group_id,
+      source_skill_id: skill_id,
+    })),
+
+    steps: base.steps.map(({ id, moment_id, ...s }) => ({
+      ...s,
+      timeline_uuid,
+      source_id: id,
+      source_moment_id: moment_id,
+    })),
+  };
+}
+
+export const baseTemplates: TimelineState[] = [
   {
     id: "001",
     summary: "DJ: Full Wedding (Ceremony, Reception, & Dancing)",
@@ -14,6 +91,8 @@ export const timelineTemplates: TimelineState[] = [
     start: 0,
     end: 0,
     rev: 0,
+    notes: null,
+    secret_notes: null,
     moments: [
       {
         id: 1,
@@ -144,6 +223,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Jerry & Kim (Father & Daughter)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 102,
@@ -152,6 +232,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Hannah & Kevin (Mother & Son)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 103,
@@ -160,6 +241,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Kim & Kevin (First Dance)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 104,
@@ -168,6 +250,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 105,
@@ -176,6 +259,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 91,
@@ -184,6 +268,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Jerry (FOB)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 92,
@@ -192,6 +277,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Sara (Matron of Honor)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 93,
@@ -200,6 +286,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "Brendan (Best Man)",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 94,
@@ -208,6 +295,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         text: "",
         order: 0,
+        timeline_uuid: "001",
       },
       {
         id: 51,
@@ -216,6 +304,7 @@ export const timelineTemplates: TimelineState[] = [
         tbd: false,
         note: "",
         text: "Brendan & Sara",
+        timeline_uuid: "001",
       },
       {
         id: 52,
@@ -224,6 +313,7 @@ export const timelineTemplates: TimelineState[] = [
         tbd: false,
         note: "",
         text: "Rachele & Harry",
+        timeline_uuid: "001",
       },
       {
         id: 53,
@@ -232,6 +322,7 @@ export const timelineTemplates: TimelineState[] = [
         tbd: true,
         note: "",
         text: "TBD Tom (or Brett) & Jessica",
+        timeline_uuid: "001",
       },
     ],
     groups: [
@@ -297,10 +388,12 @@ export const timelineTemplates: TimelineState[] = [
     start: 0,
     end: 0,
     rev: 0,
+    notes: null,
+    secret_notes: null,
     moments: [
       {
         desc: "Cocktail Hour",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         note: "",
         start: 900,
         end: 960,
@@ -317,7 +410,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 9,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 14,
       },
       {
@@ -328,7 +421,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 7,
         note: "TBD prizes?",
         tbd: true,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 15,
       },
       {
@@ -339,7 +432,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 8,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 16,
       },
       {
@@ -350,7 +443,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 10,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 17,
       },
       {
@@ -361,7 +454,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 7,
         note: "No prize needed",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 18,
       },
       {
@@ -372,7 +465,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 8,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 19,
       },
       {
@@ -383,7 +476,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 7,
         note: "grand prize for the pair of winners (possible runner up prize for 2nd place pair)",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 20,
       },
       {
@@ -394,7 +487,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 9,
         note: "traditional or modern song choice?",
         tbd: true,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 21,
       },
       {
@@ -405,7 +498,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 10,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 22,
       },
       {
@@ -416,7 +509,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 9,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 23,
       },
       {
@@ -427,7 +520,7 @@ export const timelineTemplates: TimelineState[] = [
         group_id: 9,
         note: "",
         tbd: false,
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 24,
       },
     ],
@@ -439,6 +532,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         order: 1,
         id: 106,
+        timeline_uuid: "002",
       },
       {
         text: "Guest of Honor",
@@ -447,6 +541,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         order: 1,
         id: 107,
+        timeline_uuid: "002",
       },
       {
         text: "List of Questions and answers",
@@ -455,6 +550,7 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         order: 1,
         id: 108,
+        timeline_uuid: "002",
       },
       {
         text: "Prize Givaways (for each question or for person with highest points?)",
@@ -463,27 +559,28 @@ export const timelineTemplates: TimelineState[] = [
         note: "",
         order: 1,
         id: 109,
+        timeline_uuid: "002",
       },
     ],
     groups: [
       {
         name: "Games",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 7,
       },
       {
         name: "Dancing",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 8,
       },
       {
         name: "Traditionals",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 9,
       },
       {
         name: "Reception",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 10,
       },
     ],
@@ -492,28 +589,28 @@ export const timelineTemplates: TimelineState[] = [
         name: "MC",
         icon: "🎤",
         color: "#ff00b8",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 7,
       },
       {
         name: "Song Cue",
         icon: "♪",
         color: "#00ed00",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 8,
       },
       {
         name: "Music Playlist",
         icon: "🎶",
         color: "#00c7e9",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 9,
       },
       {
         name: "Misc",
         icon: "☘",
         color: "#808080",
-        timeline_uuid: "003",
+        timeline_uuid: "002",
         id: 10,
       },
     ],
@@ -529,6 +626,8 @@ export const timelineTemplates: TimelineState[] = [
     start: 0,
     end: 0,
     rev: 0,
+    notes: null,
+    secret_notes: null,
     moments: [
       {
         desc: "Arriving Background Music",
@@ -544,7 +643,7 @@ export const timelineTemplates: TimelineState[] = [
         start: 660,
         end: 675,
         desc: "Opening Remarks",
-        skill_id: 1,
+        skill_id: 7,
         group_id: 8,
         note: "",
         tbd: false,
@@ -677,6 +776,8 @@ export const timelineTemplates: TimelineState[] = [
     start: 0,
     end: 0,
     rev: 0,
+    notes: null,
+    secret_notes: null,
     moments: [],
     steps: [],
     groups: [],

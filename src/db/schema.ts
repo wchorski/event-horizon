@@ -198,7 +198,9 @@ export const Timeline = pgTable("timelines", {
   timezone: text(),
   start: integer().notNull(),
   end: integer().notNull(),
-  data: jsonb("data").$type<Record<string, TimelineData>>(), 
+  // TODO if i start supporting rev undo then I'll need this to nest like `{timeline_1: {}, timleline_2: {}}`
+  // data: jsonb("data").$type<Record<string, TimelineData>>(),
+  data: jsonb("data").$type<TimelineData>(),
 });
 
 export const Event = pgTable(

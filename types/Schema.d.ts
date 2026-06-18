@@ -88,6 +88,7 @@ export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
 export type MomentStep = {
   id: number;
   moment_id: number;
+  timeline_uuid: string;
   tbd: boolean;
   text: string;
   note: string;
@@ -96,15 +97,17 @@ export type MomentStep = {
 
 export type Timeline = {
   id: string;
-  summary: string;
+  summary: string | null;
   date: Date;
   date_civil: string;
-  timezone: string;
+  timezone: string | null;
   start: number;
   end: number;
   date_modified: Date;
   date_created: Date;
   rev: number;
+  notes: string | null;
+  secret_notes: string | null;
 };
 
 export type TimelineState = Timeline & TimelineData;
@@ -169,3 +172,54 @@ export type BtnAction = "delete" | "insert" | "create";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
 export type TimelineBtnAction = "commit" | "import" | "export" | "print";
+
+export type TemplateGroupClone = Omit<TimelineGroup, "id"> & {
+  source_id: number;
+};
+
+export type TemplateSkillClone = Omit<TimelineSkill, "id"> & {
+  source_id: number;
+};
+
+export type TemplateMomentClone = Omit<
+  TimelineMoment,
+  "id" | "group_id" | "skill_id"
+> & {
+  source_id: number;
+  source_group_id: number;
+  source_skill_id: number;
+};
+
+export type TemplateStepClone = Omit<TimelineStep, "id" | "moment_id"> & {
+  source_id: number;
+  source_moment_id: number;
+};
+
+export type InsertableGroup = Omit<TimelineGroup, "id"> & {
+  source_id: number;
+};
+
+export type InsertableSkill = Omit<TimelineSkill, "id"> & {
+  source_id: number;
+};
+
+export type InsertableMoment = Omit<TimelineMoment, "id" | "group_id" | "skill_id"> & {
+  source_id: number;
+  source_group_id: number;
+  source_skill_id: number;
+};
+
+export type InsertableStep = Omit<TimelineStep, "id" | "moment_id"> & {
+  source_id: number;
+  source_moment_id: number;
+};
+
+export type InsertableTimelineGraph = Omit<
+  TimelineState,
+  "groups" | "skills" | "moments" | "steps"
+> & {
+  groups: InsertableGroup[];
+  skills: InsertableSkill[];
+  moments: InsertableMoment[];
+  steps: InsertableStep[];
+};

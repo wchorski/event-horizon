@@ -1,5 +1,5 @@
 ---
-import { timelineTemplates } from "@client/templates/timelineTemplates";
+import { baseTemplates } from "@client/templates/timelineTemplates";
 import BaseLayout from "@layouts/BaseLayout.astro";
 ---
 
@@ -13,48 +13,46 @@ import BaseLayout from "@layouts/BaseLayout.astro";
     <h2>Starter Templates</h2>
     <ul id="timeline-templates" class="unstyled grid auto-fit-max gap-m">
       {
-        timelineTemplates.map(
-          ({ id, summary, moments, steps, skills, groups }) => (
-            <li class="card">
-              <header class="flex gap-m space-between">
-                <h3>{summary}</h3>
-                <button
-                  data-type="timelines"
-                  data-action="create"
-                  data-template-id={id}
-                  class="btn m"
-                >
-                  Create Timeline
-                </button>
-              </header>
+        baseTemplates.map(({ id, summary, moments, steps, skills, groups }) => (
+          <li class="card">
+            <header class="flex gap-m space-between">
+              <h3>{summary}</h3>
+              <button
+                data-type="timelines"
+                data-action="create"
+                data-template-id={id}
+                class="btn m"
+              >
+                Create Timeline
+              </button>
+            </header>
 
-              <h4>Moments</h4>
-              <ul>
-                {moments.length > 0 ? (
-                  moments.map((m) => <li>{m.desc}</li>)
-                ) : (
-                  <li class="ghost">empty</li>
-                )}
-              </ul>
-              <h4>Skills</h4>
-              <ul>
-                {skills.length > 0 ? (
-                  skills.map((s) => <li>{s.name}</li>)
-                ) : (
-                  <li class="ghost">empty</li>
-                )}
-              </ul>
-              <h4>Groups</h4>
-              <ul>
-                {groups.length > 0 ? (
-                  groups.map((g) => <li>{g.name}</li>)
-                ) : (
-                  <li class="ghost">empty</li>
-                )}
-              </ul>
-            </li>
-          ),
-        )
+            <h4>Moments</h4>
+            <ul>
+              {moments.length > 0 ? (
+                moments.map((m) => <li>{m.desc}</li>)
+              ) : (
+                <li class="ghost">empty</li>
+              )}
+            </ul>
+            <h4>Skills</h4>
+            <ul>
+              {skills.length > 0 ? (
+                skills.map((s) => <li>{s.name}</li>)
+              ) : (
+                <li class="ghost">empty</li>
+              )}
+            </ul>
+            <h4>Groups</h4>
+            <ul>
+              {groups.length > 0 ? (
+                groups.map((g) => <li>{g.name}</li>)
+              ) : (
+                <li class="ghost">empty</li>
+              )}
+            </ul>
+          </li>
+        ))
       }
     </ul>
 
@@ -65,10 +63,14 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 </BaseLayout>
 
 <script>
-  import { timelineTemplates } from "@client/templates/timelineTemplates";
   import {
-    idbCreateTimelineFromTemplate,
+    baseTemplates,
+    buildFromTemplate,
+    buildInsertableTimelineGraph,
+  } from "@client/templates/timelineTemplates";
+  import {
     idbGetAllTimelines,
+    idbInsertTimelineGraph,
   } from "@client/indexedDB";
   import { uuidv7 } from "@client/uuidv7";
   import { createElement } from "@client/elementRenders";
@@ -104,7 +106,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
         "a",
         {
           href: `/timelines/${t.id}`,
-          textContent: `${t.summary} @ ${prettyPlainCivilDateFull(t.date_civil)}`,
+          textContent: `${t.summary} (rev ${t.rev}) @ ${prettyPlainCivilDateFull(t.date_civil)}`,
         },
         {
           astroReload: "true",
@@ -128,12 +130,22 @@ import BaseLayout from "@layouts/BaseLayout.astro";
     if (action !== "create" && type !== "timelines") return;
 
     const templateId = target.dataset.templateId;
-    const template = timelineTemplates.find((t) => t.id === templateId);
-    if (!template) throw new Error(`template not found with id ${templateId}`);
+
+    const base = baseTemplates.find((t) => t.id === templateId);
+
+    if (!base) {
+      throw new Error(`template not found with id ${templateId}`);
+    }
 
     const timeline_uuid = uuidv7();
+
+    const template = buildInsertableTimelineGraph(base, timeline_uuid);
+
+    if (!template) throw new Error(`template not found with id ${templateId}`);
+
     // console.log(timeline_uuid);
-    await idbCreateTimelineFromTemplate(template, timeline_uuid);
+
+    await idbInsertTimelineGraph(template);
     window.location.href = `/timelines/${timeline_uuid}`;
     // target.disabled = false;
   });

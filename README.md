@@ -81,6 +81,8 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] timeline template importer. think through how data comes in and ui refreshes
+- [ ] Move Skills editor to slide in out bar, or maybe popup modal directly on each line
 - [ ] umami script in baselayout
 - [ ] commit button saves data to server
 - [ ] fully utilize timelineStore object so whole UI is reactive

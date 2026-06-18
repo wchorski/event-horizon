@@ -25,13 +25,16 @@ if (Astro.request.method === "POST") {
     if (!body) return new Response("Bad Request", { status: 400 });
     const { moments, steps, groups, skills, ...restTimeline } = body;
     const payload: TimelineInsert = {
+      ...restTimeline,
+      owner_user_id: null,
+      booking_id: null,
+      color: "pink",
       data: {
         moments,
         steps,
         groups,
         skills,
       },
-      ...restTimeline,
       // TODO should i really set rev increment here or in database?
       rev: body.rev + 1,
       // booking_id: "NEEDS_REAL_UUID",
@@ -39,11 +42,10 @@ if (Astro.request.method === "POST") {
       date: new Date(restTimeline.date), // ← gets overwritten
       date_created: new Date(restTimeline.date_created), // ← gets overwritten
       date_modified: new Date(),
-      timestamp: new Date(restTimeline.timestamp ?? Date.now()),
+      timestamp: new Date(restTimeline.date ?? Date.now()),
     };
 
     const validId = validate.id.parse(id);
-  
 
     const [existing] = await db
       .select()
@@ -73,7 +75,7 @@ if (Astro.request.method === "POST") {
       });
     } else {
       const [created] = await db.insert(Timeline).values(payload).returning();
-      
+
       return new Response(`New Timeline Created (rev: ${created.rev})`, {
         status: 200,
         headers: {

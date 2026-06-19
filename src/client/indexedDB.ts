@@ -9,16 +9,17 @@ import type {
   Timeline,
   TimelineState,
   InsertableTimelineGraph,
+  MomentStepDB,
 } from "@ty/Schema";
 import { uuidv7 } from "./uuidv7";
 import type { buildFromTemplate } from "./templates/timelineTemplates";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
-export const MOMENTS_STORE = "moments";
 export const TIMELINES_STORE = "timelines";
+export const MOMENTS_STORE = "moments";
 export const GROUPS_STORE = "groups";
 export const SKILLS_STORE = "skills";
 export const STEPS_STORE = "steps";
@@ -34,14 +35,21 @@ export function openDB(): Promise<IDBDatabase> {
     };
 
     // if version number is newer, run this
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = () => {
       const db = request.result;
 
       if (!db.objectStoreNames.contains(TIMELINES_STORE)) {
-        db.createObjectStore(TIMELINES_STORE, {
+        const store = db.createObjectStore(TIMELINES_STORE, {
           keyPath: "id",
-          // autoIncrement: true,
         });
+
+        store.createIndex("timeline_uuid", "id", { unique: true });
+      } else {
+        const store = request.transaction!.objectStore(TIMELINES_STORE);
+
+        if (!store.indexNames.contains("timeline_uuid")) {
+          store.createIndex("timeline_uuid", "id", { unique: true });
+        }
       }
 
       if (!db.objectStoreNames.contains(MOMENTS_STORE)) {
@@ -50,10 +58,17 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
 
-        // useful later
         store.createIndex("group_id", "group_id", { unique: false });
         store.createIndex("skill_id", "skill_id", { unique: false });
         store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+      } else {
+        const store = request.transaction!.objectStore(MOMENTS_STORE);
+
+        if (!store.indexNames.contains("timeline_uuid")) {
+          store.createIndex("timeline_uuid", "timeline_uuid", {
+            unique: false,
+          });
+        }
       }
 
       if (!db.objectStoreNames.contains(GROUPS_STORE)) {
@@ -63,6 +78,14 @@ export function openDB(): Promise<IDBDatabase> {
         });
 
         store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+      } else {
+        const store = request.transaction!.objectStore(GROUPS_STORE);
+
+        if (!store.indexNames.contains("timeline_uuid")) {
+          store.createIndex("timeline_uuid", "timeline_uuid", {
+            unique: false,
+          });
+        }
       }
 
       if (!db.objectStoreNames.contains(SKILLS_STORE)) {
@@ -70,14 +93,34 @@ export function openDB(): Promise<IDBDatabase> {
           keyPath: "id",
           autoIncrement: true,
         });
+
         store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+      } else {
+        const store = request.transaction!.objectStore(SKILLS_STORE);
+
+        if (!store.indexNames.contains("timeline_uuid")) {
+          store.createIndex("timeline_uuid", "timeline_uuid", {
+            unique: false,
+          });
+        }
       }
+
       if (!db.objectStoreNames.contains(STEPS_STORE)) {
         const store = db.createObjectStore(STEPS_STORE, {
           keyPath: "id",
           autoIncrement: true,
         });
+
         store.createIndex("moment_id", "moment_id", { unique: false });
+        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+      } else {
+        const store = request.transaction!.objectStore(STEPS_STORE);
+
+        if (!store.indexNames.contains("timeline_uuid")) {
+          store.createIndex("timeline_uuid", "timeline_uuid", {
+            unique: false,
+          });
+        }
       }
     };
   });
@@ -226,7 +269,188 @@ function putValue<T>(store: IDBObjectStore, value: T): Promise<IDBValidKey> {
   });
 }
 
-export async function idbInsertTimelineGraph(graph: InsertableTimelineGraph) {
+export async function idbInsertTimelineGraph(
+  graph: InsertableTimelineGraph,
+): Promise<
+  Timeline & {
+    groups: TimelineGroup[];
+    skills: TimelineSkill[];
+    moments: TimelineMoment[];
+    steps: MomentStep[];
+  }
+> {
+  const db = await openDB();
+
+  const insertedGroups: TimelineGroup[] = [];
+  const insertedSkills: TimelineSkill[] = [];
+  const insertedMoments: TimelineMoment[] = [];
+  const insertedSteps: MomentStep[] = [];
+
+  const reqToPromise = <T = any>(req: IDBRequest<T>) =>
+    new Promise<T>((res, rej) => {
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+
+  const tx = db.transaction(
+    [TIMELINES_STORE, GROUPS_STORE, SKILLS_STORE, MOMENTS_STORE, STEPS_STORE],
+    "readwrite",
+  );
+
+  const timelinesStore = tx.objectStore(TIMELINES_STORE);
+  const groupsStore = tx.objectStore(GROUPS_STORE);
+  const skillsStore = tx.objectStore(SKILLS_STORE);
+  const momentsStore = tx.objectStore(MOMENTS_STORE);
+  const stepsStore = tx.objectStore(STEPS_STORE);
+
+  const { groups, skills, moments, steps, ...timelineBase } = graph;
+
+  const groupIdMap = new Map<number, number>();
+  const skillIdMap = new Map<number, number>();
+  const momentIdMap = new Map<number, number>();
+
+  let timelineResult: Timeline | null = null;
+
+  const work = (async () => {
+    try {
+      // ✅ timeline
+      timelineResult = {
+        ...timelineBase,
+        id: graph.id,
+      };
+
+      await reqToPromise(timelinesStore.put(timelineResult));
+
+      // ✅ groups
+      for (const g of groups) {
+        const { source_id, ...groupToInsert } = g;
+
+        const newId = (await reqToPromise(
+          groupsStore.add(groupToInsert),
+        )) as number;
+
+        groupIdMap.set(source_id, newId);
+
+        insertedGroups.push({
+          ...groupToInsert,
+          id: newId,
+        });
+      }
+
+      // ✅ skills
+      for (const s of skills) {
+        const { source_id, ...skillToInsert } = s;
+
+        const newId = (await reqToPromise(
+          skillsStore.add(skillToInsert),
+        )) as number;
+
+        skillIdMap.set(source_id, newId);
+
+        insertedSkills.push({
+          ...skillToInsert,
+          id: newId,
+        });
+      }
+
+      // ✅ moments
+      for (const m of moments) {
+        const {
+          source_id,
+          source_group_id,
+          source_skill_id,
+          ...momentToInsert
+        } = m;
+
+        const newGroupId = groupIdMap.get(source_group_id);
+        const newSkillId = skillIdMap.get(source_skill_id);
+
+        if (newGroupId == null) {
+          throw new Error(
+            `Missing group remap for source_group_id=${source_group_id}`,
+          );
+        }
+
+        if (newSkillId == null) {
+          throw new Error(
+            `Missing skill remap for source_skill_id=${source_skill_id}`,
+          );
+        }
+
+        const newId = (await reqToPromise(
+          momentsStore.add({
+            ...momentToInsert,
+            group_id: newGroupId,
+            skill_id: newSkillId,
+          }),
+        )) as number;
+
+        momentIdMap.set(source_id, newId);
+
+        insertedMoments.push({
+          ...momentToInsert,
+          id: newId,
+          group_id: newGroupId,
+          skill_id: newSkillId,
+        });
+      }
+
+      // ✅ steps
+      for (const s of steps) {
+        const { source_moment_id } = s;
+
+        const newMomentId = momentIdMap.get(source_moment_id);
+
+        if (newMomentId == null) {
+          throw new Error(
+            `Missing moment remap for source_moment_id=${source_moment_id}`,
+          );
+        }
+
+        const newId = (await reqToPromise(
+          stepsStore.add({
+            ...s,
+            moment_id: newMomentId,
+          }),
+        )) as number;
+
+        // Because the id will be generated by idb
+        const inserted: MomentStepDB = {
+          ...s,
+          id: newId,
+          moment_id: newMomentId,
+        };
+
+        insertedSteps.push(inserted);
+      }
+    } catch (err) {
+      tx.abort();
+      throw err;
+    }
+  })();
+
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => {
+      work
+        .then(() => {
+          resolve({
+            ...(timelineResult as Timeline),
+            groups: insertedGroups,
+            skills: insertedSkills,
+            moments: insertedMoments,
+            steps: insertedSteps,
+          });
+        })
+        .catch(reject);
+    };
+
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+export async function idbDeleteAllByTimelineUuid(
+  timeline_uuid: string | number,
+) {
   const db = await openDB();
 
   return new Promise<void>((resolve, reject) => {
@@ -235,109 +459,42 @@ export async function idbInsertTimelineGraph(graph: InsertableTimelineGraph) {
       "readwrite",
     );
 
-    const timelinesStore = tx.objectStore(TIMELINES_STORE);
-    const groupsStore = tx.objectStore(GROUPS_STORE);
-    const skillsStore = tx.objectStore(SKILLS_STORE);
-    const momentsStore = tx.objectStore(MOMENTS_STORE);
-    const stepsStore = tx.objectStore(STEPS_STORE);
-
-    const { groups, skills, moments, steps, ...timelineBase } = graph;
-
-    const groupIdMap = new Map<number, number>();
-    const skillIdMap = new Map<number, number>();
-    const momentIdMap = new Map<number, number>();
-
-    // --- helper to wrap IDB requests ---
     const reqToPromise = <T = any>(req: IDBRequest<T>) =>
       new Promise<T>((res, rej) => {
         req.onsuccess = () => res(req.result);
         req.onerror = () => rej(req.error);
       });
 
+    const deleteByTimelineUuid = async (
+      store: IDBObjectStore,
+      timelineUuid: string | number,
+    ) => {
+      const index = store.index("timeline_uuid");
+
+      const records = await reqToPromise<any[]>(index.getAll(timelineUuid));
+
+      for (const record of records) {
+        await reqToPromise(store.delete(record.id));
+      }
+    };
+
     (async () => {
       try {
-        // ✅ timeline (use put)
-        await reqToPromise(
-          timelinesStore.put({
-            ...timelineBase,
-            id: graph.id,
-          }),
+        await deleteByTimelineUuid(tx.objectStore(GROUPS_STORE), timeline_uuid);
+
+        await deleteByTimelineUuid(tx.objectStore(SKILLS_STORE), timeline_uuid);
+
+        await deleteByTimelineUuid(
+          tx.objectStore(MOMENTS_STORE),
+          timeline_uuid,
         );
 
-        // ✅ groups
-        for (const g of groups) {
-          const { source_id, ...groupToInsert } = g;
-          const newId = (await reqToPromise(
-            groupsStore.add(groupToInsert),
-          )) as number;
+        await deleteByTimelineUuid(tx.objectStore(STEPS_STORE), timeline_uuid);
 
-          groupIdMap.set(source_id, newId);
-        }
-
-        // ✅ skills
-        for (const s of skills) {
-          const { source_id, ...skillToInsert } = s;
-          const newId = (await reqToPromise(
-            skillsStore.add(skillToInsert),
-          )) as number;
-
-          skillIdMap.set(source_id, newId);
-        }
-
-        // ✅ moments
-        for (const m of moments) {
-          const {
-            source_id,
-            source_group_id,
-            source_skill_id,
-            ...momentToInsert
-          } = m;
-
-          const newGroupId = groupIdMap.get(source_group_id);
-          const newSkillId = skillIdMap.get(source_skill_id);
-
-          if (newGroupId == null) {
-            throw new Error(
-              `Missing group remap for source_group_id=${source_group_id}`,
-            );
-          }
-
-          if (newSkillId == null) {
-            throw new Error(
-              `Missing skill remap for source_skill_id=${source_skill_id}`,
-            );
-          }
-
-          const newId = (await reqToPromise(
-            momentsStore.add({
-              ...momentToInsert,
-              group_id: newGroupId,
-              skill_id: newSkillId,
-            }),
-          )) as number;
-
-          momentIdMap.set(source_id, newId);
-        }
-
-        // ✅ steps
-        for (const s of steps) {
-          const { source_moment_id, ...stepToInsert } = s;
-
-          const newMomentId = momentIdMap.get(source_moment_id);
-
-          if (newMomentId == null) {
-            throw new Error(
-              `Missing moment remap for source_moment_id=${source_moment_id}`,
-            );
-          }
-
-          await reqToPromise(
-            stepsStore.add({
-              ...stepToInsert,
-              moment_id: newMomentId,
-            }),
-          );
-        }
+        // timeline store uses id, not timeline_uuid
+        await reqToPromise(
+          tx.objectStore(TIMELINES_STORE).delete(timeline_uuid),
+        );
       } catch (err) {
         tx.abort();
         reject(err);

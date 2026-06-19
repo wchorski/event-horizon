@@ -10,6 +10,9 @@ import BaseLayout from "@layouts/BaseLayout.astro";
       <p>Plan the moment to moment events that make up the day's agenda.</p>
     </header>
     <hr />
+    <h2>Found On Device</h2>
+    <p class="sub-text">Continue editing a timeline</p>
+    <ul id="existing-timelines-list" class="callout">Nothing found</ul>
     <h2>Starter Templates</h2>
     <ul id="timeline-templates" class="unstyled grid auto-fit-max gap-m">
       {
@@ -55,10 +58,6 @@ import BaseLayout from "@layouts/BaseLayout.astro";
         ))
       }
     </ul>
-
-    <h2>Found On Device</h2>
-    <p>Continue editing a timeline</p>
-    <ul id="existing-timelines-list" class="callout">Nothing found</ul>
   </main>
 </BaseLayout>
 
@@ -97,6 +96,7 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 
     if (existingTimelines.length === 0) {
       existingTemplateList.textContent = "Nothing found";
+      existingTemplateList.classList.add("ghost");
       return;
     }
 

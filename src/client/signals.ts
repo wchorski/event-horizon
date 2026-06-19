@@ -76,7 +76,9 @@ type CollectionChange<T> =
   | { type: "inserted"; item: T; index?: number }
   | { type: "removed"; id: number }
   | { type: "updated"; item: T; previous: T | undefined; fromSelf: boolean }
-  | { type: "reordered" };
+  | { type: "reordered" }
+  | { type: "replaced"; items: T[]; previous: T[] }
+  | { type: "cleared"; previous: T[] };
 
 export function collection<T extends { id: number }>(initial: T[]) {
   const items = signal<T[]>(initial);
@@ -109,6 +111,28 @@ export function collection<T extends { id: number }>(initial: T[]) {
       const previous = items.value.find((i) => i.id === item.id);
       items.value = items.value.map((i) => (i.id === item.id ? item : i));
       change.value = { type: "updated", item, previous, fromSelf };
+    },
+    replace(nextItems: T[]) {
+      const previous = items.value;
+
+      items.value = nextItems;
+
+      change.value = {
+        type: "replaced",
+        items: nextItems,
+        previous,
+      };
+    },
+
+    clear() {
+      const previous = items.value;
+
+      items.value = [];
+
+      change.value = {
+        type: "cleared",
+        previous,
+      };
     },
     reorder() {
       change.value = { type: "reordered" };

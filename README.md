@@ -69,6 +69,20 @@ npx drizzle-kit migrate    # runs them against your DB
 </details>
 
 <details>
+<summary>🤖 RAG Chat AI Assistant</summary>
+> [!note] This assumes you're already setup with Open-Webui and Ollama LLMs
+
+- https://github.com/open-webui/oikb
+- https://docs.openwebui.com/features/knowledge-base-sync/
+
+```shell
+pip install oikb
+oikb init
+
+```
+</details>
+
+<details>
 <summary> 🏭 Production</summary>
 
 ```shell
@@ -79,6 +93,8 @@ docker compose up --remove-orphans
 ```
 
 </details>
+
+
 
 #todo
 - [ ] timeline template importer. think through how data comes in and ui refreshes

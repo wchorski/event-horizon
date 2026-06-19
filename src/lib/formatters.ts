@@ -181,6 +181,26 @@ export function prettyPlainCivilDateFull(date_civil: string): string {
   }
 }
 
+export function formatDateToYYYY_MM_DD__HH_MM(date: Date) {
+  // Create a new Date object to avoid mutating the original one
+  const formattedDate = new Date(date);
+
+  // Use Intl.DateTimeFormat API to format the date
+  const options = {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
+  //@ts-ignore
+  const formatter = new Intl.DateTimeFormat("en-CA", options);
+
+  // Get the formatted date string
+  return formatter.format(formattedDate);
+}
+
 export function prettyDateToLocale(timestamp: Date) {
   return timestamp.toLocaleString("en-US", {
     weekday: "long",

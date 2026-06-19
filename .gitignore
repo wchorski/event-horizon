@@ -6,7 +6,7 @@ db/*-data
 
 compose*.yml
 compose.yml
-
+.oikb.yaml
 # generated types
 .astro/
 

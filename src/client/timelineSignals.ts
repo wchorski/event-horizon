@@ -15,6 +15,7 @@ import {
   idbGetSingleTimelineData,
   idbUpdateTimeline,
   idbInsertTimelineGraph,
+  idbDeleteAllByTimelineUuid,
 } from "@client/indexedDB";
 import { seedIfEmpty } from "@client/initTimelineDB";
 import {
@@ -39,7 +40,10 @@ import type {
 import { debounce } from "@lib/wait";
 import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { downloadAsJSON } from "@client/downloadOnClient";
-import { prettyDateToLocale } from "@lib/formatters";
+import {
+  formatDateToYYYY_MM_DD__HH_MM,
+  prettyDateToLocale,
+} from "@lib/formatters";
 import { skillListItem } from "@client/templates/skillListItem";
 
 const pageHeader = document.getElementById("page-header")!;
@@ -185,6 +189,8 @@ moments.onChange((change) => {
     case "reordered":
       renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
       break;
+    case "replaced":
+      renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
   }
 });
 
@@ -235,6 +241,8 @@ skills.onChange((change) => {
         });
       break;
     }
+    case "replaced":
+      renderSkillsUI(skills.value);
   }
 });
 
@@ -286,6 +294,8 @@ groups.onChange((change) => {
         });
       break;
     }
+    case "replaced":
+      renderGraphUI(moments.value, skills.value);
   }
 });
 
@@ -736,8 +746,9 @@ timelineActionMenu.addEventListener("click", async (e) => {
       // });
       return;
 
-    case "import":
-      return console.log("import");
+    // moved to `timelineActionMenu.addEventListener("change",`
+    // case "import":
+    //   return console.log("import");
 
     case "print":
       return console.log("print");
@@ -747,8 +758,14 @@ timelineActionMenu.addEventListener("click", async (e) => {
       // const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
       const { summary, rev, date_modified } = timeline.value;
       return downloadAsJSON(
-        timeline.value,
-        `${summary} rev-${rev} ${date_modified}`,
+        {
+          ...timeline.value,
+          moments: moments.value,
+          steps: steps.value,
+          skills: skills.value,
+          groups: groups.value,
+        },
+        `${summary} rev-${rev} ${formatDateToYYYY_MM_DD__HH_MM(date_modified)}`,
       );
 
     default:
@@ -782,12 +799,31 @@ timelineActionMenu.addEventListener("change", async (e) => {
 
       const template = buildInsertableTimelineGraph(base, timeline.value.id);
 
+      console.log(base);
       if (!template)
         throw new Error(`template not created with id ${timeline.value.id}`);
 
       // console.log(timeline_uuid);
 
-      await idbInsertTimelineGraph(template);
+      await idbDeleteAllByTimelineUuid(template.id);
+      const inserted = await idbInsertTimelineGraph(template);
+      console.log({ inserted });
+      const {
+        groups: g,
+        skills: sk,
+        moments: m,
+        steps: st,
+        ...rest
+      } = inserted;
+
+      timeline.value = rest;
+      moments.replace(m);
+      steps.replace(st);
+      groups.replace(g);
+      skills.replace(sk);
+      // Because timeline does not have onChange reaction
+      initTimelineUI(timeline.value);
+
     } catch (err) {
       console.error("Import failed:", err);
       alert("Failed to import: invalid or corrupted file");

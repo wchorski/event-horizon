@@ -223,3 +223,18 @@ export type InsertableTimelineGraph = Omit<
   moments: InsertableMoment[];
   steps: InsertableStep[];
 };
+
+export type MomentStepDB = {
+  id: number;
+  moment_id: number;
+  timeline_uuid: string;
+  text: string;
+  note: string;
+  order: number;
+  tbd: boolean;
+};
+
+export type MomentStepImport = Omit<MomentStepDB, "id" | "moment_id"> & {
+  source_id: number;
+  source_moment_id: number;
+};

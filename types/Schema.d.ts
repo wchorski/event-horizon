@@ -209,7 +209,7 @@ export type InsertableMoment = Omit<TimelineMoment, "id" | "group_id" | "skill_i
   source_skill_id: number;
 };
 
-export type InsertableStep = Omit<TimelineStep, "id" | "moment_id"> & {
+export type InsertableStep = Omit<MomentStep, "id" | "moment_id"> & {
   source_id: number;
   source_moment_id: number;
 };

@@ -391,3 +391,7 @@ li[data-tdb]::before {
   content: "*TBD* ";
   color: var(--c-accent);
 }
+
+img.framed {
+  outline: solid 5px var(--c-seperator);
+}

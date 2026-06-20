@@ -1,0 +1,10 @@
+.col_1 {
+  grid-template-columns: 1fr©;
+}
+
+.col_2 {
+  grid-template-columns: 1fr 1fr;
+}
+.col_3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}

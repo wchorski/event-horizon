@@ -1,5 +1,5 @@
-body.layout_reading {
-  /* width: 800px; */
+.layout_reading {
+  max-width: 1200px;
   /* margin-inline: auto; */
   
   & > main {

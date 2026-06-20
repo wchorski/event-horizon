@@ -11,6 +11,7 @@
       "@lib/*": ["./src/lib/*"],
       "@ty/*": ["./types/*"],
       "@db/*": ["./src/db/*"],
+      "@public/*": ["./public/*"],
       "@layouts/*": ["./src/layouts/*"]
     },
     "plugins": [

@@ -1,0 +1,15 @@
+header.hero {
+  place-items: center;
+  margin-block: var(--size-xl);
+}
+
+.logo {
+  fill: var(--c-txt);
+  width: 50vw;
+  height: 10vh;
+}
+
+.page_content {
+    display: grid;
+    gap: 6rem;
+}

@@ -1,14 +1,89 @@
 ---
 // pages/index.astro
-import AstroHeart from "@components/AstroHeart.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import gridStyles from "@styles/grid.module.css";
+import homeStyles from "@styles/home.module.css";
+import SvgSiteLogo from "@public/favicon.svg";
+import layoutStyles from "@styles/layout_reading.module.css";
 ---
 
 <BaseLayout>
-  <a href="/admin" class="btn">Admin Dashboard</a>
-  <a href="/users" class="btn">Users</a>
-  <a href="/bookings" class="btn">Bookings</a>
-  <a href="/planners" class="btn">Planners</a>
-  <a href="/events" class="btn">Events</a>
-  <a href="/tickets" class="btn">tickets</a>
+  <div class="callout warning">
+    <p>⚠️ Pre Alpha Build ⚠️</p>
+    <p>
+      This App is under heavily development and will go through significant
+      changes in the near future
+    </p>
+  </div>
+  <main class:list={[layoutStyles.layout_reading, homeStyles.page]}>
+    <header class:list={[gridStyles.col_2, "grid", homeStyles.hero]}>
+      <h1>Event Horizon</h1>
+      <SvgSiteLogo class={homeStyles.logo} />
+    </header>
+    <hr />
+    <div class={homeStyles.page_content}>
+      <section class:list={[gridStyles.col_2, "grid"]}>
+        <div>
+          <h2>The Timeline</h2>
+          <a href="/timelines" class="btn m">Go To Timelines</a>
+          <ul>
+            <li>Just as flexible as Word document</li>
+            <li>More Powerful than a spreedsheet</li>
+            <li>Easy to read like a calendar</li>
+          </ul>
+        </div>
+        <div>
+          <img
+            src="/imgs/screenshot-evhrz-1.png"
+            height="500"
+            width="600"
+            alt="site screenshot"
+            class="framed"
+          />
+        </div>
+      </section>
+      <section>
+        <h2>What It Do</h2>
+        <div class:list={[gridStyles.col_3, "grid", "gap-m"]}>
+          <div class="card">
+            <h3>Create</h3>
+            <p>Manage multiple timelines</p>
+          </div>
+          <div class="card">
+            <h3>Edit</h3>
+            <p>Save your work on every keystroke</p>
+          </div>
+          <div class="card">
+            <h3>Share</h3>
+            <p>Commit your changes to the cloud and share them to anyone</p>
+          </div>
+        </div>
+      </section>
+      <section class:list={[gridStyles.col_2, "grid", "gap-m"]}>
+        <div>
+          <h2>Pretty In Print</h2>
+          <p>
+            Print out different versions for your different vendors. Give them
+            the information they need
+          </p>
+        </div>
+        <div class="grid gap-m">
+          <img
+            src="/imgs/screenshot-evhrz-3.png"
+            height="500"
+            width="600"
+            alt="site screenshot"
+            class="framed"
+          />
+          <img
+            src="/imgs/screenshot-evhrz-2.png"
+            height="500"
+            width="600"
+            alt="site screenshot"
+            class="framed"
+          />
+        </div>
+      </section>
+    </div>
+  </main>
 </BaseLayout>

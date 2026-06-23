@@ -38,7 +38,7 @@ function basicAuth(username: string, appPassword: string) {
  */
 function acfDateTimeFromCivil(date_civil: string) {
   // Force seconds, then replace "T" with space
-  return dateCivil.replace("T", " ") + ":00";
+  return date_civil.replace("T", " ") + ":00";
 }
 
 // function acfRealDateTimeFromInstant(timestamp: Date, timeZone: string) {
@@ -127,7 +127,8 @@ export async function createWordpressEventPost(
     // "site": [181],
     // "event_filter": [194]
     //   }'
-  } catch (e) {
+    // TODO properly type this WP error
+  } catch (e: any) {
     console.log(e);
     //? what a WP error looks like
     // {
@@ -172,7 +173,7 @@ export async function updateWordpressEventPost(
 
   try {
     const res = await fetch(
-      `https://local150.org/wp-json/wp/v2/event/${course.wpPostId}`,
+      `https://local150.org/wp-json/wp/v2/event/${course.wp_post_id}`,
       {
         method: "PATCH",
         headers: {
@@ -192,7 +193,8 @@ export async function updateWordpressEventPost(
     const post = JSON.parse(text);
     //   console.log("UPDATED event, ", { post });
     return post;
-  } catch (e) {
+    // TODO properly type this WP error
+  } catch (e: any) {
     console.log(e);
     //? what a WP error looks like
     // {
@@ -213,17 +215,19 @@ export async function updateWordpressEventPost(
 
 // TODO hardcoding for now to get MVP prototype. need to save id to Event.siteId
 function getSiteMap(course: EventInsert) {
-  const { locationId } = course;
+  const { location_id } = course;
   const ids = [];
   switch (true) {
-    case locationId === 100:
-    case locationId === 200:
-    case locationId === 300:
-    case locationId === 400:
-    case locationId === 500:
-    case locationId === 600:
-    case locationId === 700:
-    case locationId === 800:
+    // case location_id === 100:
+    // case location_id === 200:
+    // case location_id === 300:
+    // case location_id === 400:
+    // case location_id === 500:
+    // case location_id === 600:
+    // case location_id === 700:
+    // case location_id === 800:
+    //   break;
+    default:
       ids.push(181);
       break;
   }
@@ -233,34 +237,39 @@ function getSiteMap(course: EventInsert) {
 
 // TODO learn how to move from hardcode
 function getEventFilterMap(course: EventInsert) {
-  const { locationId, subject } = course;
+  const { location_id, subject } = course;
   const ids = [];
+
+  const idNum = Number(location_id)
   switch (true) {
     // case locationId >= 0 && locationId <= 99:
     //   ids.push(0);
-    case locationId >= 100 && locationId <= 199:
+    case idNum >= 100 && idNum <= 199:
       ids.push(194);
       break;
-    case locationId >= 200 && locationId <= 299:
+    case idNum >= 200 && idNum <= 299:
       ids.push(195);
       break;
-    case locationId >= 300 && locationId <= 399:
+    case idNum >= 300 && idNum <= 399:
       ids.push(196);
       break;
-    case locationId >= 400 && locationId <= 499:
+    case idNum >= 400 && idNum <= 499:
       ids.push(197);
       break;
-    case locationId >= 500 && locationId <= 599:
+    case idNum >= 500 && idNum <= 599:
       ids.push(198);
       break;
-    case locationId >= 600 && locationId <= 699:
+    case idNum >= 600 && idNum <= 699:
       ids.push(199);
       break;
-    case locationId >= 700 && locationId <= 799:
+    case idNum >= 700 && idNum <= 799:
       ids.push(200);
       break;
-    case locationId >= 800 && locationId <= 899:
+    case idNum >= 800 && idNum <= 899:
       ids.push(201);
+      break;
+    default:
+      ids.push(194);
       break;
   }
 

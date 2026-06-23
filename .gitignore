@@ -1,5 +1,7 @@
 # build output
 dist/
+tmp/
+uploads/
 private
 db/data
 db/*-data

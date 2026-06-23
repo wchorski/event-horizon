@@ -97,6 +97,8 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] REMOVE any microsoft, wordpress, api hooks and functions
+- [ ] remove any other testing or example pages from old repo 
 - [ ] timeline template importer. think through how data comes in and ui refreshes
 - [ ] Move Skills editor to slide in out bar, or maybe popup modal directly on each line
 - [ ] umami script in baselayout

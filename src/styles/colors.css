@@ -1,13 +1,13 @@
 @media (prefers-color-scheme: light) {
   :root {
-    --c-bg: #dddddd;
+    --c-bg: hsl(0, 0%, 96%);
     --c-txt: #2e2b28;
     --c-txt-rev: #fff7f0;
     --c-txt-bg: #ffffff;
     --c-input-bg: rgb(220, 220, 220);
     --c-seperator: rgb(160, 160, 160);
     --c-seperator-light: rgb(210, 210, 210);
-    --c-interactive: rgb(176, 171, 37);
+    --c-interactive: rgb(37, 144, 176);
     --c-active: rgb(100, 160, 151);
     --c-primary: rgb(79, 79, 196);
     --c-primary-dark: rgb(65, 65, 129);

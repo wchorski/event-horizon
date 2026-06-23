@@ -20,14 +20,13 @@
   --cols: 1;
   --lanes: 1;
 
+  background-color: black;
   display: grid;
   grid-template-columns: var(--y-axis-w) repeat(var(--cols), var(--col-w));
   grid-template-rows: repeat(var(--lanes), var(--lane-h)) auto;
 
-
   overflow-x: auto;
   
-
   /* reserve scrollbar space to prevent jumps when it appears */
   scrollbar-gutter: stable both-edges; /* [2](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-gutter) */
 

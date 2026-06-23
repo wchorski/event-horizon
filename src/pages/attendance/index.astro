@@ -1,7 +1,7 @@
 ---
 import { getEventsPage } from "@lib/getEventsPage";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import EventsList from "../partials/events-list.astro";
+import EventsList from "@components/EventsList.astro";
 const result = await getEventsPage({page: 1});
 
 if ("redirect" in result) {

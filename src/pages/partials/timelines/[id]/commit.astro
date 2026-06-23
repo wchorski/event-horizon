@@ -76,7 +76,7 @@ if (Astro.request.method === "POST") {
     } else {
       const [created] = await db.insert(Timeline).values(payload).returning();
 
-      return new Response(`New Timeline Created (rev: ${created.rev})`, {
+      return new Response(`Timeline synced to server (rev: ${created.rev})`, {
         status: 200,
         headers: {
           "Content-Type": "text/plain",

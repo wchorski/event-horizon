@@ -141,12 +141,13 @@ export async function idbGetAllTimelines(): Promise<Timeline[]> {
   });
 }
 export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
-  Timeline & {
-    moments: TimelineMoment[];
-    steps: MomentStep[];
-    groups: TimelineGroup[];
-    skills: TimelineSkill[];
-  }
+  | (Timeline & {
+      moments: TimelineMoment[];
+      steps: MomentStep[];
+      groups: TimelineGroup[];
+      skills: TimelineSkill[];
+    })
+  | null
 > {
   const db = await openDB();
 
@@ -181,10 +182,10 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
     }),
   ]);
 
-  if (!timeline)
-    throw new Error(
-      `Timeline "${timeline_uuid}" not found. Import the JSON backup or start a new template`,
-    );
+  if (!timeline) {
+    console.log(`Timeline "${timeline_uuid}" not found in local idb.`);
+    return null;
+  }
 
   const momentIds = new Set(moments.map((m) => m.id));
 
@@ -566,7 +567,9 @@ export async function idbUpdateMoment(
         ? Number(value)
         : isTimeField(key) && typeof value === "string"
           ? formatTimeToMinutes(value)
-          : value,
+          : isCheckboxField(key) && typeof value === "string"
+            ? value === "true" || value === "on"
+            : value,
     ]),
   ) as Partial<TimelineMoment>;
   const db = await openDB();

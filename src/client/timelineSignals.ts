@@ -14,7 +14,7 @@ import {
   idbDeleteStep,
   idbGetSingleTimelineData,
   idbUpdateTimeline,
-  idbInsertTimelineGraph,
+  idbInsertTimelineGraph as idbInsertTimelineState,
   idbDeleteAllByTimelineUuid,
 } from "@client/indexedDB";
 import { seedIfEmpty } from "@client/initTimelineDB";
@@ -73,10 +73,12 @@ async function fetchData() {
 
     // check server for a newer version
     const response = await fetch(`/api/timelines/${timeline_uuid}`);
+
     if (response.ok) {
       const server: TimelineSelect = await response.json();
 
       if (
+        !local ||
         server.rev > local.rev
         // server date is a string not Date object
         // && server.date_modified < local.date_modified
@@ -103,8 +105,8 @@ async function fetchData() {
             },
             timeline_uuid,
           );
-
-          await idbInsertTimelineGraph(template);
+          console.log("inserting timeline from server into local idb");
+          return await idbInsertTimelineState(template);
         } else {
           // server has no jsonb data yet — just sync top-level fields
           await idbUpdateTimeline(timeline_uuid, {
@@ -112,18 +114,22 @@ async function fetchData() {
             rev: server.rev,
             date_modified: new Date(server.date_modified),
           });
+          return await idbGetSingleTimelineData(timeline_uuid);
         }
       }
+    } else {
+      uiBanner("Not synced to server. Commit to sync", "info");
     }
-
-    return await idbGetSingleTimelineData(timeline_uuid);
+    // if nothing else found then return local data
+    return local;
   } catch (error) {
     uiBanner(String(error), "error");
     throw new Error(`fetchData, ${error}`);
   }
 }
 
-const tmlnData = await fetchData();
+const tmlnState = await fetchData();
+if (!tmlnState) throw new Error(`no timeline data found`);
 
 // const { skills, groups, moments } = tmlnData;
 
@@ -142,7 +148,7 @@ const {
   groups: g,
   skills: sk,
   ...timelineFields
-} = tmlnData;
+} = tmlnState;
 
 const timeline = signal<Timeline>(timelineFields);
 const moments = collection<TimelineMoment>(m);
@@ -806,7 +812,7 @@ timelineActionMenu.addEventListener("change", async (e) => {
       // console.log(timeline_uuid);
 
       await idbDeleteAllByTimelineUuid(template.id);
-      const inserted = await idbInsertTimelineGraph(template);
+      const inserted = await idbInsertTimelineState(template);
       console.log({ inserted });
       const {
         groups: g,
@@ -823,7 +829,6 @@ timelineActionMenu.addEventListener("change", async (e) => {
       skills.replace(sk);
       // Because timeline does not have onChange reaction
       initTimelineUI(timeline.value);
-
     } catch (err) {
       console.error("Import failed:", err);
       alert("Failed to import: invalid or corrupted file");

@@ -385,6 +385,16 @@ details > summary {
   .print-break {
     break-after: page;
   }
+  table {
+    break-inside: auto;
+  }
+  tr {
+    break-inside: avoid;
+    break-after: auto;
+  }
+  .print-none {
+    display: none;
+  }
 }
 
 li[data-tdb]::before {

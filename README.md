@@ -97,6 +97,7 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] footer linking to open source repo and tawtaw.site
 - [ ] REMOVE any microsoft, wordpress, api hooks and functions
 - [ ] remove any other testing or example pages from old repo 
 - [ ] timeline template importer. think through how data comes in and ui refreshes

@@ -1,4 +1,5 @@
 ---
+import PrintButton from "@components/PrintButton.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
 interface Params {
   id: string;
@@ -23,7 +24,7 @@ if (!id) return Astro.redirect("/404");
         >
       </div>
       <div>
-        <button>PRINT to PDF 🖨️</button>
+        <PrintButton />
         <dl class="kv meta ghost">
           <dt>rev</dt>
           <dd id="timeline-rev">#</dd>
@@ -33,40 +34,38 @@ if (!id) return Astro.redirect("/404");
       </div>
     </header>
 
-    <section class="timeline-grid gap-m" data-layout="content">
-      <table id="timeline-moment-table" class="timeline-schedule">
-        <thead>
-          <tr>
-            <th>time</th>
-            <th>desc</th>
-            <th>skill</th>
-            <th>group</th>
-            <th>note</th>
-          </tr>
-        </thead>
-        <tbody id="time-moment-list"></tbody>
-      </table>
-      <aside class="grid gap-m">
-        <h2 class="display none">blocks</h2>
-        <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
-      </aside>
-    </section>
-    <hr class="print-break" />
-    <section id="timeline-calendar" class="page">
-      <h2 class="display none">Timeline</h2>
-      <div class="col-headers" id="col-headers"></div>
-
-      <div class="wrap">
-        <div class="time-col" id="time-col"></div>
-        <div class="columns-area" id="columns-area"></div>
-      </div>
-
-      <div class="tooltip" id="tooltip">
-        <div class="tooltip-title" id="tt-title"></div>
-        <div class="tooltip-detail" id="tt-detail"></div>
-      </div>
-    </section>
+    <table id="timeline-moment-table" class="timeline-schedule">
+      <thead>
+        <tr>
+          <th>time</th>
+          <th>desc</th>
+          <th>skill</th>
+          <th>group</th>
+          <th>note</th>
+        </tr>
+      </thead>
+      <tbody id="time-moment-list"></tbody>
+    </table>
+    <aside class="grid gap-m">
+      <h2 class="display none">blocks</h2>
+      <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
+    </aside>
   </main>
+  <hr class="print-break" />
+  <section id="timeline-calendar" class="page">
+    <h2 class="display none">Timeline</h2>
+    <div class="col-headers" id="col-headers"></div>
+
+    <div class="wrap">
+      <div class="time-col" id="time-col"></div>
+      <div class="columns-area" id="columns-area"></div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+      <div class="tooltip-title" id="tt-title"></div>
+      <div class="tooltip-detail" id="tt-detail"></div>
+    </div>
+  </section>
 </BaseLayout>
 
 <style is:global>
@@ -108,7 +107,7 @@ if (!id) return Astro.redirect("/404");
     }
   }
   const tmlnFetch = await fetchIdbData();
-
+  if (!tmlnFetch) throw new Error("timeline not found: null");
   const {
     summary,
     date_civil,

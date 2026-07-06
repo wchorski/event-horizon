@@ -1,9 +1,13 @@
 .layout_reading {
   max-width: 1200px;
   /* margin-inline: auto; */
-  
+
   & > main {
     padding-inline: 0;
     /* padding-inline: var(--size-m, 1rem); */
+  }
+
+  &:has(> footer) {
+    padding-bottom: 0;
   }
 }

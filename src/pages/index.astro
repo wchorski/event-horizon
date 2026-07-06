@@ -5,21 +5,18 @@ import gridStyles from "@styles/grid.module.css";
 import homeStyles from "@styles/home.module.css";
 import SvgSiteLogo from "@public/favicon.svg";
 import layoutStyles from "@styles/layout_reading.module.css";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 ---
 
-<BaseLayout>
-  <div class="callout warning">
-    <p>⚠️ Pre Alpha Build ⚠️</p>
-    <p>
-      This App is under heavily development and will go through significant
-      changes in the near future
-    </p>
-  </div>
+<CommonPageLayout>
   <main class:list={[layoutStyles.layout_reading, homeStyles.page]}>
-    <header class:list={[gridStyles.col_2, "grid", homeStyles.hero]}>
-      <h1>Event Horizon</h1>
-      <SvgSiteLogo class={homeStyles.logo} />
-    </header>
+    <div class="callout warning">
+      <p>⚠️ Pre Alpha Build ⚠️</p>
+      <p>
+        This App is under heavily development and will go through significant
+        changes in the near future
+      </p>
+    </div>
     <hr />
     <div class={homeStyles.page_content}>
       <section class:list={[gridStyles.col_2, "grid"]}>
@@ -59,7 +56,7 @@ import layoutStyles from "@styles/layout_reading.module.css";
           </div>
         </div>
       </section>
-      <section class:list={[gridStyles.col_2, "grid", "gap-m"]}>
+      <section>
         <div>
           <h2>Pretty In Print</h2>
           <p>
@@ -67,7 +64,8 @@ import layoutStyles from "@styles/layout_reading.module.css";
             the information they need
           </p>
         </div>
-        <div class="grid gap-m">
+        <hr />
+        <div class:list={[gridStyles.col_2, "grid", "gap-m"]}>
           <img
             src="/imgs/screenshot-evhrz-3.png"
             height="500"
@@ -86,8 +84,15 @@ import layoutStyles from "@styles/layout_reading.module.css";
       </section>
       <section>
         <h2>Make Time, Manage Moments</h2>
-        <a href="/timelines">Create a Timeline</a>
+        <a href="/timelines" class="btn m">Create/Edit your Timeline</a>
       </section>
     </div>
+    <hr />
   </main>
-</BaseLayout>
+</CommonPageLayout>
+
+<style>
+  section {
+    outline: dotted white 1px;
+  }
+</style>

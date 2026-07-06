@@ -403,5 +403,8 @@ li[data-tdb]::before {
 }
 
 img.framed {
-  outline: solid 5px var(--c-seperator);
+  border: solid 5px var(--c-seperator);
+  box-sizing: border-box;
+  width: 100%;
+  object-fit: contain;
 }

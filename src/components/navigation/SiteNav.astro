@@ -1,0 +1,11 @@
+---
+import SvgSiteLogo from "@public/favicon.svg";
+import homeStyles from "@styles/home.module.css";
+import layoutStyles from "@styles/layout_reading.module.css";
+import gridStyles from "@styles/grid.module.css";
+---
+
+<header class:list={[gridStyles.col_2, "grid", homeStyles.hero]}>
+  <h1>Event Horizon</h1>
+  <SvgSiteLogo class={homeStyles.logo} />
+</header>

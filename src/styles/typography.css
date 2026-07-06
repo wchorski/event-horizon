@@ -1,0 +1,8 @@
+body {
+
+  & > footer {
+    margin-bottom: 0;
+    margin-top: 3rem;
+    padding: var(--size-m);
+  }
+}

@@ -1,0 +1,11 @@
+---
+import SiteNav from "@components/navigation/SiteNav.astro";
+import BaseLayout from "./BaseLayout.astro";
+import Footer from "@components/navigation/Footer.astro";
+---
+
+<BaseLayout>
+  <SiteNav slot={"header"} />
+  <slot />
+  <Footer slot={"footer"} />
+</BaseLayout>

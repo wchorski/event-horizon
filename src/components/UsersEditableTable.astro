@@ -20,10 +20,12 @@ const ctx = {
 {
   users.length === 0 ? (
     <p class="callout not-found">no users found</p>
-    <table>
-      <tbody>
-        <RowCreate {...ctx} class:list={"highlight-green"} />
+    <table data-crud={ctx.crud}>
+      <tbody id={`${ctx.crud}-table-body`}>
       </tbody>
+      <tfoot>
+        <RowCreate {...ctx} class:list={"highlight-green"} />
+      </tfoot>
     </table>
   ) : (
     <TableEditable

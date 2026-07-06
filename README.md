@@ -97,6 +97,7 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] print url removal https://stackoverflow.com/questions/2192806/can-i-remove-the-url-from-my-print-css-so-the-web-address-doesnt-print
 - [ ] footer linking to open source repo and tawtaw.site
 - [ ] REMOVE any microsoft, wordpress, api hooks and functions
 - [ ] remove any other testing or example pages from old repo 

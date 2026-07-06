@@ -1,6 +1,6 @@
 export default [
   {
-    id: "00000000-0000-0000-0000-000000000002",
+    id: "019f3930-2608-77bb-952c-eed3c15fc515",
     name: "Birthplace of Rock 'n' Roll (Sun Studio)",
     address: "706 Union Ave",
     city: "Memphis",
@@ -11,7 +11,7 @@ export default [
       "A legendary recording room tied to early rock ‘n' roll history—perfect for a rockabilly / classic rock themed party vibe.",
   },
   {
-    id: "00000000-0000-0000-0000-000000000003",
+    id: "019f3930-2608-7d4f-a6cf-a977a903e9f1",
     name: "Hitsville U.S.A. (Motown Museum)",
     address: "2648 W Grand Blvd",
     city: "Detroit",
@@ -21,9 +21,8 @@ export default [
     excerpt:
       "Instant Motown theme—think soul, R&B, and the 'Sound of Young America' energy for a dance-forward party.",
   },
-
   {
-    id: "00000000-0000-0000-0000-000000000004",
+    id: "019f3930-2608-74e3-81e6-e93d92c431a3",
     name: "Purple Rain Night (First Avenue)",
     address: "701 1st Ave N",
     city: "Minneapolis",
@@ -33,9 +32,8 @@ export default [
     excerpt:
       "Iconic Minneapolis music venue strongly associated with Prince/pop-funk era aesthetics—great for an 80s / purple neon theme.",
   },
-
   {
-    id: "00000000-0000-0000-0000-000000000005",
+    id: "019f3930-2608-7aaa-8b61-564888eefc8d",
     name: "Sunset Strip Rock Night (Whisky a Go Go)",
     address: "8901 W Sunset Blvd",
     city: "West Hollywood",
@@ -46,7 +44,7 @@ export default [
       "Classic Sunset Strip rock landmark—ideal for a guitars-and-leather, glam/rock party concept.",
   },
   {
-    id: "00000000-0000-0000-0000-000000000000",
+    id: "019f3930-2608-7841-bf34-5b076f39a5e0",
     name: "Online Live Stream",
     address: "/live-stream",
     city: "www.mywebiste.com",

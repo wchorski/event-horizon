@@ -39,6 +39,7 @@ tr:last-child td {
   text-align: right;
   width: 1%;
   white-space: nowrap;
+  background-color: color-mix(in srgb, var(--c-bg) 80%, transparent);
 }
 th,
 td {
@@ -120,6 +121,12 @@ table tr.new-row {
 }
 
 td[data-key="id"] {
+  max-width: 5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+
   & a,
   & code span {
     white-space: nowrap;

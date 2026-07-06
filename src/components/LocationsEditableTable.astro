@@ -20,10 +20,12 @@ const ctx = {
 {
   locations.length === 0 ? (
     <p class="callout not-found">no locations found</p>
-    <table>
-    <tr class="highlight-green">
-      <RowCreate {...ctx} />
-    </tr>
+    <table data-crud={ctx.crud}>
+      <tbody id={`${ctx.crud}-table-body`}>
+      </tbody>
+      <tfoot>
+        <RowCreate {...ctx} class:list={"highlight-green"} />
+      </tfoot>
     </table>
   ) : (
     <TableEditable

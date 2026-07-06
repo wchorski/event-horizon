@@ -3,7 +3,8 @@ import { normalizePhoneToE164Manual } from "./formatters";
 import { BOOKING_STATUSES } from "@db/schema";
 
 export const validate = {
-  // TODO validate as a uuidv7?
+  // TODO validate as a uuidv7 when i fix seed data?
+  // id: z.uuid(),
   id: z.uuidv7(),
   bookingStatus: z.enum(BOOKING_STATUSES),
   phone: z

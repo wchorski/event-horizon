@@ -2,29 +2,31 @@ services:
   db:
     image: postgres:18-alpine
     restart: unless-stopped
-    environment:  
+    container_name: event_horizon_db
+    environment:
       POSTGRES_USER: ${PGUSER}
       POSTGRES_PASSWORD: ${PGPASSWORD}
       POSTGRES_DB: ${PGDATABASE}
       PGDATA: /data/postgres
-    ports:
-      - "5060:5432"
+    # ports:
+    #   - "5060:5432"
     networks:
-      - moeits_staff-astro-network
+      - event-horizon-network
     volumes:
       - ./db/postgres-data:/data/postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}" ]
       interval: 5s
       retries: 10
 
   # Migration service - runs once using the build stage with dev deps
   migrate:
+    container_name: event_horizon_migrate
     build:
       context: .
       target: migrate # Use the migrate stage that has drizzle-kit
     networks:
-      - moeits_staff-astro-network
+      - event-horizon-network
     depends_on:
       db:
         condition: service_healthy
@@ -33,11 +35,12 @@ services:
     restart: "no" # Run once and exit
 
   seed:
+    container_name: event_horizon_seed
     build:
       context: .
       target: seed
     networks:
-      - moeits_staff-astro-network
+      - event-horizon-network
     env_file:
       - .env
     depends_on:
@@ -49,23 +52,30 @@ services:
 
   app:
     build: .
-    container_name: moeits_staff-astro
+    container_name: event_horizon_app
     restart: unless-stopped
-    ports:
-      - "4321:4321"
+    # ports:
+    #   - "4321:4321"
     networks:
-      - moeits_staff-astro-network
+      - event-horizon-network
+      - proxy
     env_file:
       - .env
     volumes:
       - ./public:/app/public
-      # - ./db/data:/app/db/data
+      # - ./uploads:/app/uploads
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4321/health"]
+      test: [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4321/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -83,5 +93,10 @@ services:
   #   restart: "no" # exits after running — intentional
 
 networks:
-  moeits_staff-astro-network:
+  event-horizon-network:
+    name: event-horizon-network
     driver: bridge
+  proxy:
+    name: nginx-prox-mgmt-3_default
+    driver: bridge
+    external: true

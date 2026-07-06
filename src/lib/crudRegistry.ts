@@ -89,6 +89,7 @@ export const crud = {
         // const fields = await creditPolicy.writableFields(session, null);
         // const sanitized = sanitizeFields(row, fields);
         const validId = validate.id.parse(id);
+        
         const [row] = await db
           .select()
           .from(User)

@@ -106,13 +106,24 @@ await db.insert(schema.Location).values(seedData.locations);
 //   console.log(`+ ${element.label}`);
 // });
 console.log(`=== Users (+${seedData.users.length}) ===`);
-await db.insert(schema.User).values(seedData.users);
+const usersCoreced = seedData.users.map((item) => ({
+  ...item,
+  date_created: new Date(item.date_created),
+  date_modified: new Date(item.date_modified),
+}));
+await db.insert(schema.User).values(usersCoreced);
 // seedData.users.forEach((element) => {
 //   console.log(`+ ${element.email}`);
 // });
 
 console.log(`=== Events (+${seedData.events.length})===`);
-await db.insert(schema.Event).values(seedData.events);
+const eventsCoreced = seedData.events.map((e) => ({
+  ...e,
+  timestamp: new Date(e.timestamp),
+  date_created: new Date(e.date_created),
+  date_modified: new Date(e.date_modified),
+}));
+await db.insert(schema.Event).values(eventsCoreced);
 // seedData.events.forEach((element) => {
 //   console.log(`+ ${element.subject} | ${element.date_civil}`);
 // });
@@ -130,7 +141,13 @@ await db
   .onConflictDoNothing();
 
 console.log(`=== Tickets (+${seedData.tickets.length})===`);
-await db.insert(schema.Ticket).values(seedData.tickets);
+const ticketsCoreced = seedData.tickets.map((t) => ({
+  ...t,
+  timestamp: new Date(t.timestamp),
+  date_created: new Date(t.date_created),
+  date_modified: new Date(t.date_modified),
+}));
+await db.insert(schema.Ticket).values(ticketsCoreced);
 // seedData.tickets.forEach((element) => {
 //   console.log(
 //     `+ event_id: ${element.event_id}, user_id: ${element.user_id}, attended: ${element.attended}`,

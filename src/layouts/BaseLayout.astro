@@ -14,8 +14,9 @@ import "@styles/animation.css";
 import styles from "@styles/layout_reading.module.css";
 import DialogConfirm from "@components/DialogConfirm.astro";
 import { ClientRouter } from "astro:transitions";
+import { UMAMI_PROXY_PREFIX } from "../middleware";
 
-const { SITE_TITLE, SITE_EXCERPT } = import.meta.env;
+const { SITE_TITLE, SITE_EXCERPT, DOMAIN_URL, UMAMI_WEB_ID } = import.meta.env;
 const {
   title = SITE_TITLE,
   excerpt = SITE_EXCERPT,
@@ -38,6 +39,16 @@ const {
     <script>
       import "@client/htmx";
     </script>
+    {
+      UMAMI_WEB_ID && !import.meta.env.DEV ? (
+        <script
+          defer
+          src={UMAMI_PROXY_PREFIX}
+          data-website-id={UMAMI_WEB_ID}
+          data-host-url={`${DOMAIN_URL}/assets/ramen`}
+        />
+      ) : null
+    }
   </head>
   <body hx-ext="response-targets" class={classNames}>
     <slot name="header" />

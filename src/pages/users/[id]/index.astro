@@ -30,7 +30,7 @@ const {
   email,
 } = user;
 
-const ownedCredits = await db
+const ownedItems = await db
   .select({
     ticket: Ticket,
     course: Event,
@@ -41,7 +41,7 @@ const ownedCredits = await db
   .innerJoin(Location, eq(Event.location_id, Location.id))
   .where(eq(Ticket.user_id, id));
 
-const tableRows = ownedCredits.map(({ ticket, course, location }) => ({
+const tableRows = ownedItems.map(({ ticket, course, location }) => ({
   id: ticket.id,
   event_id: course.id,
   location_id: location.id,

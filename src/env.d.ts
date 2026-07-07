@@ -16,6 +16,10 @@ interface ImportMetaEnv {
   readonly DATABASE_ID_SECRET?: string;
   readonly SITE_TITLE?: string;
   readonly SITE_EXCERPT?: string;
+  readonly UMAMI_HOST?: string;
+  readonly UMAMI_SCRIPT?: string;
+  readonly UMAMI_WEB_ID?: string;
+  readonly DOMAIN_URL?: string;
 }
 
 interface ImportMeta {

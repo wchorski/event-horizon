@@ -49,7 +49,9 @@ const {
           data-website-id={UMAMI_WEB_ID}
           data-host-url={`${DOMAIN_URL}/assets/ramen`}
         />
-      ) : <meta name="analytics" content="analytics were not loaded" />
+      ) : (
+        <meta name="analytics" content="analytics were not loaded" />
+      )
     }
   </head>
   <body hx-ext="response-targets" class={classNames}>

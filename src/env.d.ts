@@ -19,6 +19,7 @@ interface ImportMetaEnv {
   readonly UMAMI_HOST?: string;
   readonly UMAMI_SCRIPT?: string;
   readonly UMAMI_WEB_ID?: string;
+  readonly UMAMI_PROXY_PREFIX?: string;
   readonly DOMAIN_URL?: string;
 }
 

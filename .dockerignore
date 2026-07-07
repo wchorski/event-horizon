@@ -15,3 +15,6 @@ tests
 *.spec.*
 db/data
 db/*-data
+.env.development
+.env.production
+.env.example

@@ -43,11 +43,13 @@ const {
       UMAMI_WEB_ID && !import.meta.env.DEV ? (
         <script
           defer
+          is:inline
+          data-astro-rerun
           src={UMAMI_PROXY_PREFIX}
           data-website-id={UMAMI_WEB_ID}
           data-host-url={`${DOMAIN_URL}/assets/ramen`}
         />
-      ) : null
+      ) : <meta name="analytics" content="analytics were not loaded" />
     }
   </head>
   <body hx-ext="response-targets" class={classNames}>

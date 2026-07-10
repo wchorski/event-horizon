@@ -199,7 +199,7 @@ moments.onChange((change) => {
       renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
   }
 });
-// TODO setup steps signal
+// TODO setup steps signal. not exactly necessary because no other data type depends on step update
 // steps.onChange(change => {
 //   switch (change.type) {
 //     case 'added':

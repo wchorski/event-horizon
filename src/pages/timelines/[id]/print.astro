@@ -251,17 +251,31 @@ if (!id) return Astro.redirect("/404");
         textContent: `${steps.length} step${steps.length > 1 ? "s" : ""}`,
       });
       const stepsList = createElement("ol", { className: "steps" });
-      const stepItems = steps.map((s) =>
-        createElement(
+      const stepItems = steps.map((s) => {
+        const li = createElement(
           "li",
           {
-            textContent: `${s.text}` || "-- blank --",
+            // textContent:
+            //   (s.text || "-- blank --") + (s.note ? ` [${s.note}]` : ""),
           },
           {
             tbd: String(s.tbd),
           },
-        ),
-      );
+        );
+
+        const summarySpan = createElement("span", {
+          textContent: s.text || "-- blank --",
+          className: "summary",
+        });
+
+        const noteSpan = createElement("span", {
+          textContent: s.note,
+          className: "note",
+        });
+
+        li.append(summarySpan, noteSpan);
+        return li;
+      });
 
       stepsList.append(...stepItems);
       stepsDetails.append(stepsSummary, stepsList);
@@ -343,7 +357,7 @@ if (!id) return Astro.redirect("/404");
     &::marker {
       color: orange;
     }
-    &::before {
+    &::after {
       content: "*TBD* ";
       color: orange;
     }
@@ -366,9 +380,18 @@ if (!id) return Astro.redirect("/404");
 
   ol.steps {
     padding-inline-start: var(--size-m, 1rem);
+    list-style-position: inside;
 
     & > li {
       width: fit-content;
+      display: grid;
+      grid-template-columns: 250px 200px 1fr;
+      gap: 1rem;
+
+      & .note {
+        color: var(--c-ghost);
+        font-style: italic;
+      }
     }
   }
 </style>

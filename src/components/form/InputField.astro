@@ -8,6 +8,7 @@ import type {
   InputFieldType,
 } from "@ty/FieldConfig";
 import { formatPhonePrettyManual } from "@lib/formatters";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
 
 interface Props extends Omit<
   HTMLAttributes<"input">,
@@ -53,6 +54,8 @@ const prettyVal = (() => {
   switch (true) {
     case type === "tel":
       return formatPhonePrettyManual(value);
+    case type === "datetime-local":
+      return value ? toDatetimeLocalValue(value) : value;
 
     default:
       return value;

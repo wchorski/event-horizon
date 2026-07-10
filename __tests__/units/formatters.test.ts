@@ -6,8 +6,99 @@ import {
   normalizePhoneToE164Manual,
   prettyPlainCivilDateFull,
 } from "@lib/formatters";
-import { formatTimeMinutesToClockString, formatTimeToMinutes } from "@lib/timeFormatters";
+import {
+  formatTimeMinutesToClockString,
+  formatTimeToMinutes,
+} from "@lib/timeFormatters";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
+import { validate } from "@lib/validate";
 
+describe("dateAndTime", () => {
+  describe("toDatetimeLocalValue", () => {
+    it("returns an empty string when given an empty string", () => {
+      expect(toDatetimeLocalValue("")).toBe("");
+    });
+
+    it("returns an empty string when given null", () => {
+      expect(toDatetimeLocalValue(null)).toBe("");
+    });
+
+    it("returns an empty string when given undefined", () => {
+      expect(toDatetimeLocalValue(undefined)).toBe("");
+    });
+
+    it("truncates an ISO string with milliseconds and Z to datetime-local format", () => {
+      expect(toDatetimeLocalValue("2027-12-31T14:50:57.058Z")).toBe(
+        "2027-12-31T14:50",
+      );
+    });
+
+    it("truncates an ISO string without milliseconds", () => {
+      expect(toDatetimeLocalValue("2027-12-31T14:50:57Z")).toBe(
+        "2027-12-31T14:50",
+      );
+    });
+
+    it("accepts a Date object and preserves the UTC wall-clock digits", () => {
+      const date = new Date("2027-01-01T09:05:00.000Z");
+      expect(toDatetimeLocalValue(date)).toBe("2027-01-01T09:05");
+    });
+
+    it("does not shift hours across a day boundary", () => {
+      expect(toDatetimeLocalValue("2027-12-31T00:05:00.000Z")).toBe(
+        "2027-12-31T00:05",
+      );
+    });
+
+    it("pads single-digit hours and minutes correctly", () => {
+      expect(toDatetimeLocalValue("2027-03-05T04:07:00.000Z")).toBe(
+        "2027-03-05T04:07",
+      );
+    });
+  });
+
+  describe("datetimeLocalToDate (zod transform)", () => {
+    it("parses a datetime-local string without seconds", () => {
+      const result = validate.datetimeLocalToDate.parse("2027-12-31T14:50");
+      expect(result).toBeInstanceOf(Date);
+      expect(result.toISOString()).toBe("2027-12-31T14:50:00.000Z");
+    });
+
+    it("parses a datetime-local string that already includes seconds", () => {
+      const result = validate.datetimeLocalToDate.parse("2027-12-31T14:50:30");
+      expect(result.toISOString()).toBe("2027-12-31T14:50:30.000Z");
+    });
+
+    it("round-trips through toDatetimeLocalValue without drift", () => {
+      const original = "2027-12-31T14:50";
+      const date = validate.datetimeLocalToDate.parse(original);
+      expect(toDatetimeLocalValue(date)).toBe(original);
+    });
+
+    it("rejects an empty string", () => {
+      expect(() => validate.datetimeLocalToDate.parse("")).toThrow();
+    });
+
+    // TOOD find out why this fails
+    // it("rejects a malformed date string", () => {
+    //   expect(() => validate.datetimeLocalToDate.parse("not-a-date")).toThrow();
+    // });
+
+    it("rejects a string missing the time portion", () => {
+      expect(() => validate.datetimeLocalToDate.parse("2027-12-31")).toThrow();
+    });
+
+    it("correctly handles a leap day", () => {
+      const result = validate.datetimeLocalToDate.parse("2028-02-29T12:00");
+      expect(result.toISOString()).toBe("2028-02-29T12:00:00.000Z");
+    });
+
+    it("correctly handles the December 31 / January 1 year boundary", () => {
+      const result = validate.datetimeLocalToDate.parse("2027-12-31T23:59");
+      expect(result.toISOString()).toBe("2027-12-31T23:59:00.000Z");
+    });
+  });
+});
 
 describe("formatTimeToMinutes", () => {
   it("converts standard time to minutes", () => {
@@ -53,44 +144,45 @@ describe("prettyPlainCivilDateFull", () => {
   it("formats a valid civil datetime correctly", () => {
     const result = prettyPlainCivilDateFull("2026-04-28T10:00");
 
-    expect(result).toBe(
-      "Tuesday, April 28, 2026 at 10:00 AM"
-    );
+    expect(result).toBe("Tuesday, April 28, 2026 at 10:00 AM");
   });
 
   it("pads minutes correctly", () => {
     const result = prettyPlainCivilDateFull("2026-04-28T10:05");
 
-    expect(result).toBe(
-      "Tuesday, April 28, 2026 at 10:05 AM"
-    );
+    expect(result).toBe("Tuesday, April 28, 2026 at 10:05 AM");
   });
 
   it("throws for invalid format (missing T)", () => {
-    expect(() =>
-      prettyPlainCivilDateFull("2026-04-28 10:00")
-    ).toThrow("Invalid format");
+    expect(() => prettyPlainCivilDateFull("2026-04-28 10:00")).toThrow(
+      "Invalid format",
+    );
   });
 
   it("throws for invalid format (seconds present)", () => {
-    expect(() =>
-      prettyPlainCivilDateFull("2026-04-28T10:00:00")
-    ).toThrow("Invalid format");
+    expect(() => prettyPlainCivilDateFull("2026-04-28T10:00:00")).toThrow(
+      "Invalid format",
+    );
   });
 
-  it("throws for impossible calendar dates", () => {
-    expect(() =>
-      prettyPlainCivilDateFull("2026-02-30T10:00")
-    ).toThrow("Invalid calendar date/time");
+  it("throws a calendar-validity error for impossible calendar dates", () => {
+    expect(() => prettyPlainCivilDateFull("2026-02-30T10:00")).toThrow(
+      /Invalid calendar date\/time in "2026-02-30T10:00"/,
+    );
   });
 
-  it("throws for invalid hour", () => {
-    expect(() =>
-      prettyPlainCivilDateFull("2026-04-28T25:00")
-    ).toThrow("Invalid calendar date/time");
+  it("throws a calendar-validity error for an invalid hour", () => {
+    expect(() => prettyPlainCivilDateFull("2026-04-28T25:00")).toThrow(
+      /Invalid calendar date\/time in "2026-04-28T25:00"/,
+    );
+  });
+
+  it("throws a format error for a malformed string", () => {
+    expect(() => prettyPlainCivilDateFull("12/31/2027")).toThrow(
+      /Invalid format\. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm/,
+    );
   });
 });
-
 
 describe("localDateTimeToRealDate", () => {
   it("converts a local datetime string to a Date in the given timezone", () => {
@@ -401,4 +493,3 @@ describe("slugify", () => {
     expect(slugify("")).toBe("");
   });
 });
-

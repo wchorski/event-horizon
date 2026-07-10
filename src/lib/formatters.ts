@@ -146,11 +146,20 @@ const LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_DATE_TIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 export function prettyPlainCivilDateFull(date_civil: string): string {
-  try {
-    // ✅ Date only
-    if (LOCAL_DATE_REGEX.test(date_civil)) {
-      const date = Temporal.PlainDate.from(date_civil);
+  // Step 1: shape check — fails fast with a clear "wrong format" message
+  const isDateOnly = LOCAL_DATE_REGEX.test(date_civil);
+  const isDateTime = LOCAL_DATE_TIME_REGEX.test(date_civil);
 
+  if (!isDateOnly && !isDateTime) {
+    throw new Error(
+      `Invalid format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm, received: "${date_civil}"`,
+    );
+  }
+
+  // Step 2: value check — shape was fine, but is this a real calendar date/time?
+  try {
+    if (isDateOnly) {
+      const date = Temporal.PlainDate.from(date_civil);
       return date.toLocaleString("en-US", {
         weekday: "long",
         year: "numeric",
@@ -159,25 +168,18 @@ export function prettyPlainCivilDateFull(date_civil: string): string {
       });
     }
 
-    // ✅ Date + time
-    if (LOCAL_DATE_TIME_REGEX.test(date_civil)) {
-      const dt = Temporal.PlainDateTime.from(date_civil);
-
-      return dt.toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      });
-    }
-
-    throw new Error();
-  } catch {
-    throw new Error(
-      `Invalid format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm, received: ${date_civil}`,
-    );
+    const dt = Temporal.PlainDateTime.from(date_civil);
+    return dt.toLocaleString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    throw new Error(`Invalid calendar date/time in "${date_civil}": ${reason}`);
   }
 }
 

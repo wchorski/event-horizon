@@ -5,6 +5,7 @@ import type {
   TicketSelect,
   LocationSelect,
   UserSelect,
+  BookingSelect,
 } from "@ty/Schema";
 import { prettyDateToLocale } from "./formatters";
 import { BOOKING_STATUSES } from "@db/schema";
@@ -192,6 +193,54 @@ export const courseConfigRequired = (locations: LocationSelect[]) =>
       })),
     },
   }) as FieldConfig<BaseRow> satisfies FieldConfig<EventSelect>;
+
+export const bookingConfigRequired = (locations: LocationSelect[], clients: UserSelect[]) =>
+  ({
+    id: {
+      label: "ID",
+      type: "text",
+      required: true,
+      readonly: true,
+    },
+    start: {
+      type: 'datetime-local',
+      required: true,
+    },
+    end: {
+      type: 'datetime-local',
+      required: true,
+    },
+    notes: {
+      type: 'textarea',
+    },
+    status: {
+      label: "Locations",
+      type: "select",
+      required: true,
+      options: BOOKING_STATUSES.map((stat) => ({
+        value: stat,
+        label: stat,
+      })),
+    },
+    location_id: {
+      label: "Location",
+      type: "select",
+      required: true,
+      options: locations.map((loc) => ({
+        value: loc.id,
+        label: loc.name,
+      })),
+    },
+    client_id: {
+      label: "Client",
+      type: "select",
+      required: true,
+      options: clients.map((user) => ({
+        value: user.id,
+        label: `${user.first_name} ${user.last_name} <${user.email}>`,
+      })),
+    },
+  }) as FieldConfig<BaseRow> satisfies FieldConfig<BookingSelect>;
 
 const courseCreditsRequiredConfig = {
   id: {

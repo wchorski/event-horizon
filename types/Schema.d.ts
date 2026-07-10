@@ -238,3 +238,10 @@ export type MomentStepImport = Omit<MomentStepDB, "id" | "moment_id"> & {
   source_id: number;
   source_moment_id: number;
 };
+
+export type GoogleCalendarData = {
+  event_id?: string;
+  calendar_id?: string;
+  synced_at?: string;
+  // ...whatever fields you actually store
+} | null;

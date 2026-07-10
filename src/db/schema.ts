@@ -15,7 +15,7 @@ import {
   jsonb,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
-import type { TimelineData } from "@ty/Schema";
+import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
 
 export const Role = pgTable("roles", {
   id: uuid("id")
@@ -99,7 +99,7 @@ export const Booking = pgTable(
     notes: text(),
     secret_notes: text(),
     revision: integer().notNull().default(1),
-    google_calendar: jsonb(),
+    google_calendar: jsonb().$type<GoogleCalendarData>(),
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),

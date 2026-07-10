@@ -2,9 +2,29 @@ import { z } from "astro/zod";
 import { normalizePhoneToE164Manual } from "./formatters";
 import { BOOKING_STATUSES } from "@db/schema";
 
+const datetimeLocalToDate = z
+  .string()
+  .min(1, "Required")
+  .transform((val, ctx) => {
+    // val looks like "2027-12-31T14:50" (datetime-local input format)
+    const withSeconds = val.length === 16 ? `${val}:00` : val; // handle missing seconds
+    const date = new Date(`${withSeconds}.000Z`);
+
+    if (Number.isNaN(date.getTime())) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date/time",
+      });
+      return z.NEVER;
+    }
+
+    return date;
+  });
+
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
+  datetimeLocalToDate,
   id: z.uuidv7(),
   bookingStatus: z.enum(BOOKING_STATUSES),
   phone: z
@@ -114,6 +134,27 @@ export const validate = {
   },
   get courseUpdate() {
     return this.course;
+  },
+
+  booking: z
+    .object({
+      id: z.uuidv7(),
+      // Don't reach for z.coerce.date() here — it runs values through new Date(value) directly
+      start: datetimeLocalToDate,
+      end: datetimeLocalToDate,
+      notes: z.string(),
+      status: z.enum(BOOKING_STATUSES),
+      location_id: z.string(),
+      client_id: z.string(),
+      // event_id: z.string(),
+    })
+    .refine((data) => data.end > data.start, {
+      message: "End must be after start",
+      path: ["end"], // shows the error under the `end` field in the form
+    }),
+
+  get bookingUpdate() {
+    return this.booking;
   },
 
   userLink: z

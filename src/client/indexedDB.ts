@@ -1,4 +1,4 @@
-import { isCheckboxField, isIdField, isTimeField } from "@lib/regex";
+import { isIdField, isTimeField } from "@lib/regex";
 import { formatTimeToMinutes } from "@lib/timeFormatters";
 import type {
   TimelineMoment,
@@ -567,9 +567,7 @@ export async function idbUpdateMoment(
         ? Number(value)
         : isTimeField(key) && typeof value === "string"
           ? formatTimeToMinutes(value)
-          : isCheckboxField(key) && typeof value === "string"
-            ? value === "true" || value === "on"
-            : value,
+          : value,
     ]),
   ) as Partial<TimelineMoment>;
   const db = await openDB();
@@ -657,9 +655,7 @@ export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
         ? Number(value)
         : isTimeField(key) && typeof value === "string"
           ? formatTimeToMinutes(value)
-          : isCheckboxField(key) && typeof value === "string"
-            ? value === "true" || value === "on"
-            : value,
+          : value,
     ]),
   ) as Partial<MomentStep>;
   const db = await openDB();

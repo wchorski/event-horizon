@@ -199,6 +199,17 @@ moments.onChange((change) => {
       renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
   }
 });
+// TODO setup steps signal
+// steps.onChange(change => {
+//   switch (change.type) {
+//     case 'added':
+
+//       break;
+
+//     default:
+//       break;
+//   }
+// })
 
 skills.onChange((change) => {
   switch (change.type) {
@@ -334,9 +345,11 @@ momentCreateBtn.addEventListener("pointerup", async (e) => {
 table.addEventListener("input", (e) => {
   const target = e.target as HTMLInputElement | HTMLTextAreaElement;
   if (!target.matches("input, textarea")) return;
+  if (target.matches("input[type='checkbox']")) return;
 
   const stepItem = target.closest("li[data-step-id]");
   if (stepItem) {
+    console.log('table.addEventListener("input", (e) => {');
     const stepId = Number((stepItem as HTMLElement).dataset.stepId);
     const field = target.name as keyof MomentStep;
     debouncedSaveStep(stepId, field, target.value);
@@ -357,18 +370,33 @@ table.addEventListener("input", (e) => {
 });
 // selects will have instant save, no debounce
 table.addEventListener("change", async (e) => {
-  const target = e.target as HTMLSelectElement | HTMLInputElement;
+  const target = e.target;
+  if (
+    !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)
+  ) {
+    return;
+  }
   if (!target.matches("select, input[type='checkbox']")) return;
 
+  const value =
+    target instanceof HTMLInputElement && target.type === "checkbox"
+      ? target.checked
+      : target.value;
+
+  // step update
   const stepItem = target.closest("li[data-step-id]");
   if (stepItem) {
     const stepId = Number((stepItem as HTMLElement).dataset.stepId);
     const field = target.name as keyof MomentStep;
-    debouncedSaveStep(stepId, field, target.value);
+    // TODO change this to use signal?
+    // steps.update(updated);
+    debouncedSaveStep(stepId, field, value);
     return;
   }
 
-  const row = target.closest("tr")!;
+  // moment update
+  const row = target.closest<HTMLTableRowElement>("tr[data-moment-id]");
+  if (!row) return;
   const momentId = Number(row.dataset.momentId);
   const field = target.name;
   if (!momentId || !field) return;
@@ -378,8 +406,6 @@ table.addEventListener("change", async (e) => {
     target.style.setProperty("--color", skill?.color || "gray");
   }
 
-  //@ts-ignore
-  const value = !isNaN(target.checked) ? target.checked : target.value;
   const updated = await idbUpdateMoment(momentId, { [field]: value });
   moments.update(updated);
 });
@@ -675,7 +701,7 @@ const debouncedSaveMoment = debounce(
   500,
 );
 const debouncedSaveStep = debounce(
-  async (momentId: number, field: string, value: string) => {
+  async (momentId: number, field: string, value: string | boolean) => {
     await idbUpdateStep(momentId, { [field]: value });
   },
   500,

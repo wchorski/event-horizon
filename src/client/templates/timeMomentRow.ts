@@ -63,7 +63,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
-  const tdbCheckbox = checkboxCornerEl(step.tbd);
+  const tdbCheckbox = checkboxCornerEl('tbd', step.tbd, 'To be determined');
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
     type: "text",

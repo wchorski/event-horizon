@@ -87,7 +87,12 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
       if (type === "textarea")
         return (
           <td data-type={type}>
-            <TextareaField {...inputAttrs} name={key} errorId={fieldErrorId} />
+            <TextareaField
+              {...inputAttrs}
+              name={key}
+              formId={formId}
+              errorId={fieldErrorId}
+            />
           </td>
         );
       if (type === "searchSelect") {
@@ -188,9 +193,7 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
 
       [...form.elements].forEach((el) => {
         const input = el as
-          | HTMLInputElement
-          | HTMLSelectElement
-          | HTMLTextAreaElement;
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
         if (input.type === "checkbox")
           (input as HTMLInputElement).checked = false;
         else if (input.type === "hidden") return;

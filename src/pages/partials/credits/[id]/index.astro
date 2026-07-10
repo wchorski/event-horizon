@@ -121,7 +121,7 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
 } else {
   result = {
     kind: "top-error",
-    message: "No course data available",
+    message: `No ${ctx.crud} data available`,
   };
 }
 ---

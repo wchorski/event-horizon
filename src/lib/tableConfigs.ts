@@ -166,7 +166,6 @@ export const bookingConfigRequired = (
       required: true,
     },
     status: {
-      label: "Locations",
       type: "select",
       required: true,
       options: BOOKING_STATUSES.map((stat) => ({

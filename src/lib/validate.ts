@@ -21,6 +21,24 @@ const datetimeLocalToDate = z
     return date;
   });
 
+const bookingValidation = z.object({
+  id: z.uuidv7(),
+  // Don't reach for z.coerce.date() here — it runs values through new Date(value) directly
+  start: datetimeLocalToDate,
+  end: datetimeLocalToDate,
+  notes: z.string(),
+  status: z.enum(BOOKING_STATUSES),
+  location_id: z.string(),
+  client_id: z.string(),
+  // event_id: z.string(),
+});
+
+const withEndAfterStart = <T extends z.ZodTypeAny>(schema: T) =>
+  schema.refine((data: any) => data.end > data.start, {
+    message: "End must be after start",
+    path: ["end"],
+  });
+
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
@@ -136,25 +154,13 @@ export const validate = {
     return this.course;
   },
 
-  booking: z
-    .object({
-      id: z.uuidv7(),
-      // Don't reach for z.coerce.date() here — it runs values through new Date(value) directly
-      start: datetimeLocalToDate,
-      end: datetimeLocalToDate,
-      notes: z.string(),
-      status: z.enum(BOOKING_STATUSES),
-      location_id: z.string(),
-      client_id: z.string(),
-      // event_id: z.string(),
-    })
-    .refine((data) => data.end > data.start, {
-      message: "End must be after start",
-      path: ["end"], // shows the error under the `end` field in the form
-    }),
+  booking: withEndAfterStart(bookingValidation),
 
+  get bookingCreate() {
+    return withEndAfterStart(bookingValidation.omit({ id: true }));
+  },
   get bookingUpdate() {
-    return this.booking;
+    return withEndAfterStart(bookingValidation);
   },
 
   userLink: z

@@ -109,11 +109,13 @@ export const Booking = pgTable(
     // client_id: uuid().references(() => User.id, { onDelete: "set null" }),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
+    //? Timeline now owns the FK back to Booking 
+    // timeline_id: uuid().references(() => Timeline.id),
     // service_id:
   },
-  (table) => ({
-    endAfterStart: check("end_after_start", sql`${table.end} > ${table.start}`),
-  }),
+  (table) => [
+    check("end_after_start", sql`${table.end} > ${table.start}`),
+  ],
 );
 
 // maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
@@ -143,9 +145,9 @@ export const BookingAssignment = pgTable(
 
     date_assigned: timestamp().notNull().defaultNow(),
   },
-  (table) => ({
-    uniq: unique().on(table.booking_id, table.user_id),
-  }),
+  (table) => [
+    unique().on(table.booking_id, table.user_id),
+  ],
 );
 
 export const bookingRelations = relations(Booking, ({ many, one }) => ({
@@ -155,6 +157,10 @@ export const bookingRelations = relations(Booking, ({ many, one }) => ({
     fields: [Booking.location_id],
     references: [Location.id],
   }),
+  // Booking.timeline_id -> Timeline.id
+  // inverse side — no fields/references, Drizzle infers this from
+  // timelineRelations.booking below since it's the only FK path
+  timeline: one(Timeline)
 }));
 
 export const bookingAssignmentRelations = relations(
@@ -180,8 +186,7 @@ export const Timeline = pgTable("timelines", {
     .primaryKey()
     .default(sql`uuidv7()`),
   booking_id: uuid()
-    // .notNull()
-    .references(() => Booking.id, { onDelete: "cascade" }),
+    .references(() => Booking.id, { onDelete: "cascade" }).unique(),
   owner_user_id: uuid()
     // .notNull()
     .references(() => User.id, { onDelete: "cascade" }),
@@ -202,6 +207,14 @@ export const Timeline = pgTable("timelines", {
   // data: jsonb("data").$type<Record<string, TimelineData>>(),
   data: jsonb("data").$type<TimelineData>(),
 });
+
+export const timelineRelations = relations(Timeline, ({ one }) => ({
+  // Timeline.booking_id -> Booking.id
+  booking: one(Booking, {
+    fields: [Timeline.booking_id],
+    references: [Booking.id],
+  }),
+}));
 
 export const Event = pgTable(
   "events",

@@ -13,7 +13,7 @@ interface Props extends Omit<
   value?: string | number;
   fieldError?: string | null;
   inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
-//   options: FieldOption[] | undefined;
+  //   options: FieldOption[] | undefined;
 }
 const {
   formId,
@@ -23,14 +23,13 @@ const {
   label,
   value,
   fieldError,
-//   options,
+  //   options,
   autofocus,
 } = Astro.props;
 ---
 
 <label>
-  <span>{label || name}</span>
-  <textarea {...inputAttrs} name={name } autofocus={autofocus}
-    >TODO textarea component</textarea
-  >
+  <span class="text">{label ?? name}</span>
+  <textarea {...inputAttrs} form={formId} name={name} autofocus={autofocus}>{value}</textarea>
+  <span id={errorId} class="anim-vibrate field-error">{fieldError ?? ""}</span>
 </label>

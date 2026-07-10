@@ -7,6 +7,7 @@ import SelectField from "@components/form/SelectField.astro";
 import TextareaField from "@components/form/TextareaField.astro";
 import Popover from "@components/Popover.astro";
 import type { CrudRegistryType } from "@lib/crudRegistry";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
 import { slugify } from "@lib/formatters";
 import type {
   BaseRow,
@@ -55,8 +56,23 @@ const anchorName =
   {
     headers.map((key, i) => {
       const field: FieldSlot = config[key] ?? {};
-      const resolvedValue =
-        field.value ?? (row[key] != null ? String(row[key]) : "");
+      // const resolvedValue =
+      //   field.value ?? (row[key] != null ? String(row[key]) : "");
+
+      const resolvedValue = (() => {
+        // if config has override value
+        if (field.value != null) return field.value;
+
+        switch (field.type) {
+          case "datetime-local":
+            return row[key] != null
+              ? toDatetimeLocalValue(row[key] as Date)
+              : "";
+          default:
+            return row[key] != null ? String(row[key]) : "";
+        }
+      })();
+
       const fieldError =
         error && typeof error === "object" && "fieldErrors" in error
           ? (error as any).fieldErrors[key]?.[0]
@@ -94,6 +110,7 @@ const anchorName =
             <td data-key={key} data-type={field.type}>
               <TextareaField
                 {...inputAttrs}
+                formId={`edit-form-${row.id}`}
                 name={key}
                 errorId={`field-error-${crud}-${row.id}-${key}`}
                 autofocus={autofocus}

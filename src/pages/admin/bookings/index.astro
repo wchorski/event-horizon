@@ -7,7 +7,7 @@ import TableMenu from "@components/tables/TableMenu.astro";
 import FilterSelect from "@components/form/FilterSelect.astro";
 import { getBookingsPage } from "@lib/getBookingsPage";
 import TableEditable from "@components/TableEditable.astro";
-import { bookingsRequiredConfig } from "@lib/tableConfigs";
+import { bookingConfigRequired } from "@lib/tableConfigs";
 import RowCreate from "@components/tables/RowCreate.astro";
 import { and, desc, eq } from "drizzle-orm";
 import { Booking } from "@db/schema";
@@ -63,7 +63,7 @@ const { bookings, locations, perPage, totalCount, clients, totalPages } = result
 // SEO metadata
 const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
 
-const config = bookingsRequiredConfig(locations, [], clients)
+const config = bookingConfigRequired(locations, clients)
 const ctx = {
   crud: "bookings" as const,
   config,

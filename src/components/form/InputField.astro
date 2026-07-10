@@ -54,6 +54,7 @@ const prettyVal = (() => {
   switch (true) {
     case type === "tel":
       return formatPhonePrettyManual(value);
+    // TODO this is converted for a second time.... lol
     case type === "datetime-local":
       return value ? toDatetimeLocalValue(value) : value;
 

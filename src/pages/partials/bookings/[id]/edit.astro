@@ -41,7 +41,6 @@ if (Astro.request.method === "GET") {
       .limit(1);
     if (!row) throw new NotFoundError(`Booking ${id} not found`);
     booking = row;
-    console.log({booking});
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;

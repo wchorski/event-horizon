@@ -3,10 +3,11 @@
 import type { BaseRow, FieldConfig } from "@ty/FieldConfig";
 import CellViewElement from "./CellViewElement.astro";
 import type { AstroBuiltinAttributes } from "astro";
-import { slugify } from "@lib/formatters";
+import { prettyPlainCivilDateFull, slugify } from "@lib/formatters";
 import type { ZodError } from "astro/zod";
 import AnchoredBox from "@components/AnchoredBox.astro";
 import type { ModelName } from "@ty/Schema";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
 
 interface Props<TRow extends BaseRow = BaseRow> {
   row: TRow;
@@ -56,6 +57,19 @@ const anchorName =
     headers.map((key) => {
       const field = config[key] ?? {};
       const { label, value: override, type, ...inputAttrs } = field;
+      const resolvedValue = (() => {
+        // if config has override value
+        if (override != null) return override;
+
+        switch (field.type) {
+          case "datetime-local":
+            return row[key] != null
+              ? prettyPlainCivilDateFull(toDatetimeLocalValue(row[key] as Date))
+              : "";
+          default:
+            return row[key] != null ? String(row[key]) : "";
+        }
+      })();
       const options =
         type === "select" && "options" in field ? field.options : undefined;
 
@@ -64,7 +78,7 @@ const anchorName =
           <CellViewElement
             name={key}
             type={type}
-            rawVal={row[key]}
+            rawVal={resolvedValue}
             options={options}
             endpoint={endpoint}
           />

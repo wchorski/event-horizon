@@ -83,58 +83,6 @@ const userRequiredConfig = {
   },
 } as FieldConfig<BaseRow>;
 
-export const bookingsRequiredConfig = (
-  locations: LocationSelect[],
-  events: EventSelect[],
-  clients: UserSelect[],
-) =>
-  ({
-    id: {
-      label: "ID",
-      type: "text",
-      required: true,
-      readonly: true,
-    },
-    start: {
-      type: "datetime-local",
-      required: true,
-    },
-    end: {
-      type: "datetime-local",
-      required: true,
-    },
-    revision: {
-      type: "number",
-      readonly: true,
-    },
-    status: {
-      type: "select",
-      required: true,
-      options: BOOKING_STATUSES.map((status) => ({
-        value: status,
-        label: status,
-      })),
-    },
-    location_id: {
-      label: "Location",
-      type: "select",
-      required: true,
-      options: locations.map((loc) => ({
-        value: loc.id,
-        label: loc.name,
-      })),
-    },
-    client_id: {
-      label: "Client",
-      type: "select",
-      required: true,
-      options: clients.map((user) => ({
-        value: user.id,
-        label: `${user.first_name} ${user.middle_initial || ""} ${user.last_name} <${user.email}>`,
-      })),
-    },
-  }) as FieldConfig<BaseRow>;
-
 export const userCreditCheckInConfig = {
   event_id: {
     label: "Event ID",
@@ -194,7 +142,10 @@ export const courseConfigRequired = (locations: LocationSelect[]) =>
     },
   }) as FieldConfig<BaseRow> satisfies FieldConfig<EventSelect>;
 
-export const bookingConfigRequired = (locations: LocationSelect[], clients: UserSelect[]) =>
+export const bookingConfigRequired = (
+  locations: LocationSelect[],
+  clients: UserSelect[],
+) =>
   ({
     id: {
       label: "ID",
@@ -202,16 +153,17 @@ export const bookingConfigRequired = (locations: LocationSelect[], clients: User
       required: true,
       readonly: true,
     },
+    revision: {
+      type: "number",
+      readonly: true,
+    },
     start: {
-      type: 'datetime-local',
+      type: "datetime-local",
       required: true,
     },
     end: {
-      type: 'datetime-local',
+      type: "datetime-local",
       required: true,
-    },
-    notes: {
-      type: 'textarea',
     },
     status: {
       label: "Locations",
@@ -239,6 +191,9 @@ export const bookingConfigRequired = (locations: LocationSelect[], clients: User
         value: user.id,
         label: `${user.first_name} ${user.last_name} <${user.email}>`,
       })),
+    },
+    notes: {
+      type: "textarea",
     },
   }) as FieldConfig<BaseRow> satisfies FieldConfig<BookingSelect>;
 

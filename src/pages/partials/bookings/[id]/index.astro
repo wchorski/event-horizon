@@ -1,38 +1,52 @@
 ---
-// partials/users/[id].astro
+// partials/bookings/[id].astro
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
-import { tableConfigs } from "@lib/tableConfigs";
-import RowView from "@components/tables/RowView.astro";
-import type { UserSelect } from "@ty/Schema";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
+import { bookingConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import type { BookingSelect, UserSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
-import type { BaseRow } from "@ty/FieldConfig";
-import type { TableRow } from "@ty/Table";
+
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import { Booking } from "@db/schema";
+import { db } from "@db/db";
+import { eq } from "drizzle-orm";
+import { validate } from "@lib/validate";
 type ZodErrorFlattened = ReturnType<ZodError<UserSelect>["flatten"]>;
 interface Params {
   id: string | undefined;
 }
 const { id } = Astro.params;
 if (!id) throw new BadRequestError("course ID missing in request");
-let user: UserSelect | null | undefined = null;
+let booking: BookingSelect | null | undefined = null;
 let error: string | ReturnType<ZodError["flatten"]> | null = null;
-const config = tableConfigs.users.required;
+const session = TEST_ADMIN_SESSION;
+const locations = await crud.locations.readMany(session);
+const users = await crud.users.readMany(session);
+const config = bookingConfigRequired(locations, users);
+
 const ctx = {
-  crud: "users" as CrudRegistryType,
+  crud: "bookings" as CrudRegistryType,
   config,
-  endpoint: "/users",
+  endpoint: "/bookings",
   headers: Object.keys(config),
 };
 
-const session = TEST_ADMIN_SESSION;
-
 if (Astro.request.method === "GET") {
   try {
-    user = await crud.users.read(id, session);
+    const [row] = await db
+      .select()
+      .from(Booking)
+      .where(eq(Booking.id, id))
+      .limit(1);
+    if (!row) throw new NotFoundError(`Booking ${id} not found`);
+    booking = row;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -54,7 +68,16 @@ if (Astro.request.method === "PATCH") {
       id,
     };
 
-    user = await crud.users.update(payload, session);
+    const validated = validate.bookingUpdate.parse(payload);
+
+    const [result] = await db
+      .update(Booking)
+      .set(validated)
+      .where(eq(Booking.id, validated.id))
+      .returning();
+    if (!result) throw new NotFoundError(`Booking ${validated.id} not found`);
+
+    booking = result;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -65,7 +88,12 @@ if (Astro.request.method === "PATCH") {
 
 if (Astro.request.method === "DELETE") {
   try {
-    user = await crud.users.delete(id);
+    const [deleted] = await db
+      .delete(Booking)
+      .where(eq(Booking.id, id))
+      .returning();
+    if (!deleted) throw new NotFoundError(`Booking ${id} not found`);
+    booking = deleted;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -79,8 +107,7 @@ enum PartialType {
 }
 
 const partialType = Astro.request.headers.get("X-Partial-Type") as
-  | PartialType
-  | undefined;
+  PartialType | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
 type RenderResult =
@@ -94,7 +121,7 @@ type RenderResult =
     }
   | {
       kind: "success";
-      user: UserSelect;
+      booking: BookingSelect;
       method: "GET" | "POST" | "PATCH" | "DELETE";
     };
 
@@ -107,10 +134,10 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
     kind: "top-error",
     message: typeof error === "string" ? error : JSON.stringify(error),
   };
-} else if (user) {
+} else if (booking) {
   result = {
     kind: "success",
-    user,
+    booking,
     method: Astro.request.method as any,
   };
 } else {
@@ -138,7 +165,7 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
     />
   ) : (
     <FormSuccess
-      entity={result.user}
+      entity={result.booking}
       method={result.method}
       partialType={partialType}
       ctx={ctx}

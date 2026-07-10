@@ -43,10 +43,7 @@ tr:last-child td {
 }
 th,
 td {
-  padding-inline: 0.5rem;
-}
-td {
-  padding-inline: 0.5rem;
+  padding: 0.5rem 0.2rem;
 }
 
 table.color-alternate tbody > tr:not(.row-error):nth-of-type(odd) {

@@ -1,6 +1,6 @@
 ---
-// partials/bookings/:id/edit
-import { bookingConfigRequired, tableConfigs } from "@lib/tableConfigs";
+// partials/organizations/:id/edit
+import { organizationConfigRequired } from "@lib/tableConfigs";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
@@ -9,25 +9,22 @@ import {
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import { parseOutUndefinedFormData } from "@lib/sanatizers";
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
-import type { BookingSelect } from "@ty/Schema";
+import type { OrganizationSelect } from "@ty/Schema";
 import RowEdit from "@components/tables/RowEdit.astro";
-import { Booking } from "@db/schema";
+import { Organization } from "@db/schema";
 import { db } from "@db/db";
 import { eq } from "drizzle-orm";
 
-let booking: BookingSelect | null | undefined = null;
+let organization: OrganizationSelect | null | undefined = null;
 let error = null;
 
 const { id } = Astro.params;
 if (!id) throw new BadRequestError("user ID missing in request");
-const session = TEST_ADMIN_SESSION;
-const locations = await crud.locations.readMany(session);
-const users = await crud.users.readMany(session);
-const config = bookingConfigRequired(locations, users);
+const config = organizationConfigRequired();
 const ctx = {
-  crud: "bookings" as CrudRegistryType,
+  crud: "organizations" as CrudRegistryType,
   config,
-  endpoint: "/bookings",
+  endpoint: "/organizations",
   headers: Object.keys(config),
 };
 
@@ -36,11 +33,11 @@ if (Astro.request.method === "GET") {
 
     const [row] = await db
       .select()
-      .from(Booking)
-      .where(eq(Booking.id, id))
+      .from(Organization)
+      .where(eq(Organization.id, id))
       .limit(1);
-    if (!row) throw new NotFoundError(`Booking ${id} not found`);
-    booking = row;
+    if (!row) throw new NotFoundError(`Organization ${id} not found`);
+    organization = row;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -66,9 +63,9 @@ const partialType =
     <div id={`top-level-error-${ctx.crud}-${id}`}>
       {typeof error === "string" ? error : JSON.stringify(error)}
     </div>
-  ) : booking && partialType === PartialType.TableRow ? (
-    <RowEdit {...ctx} row={booking} error={error} />
-  ) : booking && partialType === PartialType.SinglePage ? (
+  ) : organization && partialType === PartialType.TableRow ? (
+    <RowEdit {...ctx} row={organization} error={error} />
+  ) : organization && partialType === PartialType.SinglePage ? (
     <button type="button" id="submit-button" disabled>
       ✓ saved
     </button>

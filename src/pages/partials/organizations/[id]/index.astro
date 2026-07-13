@@ -1,20 +1,20 @@
 ---
-// partials/bookings/[id].astro
+// partials/organizations/[id].astro
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
   NotFoundError,
 } from "@lib/errors";
-import { bookingConfigRequired, tableConfigs } from "@lib/tableConfigs";
-import type { BookingSelect, UserSelect } from "@ty/Schema";
+import { organizationConfigRequired } from "@lib/tableConfigs";
+import type { OrganizationSelect, UserSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
 
 import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
-import { Booking } from "@db/schema";
+import { Organization } from "@db/schema";
 import { db } from "@db/db";
 import { eq } from "drizzle-orm";
 import { validate } from "@lib/validate";
@@ -24,17 +24,14 @@ interface Params {
 }
 const { id } = Astro.params;
 if (!id) throw new BadRequestError("course ID missing in request");
-let booking: BookingSelect | null | undefined = null;
+let organization: OrganizationSelect | null | undefined = null;
 let error: string | ReturnType<ZodError["flatten"]> | null = null;
-const session = TEST_ADMIN_SESSION;
-const locations = await crud.locations.readMany(session);
-const users = await crud.users.readMany(session);
-const config = bookingConfigRequired(locations, users);
+const config = organizationConfigRequired();
 
 const ctx = {
-  crud: "bookings" as CrudRegistryType,
+  crud: "organizations" as CrudRegistryType,
   config,
-  endpoint: "/bookings",
+  endpoint: "/organizations",
   headers: Object.keys(config),
 };
 
@@ -42,11 +39,11 @@ if (Astro.request.method === "GET") {
   try {
     const [row] = await db
       .select()
-      .from(Booking)
-      .where(eq(Booking.id, id))
+      .from(Organization)
+      .where(eq(Organization.id, id))
       .limit(1);
-    if (!row) throw new NotFoundError(`Booking ${id} not found`);
-    booking = row;
+    if (!row) throw new NotFoundError(`Organization ${id} not found`);
+    organization = row;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -68,16 +65,17 @@ if (Astro.request.method === "PATCH") {
       id,
     };
 
-    const validated = validate.bookingUpdate.parse(payload);
+    const validated = validate.organizationUpdate.parse(payload);
 
     const [result] = await db
-      .update(Booking)
+      .update(Organization)
       .set(validated)
-      .where(eq(Booking.id, validated.id))
+      .where(eq(Organization.id, validated.id))
       .returning();
-    if (!result) throw new NotFoundError(`Booking ${validated.id} not found`);
+    if (!result)
+      throw new NotFoundError(`Organization ${validated.id} not found`);
 
-    booking = result;
+    organization = result;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -89,11 +87,11 @@ if (Astro.request.method === "PATCH") {
 if (Astro.request.method === "DELETE") {
   try {
     const [deleted] = await db
-      .delete(Booking)
-      .where(eq(Booking.id, id))
+      .delete(Organization)
+      .where(eq(Organization.id, id))
       .returning();
-    if (!deleted) throw new NotFoundError(`Booking ${id} not found`);
-    booking = deleted;
+    if (!deleted) throw new NotFoundError(`Organization ${id} not found`);
+    organization = deleted;
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -121,7 +119,7 @@ type RenderResult =
     }
   | {
       kind: "success";
-      booking: BookingSelect;
+      organization: OrganizationSelect;
       method: "GET" | "POST" | "PATCH" | "DELETE";
     };
 
@@ -134,10 +132,10 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
     kind: "top-error",
     message: typeof error === "string" ? error : JSON.stringify(error),
   };
-} else if (booking) {
+} else if (organization) {
   result = {
     kind: "success",
-    booking,
+    organization,
     method: Astro.request.method as any,
   };
 } else {
@@ -165,7 +163,7 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
     />
   ) : (
     <FormSuccess
-      entity={result.booking}
+      entity={result.organization}
       method={result.method}
       partialType={partialType}
       ctx={ctx}

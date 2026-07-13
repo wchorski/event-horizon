@@ -51,6 +51,8 @@ function createBooking(i: number): BookingSelect {
     event_id: null,
     notes: null,
     secret_notes: null,
+    author_user_id: users[0].id,
+    organization_id: null,
   };
 }
 

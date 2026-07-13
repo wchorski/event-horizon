@@ -1,4 +1,7 @@
-export default [
+import type { UserSelect } from "@ty/Schema";
+
+
+const users: UserSelect = [
   {
     role_id: "019f392b-fad6-70e2-8287-a05da261d652",
     first_name: "Admin",
@@ -16000,3 +16003,5 @@ export default [
     id: "019f392d-881a-764c-82ae-afd8d5a6dac1",
   },
 ];
+
+export default users

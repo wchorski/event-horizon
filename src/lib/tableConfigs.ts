@@ -6,6 +6,7 @@ import type {
   LocationSelect,
   UserSelect,
   BookingSelect,
+  OrganizationSelect,
 } from "@ty/Schema";
 import { prettyDateToLocale } from "./formatters";
 import { BOOKING_STATUSES } from "@db/schema";
@@ -141,6 +142,36 @@ export const courseConfigRequired = (locations: LocationSelect[]) =>
       })),
     },
   }) as FieldConfig<BaseRow> satisfies FieldConfig<EventSelect>;
+
+export const organizationConfigRequired = () =>
+  ({
+    id: {
+      label: "ID",
+      type: "text",
+      required: true,
+      readonly: true,
+    },
+    name: {
+      type: "text",
+      required: true,
+    },
+    slug: {
+      type: "text",
+      required: true,
+    },
+    dedicated_db_url: {
+      type: "text",
+    },
+    color: {
+      type: "color",
+    },
+    color_2: {
+      type: "color",
+    },
+    logo: {
+      type: "text",
+    },
+  }) as FieldConfig<BaseRow> satisfies FieldConfig<OrganizationSelect>;
 
 export const bookingConfigRequired = (
   locations: LocationSelect[],

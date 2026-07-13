@@ -1,3 +1,5 @@
+import users from "./users";
+
 export default [
   {
     id: "019f3932-5abf-7d09-ab2e-bd1b64fa3a67",
@@ -12,6 +14,7 @@ export default [
     timestamp: "2026-06-01T01:00:00.000Z",
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7871-84b7-65989cdd2c7a",
@@ -26,6 +29,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-791c-af03-95b2162c7dd7",
@@ -40,6 +44,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7ec4-bc9e-2c250f6e6234",
@@ -54,6 +59,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-725d-8d3e-81864487708f",
@@ -68,6 +74,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-703c-b043-850a9bd401a9",
@@ -82,6 +89,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7d36-a478-2ebcfa48b205",
@@ -96,6 +104,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7cf6-8889-b8206e1c6369",
@@ -110,6 +119,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-786a-9cc9-2bd3b98aa7b1",
@@ -124,6 +134,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-754c-99a4-1ae1de9a1416",
@@ -137,6 +148,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-724e-a717-95a21d29634b",
@@ -151,6 +163,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-714e-be06-105db244d5d5",
@@ -165,6 +178,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7daf-9858-0c8052ffe696",
@@ -179,6 +193,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7c4a-aa04-3fd72577f802",
@@ -193,6 +208,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7934-9544-ae13cde14684",
@@ -207,6 +223,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7a70-9e18-f74dd82d3274",
@@ -221,6 +238,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7771-b316-3422b4f66dd5",
@@ -235,6 +253,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-78c7-955c-fcb1fbbafd20",
@@ -249,6 +268,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7ac6-9de7-11dfc6c9fde9",
@@ -263,6 +283,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7c76-891b-75d10fed86c4",
@@ -277,6 +298,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-748e-92b1-aaecbc7a3e4a",
@@ -291,6 +313,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7bc3-ad83-f59267a7955b",
@@ -305,6 +328,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-734b-823a-b2281d871011",
@@ -319,6 +343,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-7cb8-9c01-fad5e7d53e96",
@@ -333,6 +358,7 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
   {
     id: "019f3932-5ac0-71c4-be1c-5ecc9b5b47a5",
@@ -347,5 +373,6 @@ export default [
     host: null,
     date_created: "2026-05-01T21:26:37.371Z",
     date_modified: "2026-05-01T21:26:37.371Z",
+    author_user_id: users[0].id
   },
 ];

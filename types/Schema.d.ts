@@ -41,6 +41,8 @@ export type BookingAssignmentInsert = typeof BookingAssignment.$inferInsert;
 export type BookingAssignmentSelect = typeof BookingAssignment.$inferSelect;
 export type TimelineInsert = typeof Timeline.$inferSelect;
 export type TimelineSelect = typeof Timeline.$inferSelect;
+export type OrganizationInsert = typeof Organization.$inferSelect;
+export type OrganizationSelect = typeof Organization.$inferSelect;
 export type UserCreditSelect = {
   ticket: TicketSelect;
   user: UserSelect;

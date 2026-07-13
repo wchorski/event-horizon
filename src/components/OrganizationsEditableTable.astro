@@ -1,0 +1,39 @@
+---
+interface Props {
+  organizations: OrganizationSelect[];
+}
+import type { OrganizationSelect, UserSelect } from "@ty/Schema";
+import TableEditable from "./TableEditable.astro";
+import RowCreate from "./tables/RowCreate.astro";
+import { organizationConfigRequired, tableConfigs } from "@lib/tableConfigs";
+
+const { organizations } = Astro.props;
+
+const config = organizationConfigRequired()
+const ctx = {
+  crud: "organizations" as const,
+  endpoint: "/organizations",
+  config,
+  headers: Object.keys(config)
+}
+---
+
+{
+  organizations.length === 0 ? (
+    <p class="callout not-found">no {ctx.crud} found</p>
+    <table data-crud={ctx.crud}>
+      <tbody id={`${ctx.crud}-table-body`}>
+      </tbody>
+      <tfoot>
+        <RowCreate {...ctx} class:list={"highlight-green"} />
+      </tfoot>
+    </table>
+  ) : (
+    <TableEditable
+      crud={ctx.crud}
+      rows={organizations}
+      endpoint={ctx.endpoint}
+      config={ctx.config}
+    />
+  )
+}

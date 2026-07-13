@@ -1,3 +1,5 @@
+import users from "./users";
+
 export default [
   {
     id: "019f3930-2608-77bb-952c-eed3c15fc515",
@@ -9,6 +11,7 @@ export default [
     timezone: "America/Chicago",
     excerpt:
       "A legendary recording room tied to early rock ‘n' roll history—perfect for a rockabilly / classic rock themed party vibe.",
+    author_user_id: users[0].id,
   },
   {
     id: "019f3930-2608-7d4f-a6cf-a977a903e9f1",
@@ -18,6 +21,7 @@ export default [
     state: "Michigan",
     zip: "48208",
     timezone: "America/Detroit",
+    author_user_id: users[0].id,
     excerpt:
       "Instant Motown theme—think soul, R&B, and the 'Sound of Young America' energy for a dance-forward party.",
   },
@@ -29,6 +33,7 @@ export default [
     state: "Minnesota",
     zip: "55403",
     timezone: "America/Chicago",
+    author_user_id: users[0].id,
     excerpt:
       "Iconic Minneapolis music venue strongly associated with Prince/pop-funk era aesthetics—great for an 80s / purple neon theme.",
   },
@@ -40,6 +45,7 @@ export default [
     state: "California",
     zip: "90069",
     timezone: "America/Los_Angeles",
+    author_user_id: users[0].id,
     excerpt:
       "Classic Sunset Strip rock landmark—ideal for a guitars-and-leather, glam/rock party concept.",
   },
@@ -51,6 +57,7 @@ export default [
     state: "internet",
     zip: "00000",
     timezone: "America/Chicago",
+    author_user_id: users[0].id,
     excerpt: null,
   },
 ];

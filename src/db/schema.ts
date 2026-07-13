@@ -24,6 +24,9 @@ export const Role = pgTable("roles", {
   label: text().notNull().unique(),
   excerpt: text(),
   permissions: text().array().notNull().default([]),
+  organization_id: uuid()
+    .notNull()
+    .references(() => Organization.id, { onDelete: "cascade" }),
 });
 
 export const Location = pgTable(
@@ -39,6 +42,12 @@ export const Location = pgTable(
     zip: text().notNull(),
     timezone: text().notNull(),
     excerpt: text(),
+    author_user_id: uuid()
+      .notNull()
+      .references(() => User.id),
+    organization_id: uuid().references(() => Organization.id, {
+      onDelete: "cascade",
+    }),
   },
   (table) => [
     index("locations_city_idx").on(table.city),
@@ -54,6 +63,10 @@ export const User = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     role_id: uuid().references(() => Role.id),
+    //? handled with `OrganizationMembership` relationship
+    // organization_id: uuid()
+    //   .notNull()
+    //   .references(() => Organization.id, { onDelete: "cascade" }),
     first_name: text().notNull(),
     last_name: text().notNull(),
     middle_initial: text(),
@@ -104,18 +117,22 @@ export const Booking = pgTable(
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),
     // worker_ids: added with bookingRelations
+    author_user_id: uuid()
+      .notNull()
+      .references(() => User.id),
     client_id: uuid().references(() => User.id),
     // TODO allow booking to survive if User is deleted
     // client_id: uuid().references(() => User.id, { onDelete: "set null" }),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
-    //? Timeline now owns the FK back to Booking 
+    organization_id: uuid().references(() => Organization.id, {
+      onDelete: "cascade",
+    }),
+    //? Timeline now owns the FK back to Booking
     // timeline_id: uuid().references(() => Timeline.id),
     // service_id:
   },
-  (table) => [
-    check("end_after_start", sql`${table.end} > ${table.start}`),
-  ],
+  (table) => [check("end_after_start", sql`${table.end} > ${table.start}`)],
 );
 
 // maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
@@ -145,22 +162,33 @@ export const BookingAssignment = pgTable(
 
     date_assigned: timestamp().notNull().defaultNow(),
   },
-  (table) => [
-    unique().on(table.booking_id, table.user_id),
-  ],
+  (table) => [unique().on(table.booking_id, table.user_id)],
 );
 
 export const bookingRelations = relations(Booking, ({ many, one }) => ({
   assignments: many(BookingAssignment),
-  client: one(User, { fields: [Booking.client_id], references: [User.id] }),
+  author: one(User, {
+    fields: [Booking.author_user_id],
+    references: [User.id],
+    relationName: "booking_author",
+  }),
+  client: one(User, {
+    fields: [Booking.client_id],
+    references: [User.id],
+    relationName: "booking_client",
+  }),
   location: one(Location, {
     fields: [Booking.location_id],
     references: [Location.id],
   }),
+  organization: one(Organization, {
+    fields: [Booking.organization_id],
+    references: [Organization.id],
+  }),
   // Booking.timeline_id -> Timeline.id
   // inverse side — no fields/references, Drizzle infers this from
   // timelineRelations.booking below since it's the only FK path
-  timeline: one(Timeline)
+  timeline: one(Timeline),
 }));
 
 export const bookingAssignmentRelations = relations(
@@ -186,7 +214,8 @@ export const Timeline = pgTable("timelines", {
     .primaryKey()
     .default(sql`uuidv7()`),
   booking_id: uuid()
-    .references(() => Booking.id, { onDelete: "cascade" }).unique(),
+    .references(() => Booking.id, { onDelete: "cascade" })
+    .unique(),
   owner_user_id: uuid()
     // .notNull()
     .references(() => User.id, { onDelete: "cascade" }),
@@ -231,7 +260,14 @@ export const Event = pgTable(
     location_id: uuid()
       .notNull()
       .references(() => Location.id),
-    host: uuid().references(() => User.id),
+    organization_id: uuid().references(() => Organization.id, {
+      onDelete: "cascade",
+    }),
+    //? one to many relation `hosts`
+    // host: uuid().references(() => User.id),
+    author_user_id: uuid()
+      .notNull()
+      .references(() => User.id),
     date_created: timestamp().notNull().defaultNow(),
     date_modified: timestamp().notNull().defaultNow(),
   },
@@ -244,6 +280,53 @@ export const Event = pgTable(
     ),
   ],
 );
+
+// Junction table for many-to-many relationship between events and hosts
+export const EventHost = pgTable(
+  "event_hosts",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    event_id: uuid()
+      .notNull()
+      .references(() => Event.id, { onDelete: "cascade" }),
+    user_id: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    date_assigned: timestamp().notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.event_id, table.user_id)],
+);
+
+export const eventRelations = relations(Event, ({ many, one }) => ({
+  hosts: many(EventHost),
+  location: one(Location, {
+    fields: [Event.location_id],
+    references: [Location.id],
+  }),
+  organization: one(Organization, {
+    fields: [Event.organization_id],
+    references: [Organization.id],
+  }),
+  author: one(User, {
+    fields: [Event.author_user_id],
+    references: [User.id],
+    relationName: "event_author",
+  }),
+}));
+
+export const eventHostRelations = relations(EventHost, ({ one }) => ({
+  event: one(Event, {
+    fields: [EventHost.event_id],
+    references: [Event.id],
+  }),
+  user: one(User, {
+    fields: [EventHost.user_id],
+    references: [User.id],
+    relationName: "event_host_user",
+  }),
+}));
 
 export const Ticket = pgTable(
   "tickets",
@@ -273,4 +356,44 @@ export const Ticket = pgTable(
     //   table.user_id,
     // ),
   ],
+);
+
+export const Organization = pgTable("organizations", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  name: text().notNull(),
+  slug: text().notNull().unique(), // for subdomains/URLs: acme.yourapp.com
+  // for isolated DB (needed for some enterprise buisness)
+  dedicated_db_url: text(),
+  color: text(),
+  color_2: text(),
+  logo: text(),
+  date_created: timestamp().notNull().defaultNow(),
+  date_modified: timestamp().notNull().defaultNow(),
+});
+
+export const orgMemberRoleEnum = pgEnum("org_member_role", [
+  "OWNER",
+  "ADMIN",
+  "STAFF",
+  "CLIENT",
+]);
+
+export const OrganizationMembership = pgTable(
+  "organization_memberships",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organization_id: uuid()
+      .notNull()
+      .references(() => Organization.id, { onDelete: "cascade" }),
+    user_id: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    role: orgMemberRoleEnum("role").notNull().default("STAFF"),
+    date_joined: timestamp().notNull().defaultNow(),
+  },
+  (table) => [unique().on(table.organization_id, table.user_id)],
 );

@@ -98,6 +98,7 @@ docker compose up --remove-orphans
 
 #todo
 - [ ] add "organization" in schema that allows SaaS multi tenant multi buisness to use this app, but seperate users, locations, bookings, etc to respective user base.
+- [ ] if user is not apart of org then only self created/owned Events, Bookings, Timelines, etc are viewable. 
 - [ ] print url removal https://stackoverflow.com/questions/2192806/can-i-remove-the-url-from-my-print-css-so-the-web-address-doesnt-print
 - [ ] footer linking to open source repo and tawtaw.site
 - [ ] REMOVE any microsoft, wordpress, api hooks and functions

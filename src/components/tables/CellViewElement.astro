@@ -57,6 +57,10 @@ const prettyVal = (() => {
     <span class="false">false</span>
   ) : type === "checkbox" && Boolean(rawVal) === true ? (
     <span class="true">true</span>
+  ) : type === "color" ? (
+    <span style={`color: ${rawVal}; border-bottom: 3px solid ${rawVal}`}>
+      {prettyVal}
+    </span>
   ) : prettyVal ? (
     <span>{prettyVal}</span>
   ) : (

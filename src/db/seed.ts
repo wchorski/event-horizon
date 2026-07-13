@@ -57,6 +57,7 @@ if (process.argv.includes("--truncate")) {
   await db.delete(schema.User);
   await db.delete(schema.Location);
   await db.delete(schema.Role);
+  await db.delete(schema.Organization);
 }
 
 // if (process.argv.includes("--truncate")) {
@@ -97,14 +98,17 @@ if (process.argv.includes("--truncate")) {
 // );
 
 console.log("🌱 Seeding Database 🌱");
+console.log(`=== Organizations (+${seedData.organizations.length}) ===`);
+const orgCoreced = seedData.organizations.map((item) => ({
+  ...item,
+  date_created: new Date(item.date_created),
+  date_modified: new Date(item.date_modified),
+}));
+await db.insert(schema.Organization).values(orgCoreced);
+
 console.log(`=== Roles (+${seedData.roles.length})===`);
 await db.insert(schema.Role).values(seedData.roles);
 
-console.log(`=== Locations (+${seedData.locations.length})===`);
-await db.insert(schema.Location).values(seedData.locations);
-// seedData.roles.forEach((element) => {
-//   console.log(`+ ${element.label}`);
-// });
 console.log(`=== Users (+${seedData.users.length}) ===`);
 const usersCoreced = seedData.users.map((item) => ({
   ...item,
@@ -112,6 +116,12 @@ const usersCoreced = seedData.users.map((item) => ({
   date_modified: new Date(item.date_modified),
 }));
 await db.insert(schema.User).values(usersCoreced);
+
+console.log(`=== Locations (+${seedData.locations.length})===`);
+await db.insert(schema.Location).values(seedData.locations);
+// seedData.roles.forEach((element) => {
+//   console.log(`+ ${element.label}`);
+// });
 // seedData.users.forEach((element) => {
 //   console.log(`+ ${element.email}`);
 // });

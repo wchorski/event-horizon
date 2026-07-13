@@ -29,6 +29,7 @@ export function createPgAstroPool() {
 
   const { PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE } = import.meta.env;
 
+  // TODO utilize Organization `dedicated_db_url` connection for future enterprise customers
   // return new Client({
   return new Pool({
     // pg automatically reads PG* vars

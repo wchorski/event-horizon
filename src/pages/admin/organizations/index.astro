@@ -1,0 +1,76 @@
+---
+import OrganizationsEditableTable from "@components/OrganizationsEditableTable.astro";
+import AdminNav from "@components/navigation/AdminNav.astro";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { getUsersPage } from "@lib/getUsersPage";
+import PaginationNav from "@components/navigation/PaginationNav.astro";
+import TableMenu from "@components/tables/TableMenu.astro";
+import { getOrganizations } from "@lib/dbQueries/getOrganizations";
+const { SITE_TITLE } = import.meta.env;
+const params = Astro.url.searchParams;
+
+const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
+const DEFAULT_PER_PAGE = 25;
+
+let perPageParam = DEFAULT_PER_PAGE;
+const page = parseInt(params.get("page") || "1");
+const rawPerPage = params.get("perPage");
+
+if (rawPerPage !== null) {
+  const n = Number(rawPerPage);
+
+  if (ALLOWED_PER_PAGE.includes(n)) {
+    perPageParam = n;
+  } else {
+    params.delete("perPage");
+    return Astro.redirect(`${Astro.url.pathname}?${params.toString()}`);
+  }
+}
+
+// TODO get organizations
+const result = await getOrganizations({ page, perPage: perPageParam });
+
+if ("redirect" in result) {
+  return Astro.redirect("/admin/organizations");
+}
+
+const { organizations, perPage, totalCount, totalPages } = result;
+
+// SEO metadata
+const pageTitle = page === 1 ? "Organizations" : `Organizations - Page ${page}`;
+---
+
+<BaseLayout>
+  <Fragment slot="head">
+    <title>{pageTitle} | {SITE_TITLE}</title>
+  </Fragment>
+  <script type="module" src="/src/client/tablePerPage.ts"></script>
+  <AdminNav />
+  <main>
+    <header class="flex space-between">
+      <h1>Organizations - Page {page}</h1>
+    </header>
+    <div data-layout="content" class="content">
+      <TableMenu
+        page={page}
+        perPage={perPage}
+        model="organizations"
+        placeholder={"Search by name, email, or phone..."}
+      />
+      <OrganizationsEditableTable organizations={organizations} />
+       <ul>
+         {organizations.map(org => (<li>{org.name}</li>))}
+       </ul>
+      {
+        organizations ? (
+          <PaginationNav
+            path="/admin/organizations"
+            page={page}
+            perPage={perPage}
+            totalCount={totalCount}
+          />
+        ) : null
+      }
+    </div>
+  </main>
+</BaseLayout>

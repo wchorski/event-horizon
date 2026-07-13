@@ -8,6 +8,7 @@ import type {
   UserSelect,
   RoleSelect,
   BookingSelect,
+  OrganizationSelect,
 } from "@ty/Schema";
 
 import users from "./seed/users";
@@ -16,6 +17,7 @@ import bookings from "./seed/bookings";
 import locations from "./seed/locations";
 import roles from "./seed/roles";
 import tickets from "./seed/tickets";
+import organizations from "./seed/organizations";
 
 type SeedData = {
   locations: LocationSelect[];
@@ -24,6 +26,7 @@ type SeedData = {
   events: EventSelect[];
   roles: RoleSelect[];
   bookings: BookingSelect[];
+  organizations: OrganizationSelect[];
 };
 
 export const seedData: SeedData = {
@@ -33,4 +36,5 @@ export const seedData: SeedData = {
   users,
   events,
   bookings,
+  organizations,
 };

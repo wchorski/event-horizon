@@ -1,5 +1,5 @@
 import { z } from "astro/zod";
-import { normalizePhoneToE164Manual } from "./formatters";
+import { normalizePhoneToE164Manual, slugify } from "./formatters";
 import { BOOKING_STATUSES } from "@db/schema";
 
 const datetimeLocalToDate = z
@@ -38,6 +38,17 @@ const withEndAfterStart = <T extends z.ZodTypeAny>(schema: T) =>
     message: "End must be after start",
     path: ["end"],
   });
+
+export const slugSchema = z
+  .string()
+  .transform(slugify)
+  .pipe(
+    z
+      .string()
+      .min(1, "Slug cannot be empty")
+      .max(200, "Slug too long")
+      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Invalid slug format")
+  );
 
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
@@ -232,5 +243,24 @@ export const validate = {
         });
       }
     });
+  },
+
+  organization: z.object({
+    id: z.uuidv7(),
+    name: z.string().min(3),
+    slug: slugSchema,
+    color: z.string().min(3).optional(),
+    color_2: z.string().min(3).optional(),
+    dedicated_db_url: z.string().optional(),
+    logo: z.string().optional(),
+    // dedicated_db_url: z.url().optional(),
+    // logo: z.url().optional(),
+  }),
+
+  get organizationCreate() {
+    return this.organization.omit({ id: true });
+  },
+  get organizationUpdate() {
+    return this.organization;
   },
 };

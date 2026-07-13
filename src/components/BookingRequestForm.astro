@@ -1,0 +1,88 @@
+---
+import { Booking } from "@db/schema";
+import type { BookingSelect, LocationSelect } from "@ty/Schema";
+import InputField from "./form/InputField.astro";
+import SubmitButton from "./form/SubmitButton.astro";
+import type { HTMLAttributes } from "astro/types";
+import type { SelectOption } from "@ty/Form";
+import SelectField from "./form/SelectField.astro";
+import TextareaField from "./form/TextareaField.astro";
+
+interface Props extends HTMLAttributes<"form"> {
+  author_user_id: string;
+  formId?: string;
+  locationOptions?: SelectOption[];
+}
+const {
+  author_user_id,
+  formId = "create_a_booking",
+  class: classList,
+  locationOptions = [],
+  ...attr
+} = Astro.props;
+const model = "bookings";
+const errorTargetId = `top-level-error-${model}-${formId}`;
+---
+
+<form
+  id={formId}
+  class:list={[classList, "bookings-form"]}
+  hx-ext="response-targets"
+  hx-post={`/partials/bookings/request/${author_user_id}`}
+  hx-target={`#${formId}`}
+  hx-target-error={`#${errorTargetId}`}
+  hx-swap="outerHTML"
+  hx-headers='{"X-Partial-Type": "single-page"}'
+>
+  <legend>Create a Booking</legend>
+
+  <fieldset>
+    <legend>Date & Time</legend>
+    <InputField
+      id={"start"}
+      name={"start"}
+      model={"bookings"}
+      type={"datetime-local"}
+    />
+    <TextareaField name={"notes"} errorId={"notes-error"} />
+  </fieldset>
+
+  <fieldset>
+    <legend>Location</legend>
+    <SelectField
+      label=""
+      name="location_id"
+      options={locationOptions}
+      errorId={"location_id-error"}
+    >
+      <option slot="first-option">-- select location --</option>
+    </SelectField>
+
+    <legend>Or add a new location</legend>
+    <InputField id={"name"} name={"name"} model={"bookings"} type={"text"} />
+    <InputField
+      id={"address"}
+      name={"address"}
+      model={"bookings"}
+      type={"text"}
+    />
+    <InputField id={"city"} name={"city"} model={"bookings"} type={"text"} />
+    <InputField id={"state"} name={"state"} model={"bookings"} type={"text"} />
+    <InputField id={"zip"} name={"zip"} model={"bookings"} type={"text"} />
+    <InputField
+      id={"timezone"}
+      name={"timezone"}
+      model={"bookings"}
+      type={"text"}
+    />
+  </fieldset>
+
+  <fieldset class="actions">
+    <div class="row-error error top-level">
+      <p class="message">
+        <span id={errorTargetId}></span>
+      </p>
+    </div>
+    <SubmitButton />
+  </fieldset>
+</form>

@@ -1,0 +1,30 @@
+---
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import BookingRequestForm from "@components/BookingRequestForm.astro";
+import { getLocationsPage } from "@lib/getLocationsPage";
+import { seedData } from "@db/seed-data";
+import { undefined } from "astro:schema";
+
+const { locations } = await getLocationsPage({ page: 1, perPage: 25 });
+const locationOptions = locations?.map((loc) => ({
+  value: loc.id,
+  label: `${loc.name} <${loc.address}>`,
+}));
+//? handled with html slot instead
+// locationOptions?.unshift({ value: "", label: "-- select location --" });
+---
+
+<CommonPageLayout>
+  <main>
+    <header>
+      <h1>Create a Booking</h1>
+    </header>
+
+    <div data-layout="content" class="content">
+      <BookingRequestForm
+        locationOptions={locationOptions}
+        author_user_id={seedData.users[0].id}
+      />
+    </div>
+  </main>
+</CommonPageLayout>

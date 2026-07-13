@@ -3,11 +3,15 @@ interface Params {
   id: string;
 }
 import { db } from "@db/db";
-import { Event, Location } from "@db/schema";
+import { Booking, Location, User } from "@db/schema";
 import { eq } from "drizzle-orm";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import InputField from "@components/form/InputField.astro";
-import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import {
+  bookingConfigRequired,
+  courseConfigRequired,
+  tableConfigs,
+} from "@lib/tableConfigs";
 import type {
   FieldConfig,
   BaseRow,
@@ -23,26 +27,32 @@ import { crud } from "@lib/crudRegistry";
 import PageEditorWithSidebarLayout from "@layouts/PageEditorWithSidebarLayout.astro";
 import { slugify } from "@lib/formatters";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
 
 const { id } = Astro.params;
 if (!id) throw new Error("no id found. throw 404");
-const [row] = await db.select().from(Event).where(eq(Event.id, id)).limit(1);
+const [row] = await db
+  .select()
+  .from(Booking)
+  .where(eq(Booking.id, id))
+  .limit(1);
 
 if (!row) return Astro.redirect("/404");
 
 const locations = await db.select().from(Location);
+const users = await db.select().from(User);
 
 const { DATALIST_CITIES, DATALIST_STATES, DATALIST_TIMEZONES } = import.meta
   .env;
 
 // const {} = row;
 
-const config = courseConfigRequired(locations);
+const config = bookingConfigRequired(locations, users);
 
 const headers = Object.keys(config) as (keyof typeof row & string)[];
 const error = null;
-const submitUrl = `/partials/events/${row.id}`;
-const model = "events";
+const submitUrl = `/partials/bookings/${row.id}`;
+const model = "bookings";
 ---
 
 <PageEditorWithSidebarLayout>
@@ -53,7 +63,7 @@ const model = "events";
   </nav>
   <main>
     <header>
-      <h1>Edit Event:</h1>
+      <h1>Edit Booking:</h1>
     </header>
 
     <div data-layout="content">
@@ -63,7 +73,7 @@ const model = "events";
         hx-patch={submitUrl}
         hx-headers='{"X-Partial-Type": "single-page"}'
         hx-target="#submit-button"
-        hx-target-error={`#top-level-error-${"events"}-${row.id}`}
+        hx-target-error={`#top-level-error-${"bookings"}-${row.id}`}
         hx-swap="outerHTML"
         hx-disabled-elt="button, form"
         hx-indicator="#submit-button"
@@ -71,8 +81,19 @@ const model = "events";
         {
           headers.map((key, i) => {
             const field: FieldSlot = config[key] ?? {};
-            const resolvedValue =
-              field.value ?? (row[key] != null ? String(row[key]) : "");
+            const resolvedValue = (() => {
+              // if config has override value
+              if (field.value != null) return field.value;
+
+              switch (field.type) {
+                case "datetime-local":
+                  return row[key] != null
+                    ? toDatetimeLocalValue(row[key] as Date)
+                    : "";
+                default:
+                  return row[key] != null ? String(row[key]) : "";
+              }
+            })();
             const fieldError =
               error && typeof error === "object" && "fieldErrors" in error
                 ? (error as any).fieldErrors[key]?.[0]
@@ -99,7 +120,9 @@ const model = "events";
                     name={key}
                     label={label}
                     options={options}
-                  />
+                  >
+                    <option slot="first-option" value={""}>-- no {label} selected --</option>
+                  </SelectField>
                 );
               }
 
@@ -190,7 +213,7 @@ const model = "events";
 
         <fieldset class="actions">
           <div
-            id={`top-level-error-${"events"}-${row.id}`}
+            id={`top-level-error-${"bookings"}-${row.id}`}
             class="row-error error top-level"
           >
           </div>
@@ -210,8 +233,8 @@ const model = "events";
         <dl class="kv">
           <dt>Link</dt>
           <dd>
-            <a href={`/events/${row.id}`} target="_blank"
-              >{`/events/:id`}
+            <a href={`/bookings/${row.id}`} target="_blank"
+              >{`/bookings/:id`}
               <svg
                 width="20px"
                 height="20px"

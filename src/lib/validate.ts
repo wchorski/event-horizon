@@ -21,6 +21,8 @@ const datetimeLocalToDate = z
     return date;
   });
 
+const idNullUnion = z.union([z.string(), z.null()]).transform(val => val === "" ? null : val)
+
 const bookingValidation = z.object({
   id: z.uuidv7(),
   // Don't reach for z.coerce.date() here — it runs values through new Date(value) directly
@@ -28,8 +30,8 @@ const bookingValidation = z.object({
   end: datetimeLocalToDate,
   notes: z.string(),
   status: z.enum(BOOKING_STATUSES),
-  location_id: z.string(),
-  client_id: z.string(),
+  location_id: idNullUnion,
+  client_id: idNullUnion,
   // event_id: z.string(),
 });
 

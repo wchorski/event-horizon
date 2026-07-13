@@ -207,7 +207,7 @@ export const bookingConfigRequired = (
     location_id: {
       label: "Location",
       type: "select",
-      required: true,
+      // required: true,
       options: locations.map((loc) => ({
         value: loc.id,
         label: loc.name,
@@ -216,7 +216,7 @@ export const bookingConfigRequired = (
     client_id: {
       label: "Client",
       type: "select",
-      required: true,
+      // required: true,
       options: clients.map((user) => ({
         value: user.id,
         label: `${user.first_name} ${user.last_name} <${user.email}>`,

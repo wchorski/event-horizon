@@ -1,0 +1,118 @@
+---
+import InputField from "@components/form/InputField.astro";
+import SubmitButton from "@components/form/SubmitButton.astro";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import { auth } from "@lib/auth";
+
+type SignUpFields = {
+  email: string;
+  password: string;
+  image: string;
+  username: string;
+};
+
+const session = Astro.locals.session;
+
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+
+  const payload = Object.fromEntries(formData.entries());
+
+  const { email, password, image, username } = payload as SignUpFields;
+
+  console.log({ payload });
+
+  if (!email || !password) {
+    error = "Email and password are required.";
+  } else {
+    try {
+      const response = await auth.api.signUpEmail({
+        body: {
+          email,
+          password,
+          image: image || undefined,
+          username: username || undefined,
+          name: username || "",
+          displayUsername: username || undefined,
+        },
+        asResponse: true, // returns a real Response so you can forward its Set-Cookie header
+      });
+
+      if (response.status > 399) {
+        const errorBody = await response.json().catch(() => null);
+        error =
+          errorBody?.message ?? `Sign up failed (status ${response.status})`;
+      } else {
+        // console.log("🍪 raw set-cookie:", response.headers.get("set-cookie"));
+        // console.log("🍪 getSetCookie:", response.headers.getSetCookie?.());
+        const redirectResponse = new Response(null, {
+          status: 302,
+          headers: { Location: "/" },
+        });
+
+        const setCookies = response.headers.getSetCookie?.() ?? [];
+        for (const cookie of setCookies) {
+          redirectResponse.headers.append("set-cookie", cookie);
+        }
+
+        return redirectResponse;
+      }
+
+    } catch (err: any) {
+      console.log({ err });
+      error = `Sign up failed. ${String(err)}`;
+    }
+  }
+}
+---
+
+<CommonPageLayout>
+  <header>
+    <h1>Sign Up</h1>
+  </header>
+  <div data-layout="content">
+    {
+      session ? (
+        <p>
+          You are currently logged in as{" "}
+          <pre>{JSON.stringify(session, null, 2)}</pre>
+        </p>
+      ) : null
+    }
+    <form id="sign-up-form" method="POST">
+      <InputField
+        name="email"
+        type={"email"}
+        id="email"
+        model={"accounts"}
+        required={true}
+      />
+      <InputField
+        name="password"
+        type={"password"}
+        id="password"
+        model={"accounts"}
+        required={true}
+      />
+      <InputField
+        name="username"
+        type={"text"}
+        id="username"
+        model={"accounts"}
+      />
+      <InputField name="image" type={"text"} id="image" model={"accounts"} />
+
+      <SubmitButton />
+    </form>
+    {
+      error && (
+        <p class="form-error error callout" role="alert">
+          {error}
+        </p>
+      )
+    }
+  </div>
+</CommonPageLayout>

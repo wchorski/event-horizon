@@ -41,6 +41,7 @@ if (!row) return Astro.redirect("/404");
 
 const locations = await db.select().from(Location);
 const users = await db.select().from(User);
+const author = users.find((usr) => usr.id === row.author_user_id);
 
 const { DATALIST_CITIES, DATALIST_STATES, DATALIST_TIMEZONES } = import.meta
   .env;
@@ -121,7 +122,9 @@ const model = "bookings";
                     label={label}
                     options={options}
                   >
-                    <option slot="first-option" value={""}>-- no {label} selected --</option>
+                    <option slot="first-option" value={""}>
+                      -- no {label} selected --
+                    </option>
                   </SelectField>
                 );
               }
@@ -253,6 +256,14 @@ const model = "bookings";
                     stroke-linejoin="round"></path>
                 </g>
               </svg></a
+            >
+          </dd>
+          <dt>Author</dt>
+          <dd>
+            <a href={`/users/${author?.id}`} target="_blank"
+              >{
+                `${author?.first_name} ${author?.last_name} <${author?.email}>`
+              }</a
             >
           </dd>
 

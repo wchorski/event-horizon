@@ -22,6 +22,8 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
+  casing: "snake_case",
+  verbose: process.env.NODE_ENV === "development" ? true : false,
   dbCredentials: {
     url: DATABASE_URL,
     ssl: process.env.NODE_ENV === "production" ? "require" : undefined,

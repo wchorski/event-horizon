@@ -1,23 +1,39 @@
 import { db } from "@db/db";
 import { Booking, Location, User } from "@db/schema";
-import { desc, count, eq, and, gt } from "drizzle-orm";
+import { desc, count, eq, and, gt, or } from "drizzle-orm";
 
 interface Props {
   page: number;
   perPage?: number;
   location_id?: string;
+  author_user_id?: string;
+  client_id?: string;
+  organization_id?: string;
   selectFields?: Object;
 }
 
+// TODO how do i NOT allow anonymous users to not view any. i need to think of permissions and access from db level
 export async function getBookingsPage({
   page,
   perPage = 12,
   location_id,
+  author_user_id,
+  client_id,
+  organization_id,
 }: Props) {
   const conditions = [];
 
   if (location_id) {
     conditions.push(eq(Booking.location_id, location_id));
+  }
+  if (author_user_id) {
+    conditions.push(eq(Booking.author_user_id, author_user_id));
+  }
+  if (client_id) {
+    conditions.push(eq(Booking.client_id, client_id));
+  }
+  if (organization_id) {
+    conditions.push(eq(Booking.organization_id, organization_id));
   }
 
   // const now = new Date();
@@ -28,7 +44,7 @@ export async function getBookingsPage({
   const totalResult = await db
     .select({ count: count(Booking.id) })
     .from(Booking)
-    .where(and(...conditions));
+    .where(or(...conditions));
 
   const totalCount = totalResult[0].count;
   const totalPages = Math.ceil(totalCount / perPage);
@@ -38,7 +54,7 @@ export async function getBookingsPage({
   }
 
   const bookings = await db.query.Booking.findMany({
-    where: and(...conditions),
+    where: or(...conditions),
     orderBy: desc(Booking.start),
     limit: perPage,
     offset: (page - 1) * perPage,

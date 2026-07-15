@@ -1,53 +1,154 @@
 ---
-import BaseLayout from "@layouts/BaseLayout.astro";
-import { getEventsPage } from "@lib/getEventsPage";
-import EventsList from "@components/EventsList.astro";
 import PaginationNav from "@components/navigation/PaginationNav.astro";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import { Booking } from "@db/schema";
+import { getBookingsPage } from "@lib/getBookingsPage";
+import { bookingConfigRequired } from "@lib/tableConfigs";
+import TableMenu from "@components/tables/TableMenu.astro";
+import TableEditable from "@components/TableEditable.astro";
+import FilterSelect from "@components/form/FilterSelect.astro";
+import { eq } from "drizzle-orm";
 const { SITE_TITLE } = import.meta.env;
+
+const user = Astro.locals.user
+
 const page = parseInt(Astro.url.searchParams.get("page") || "1");
 
-// Redirect ?page=1 to clean /events
+// Redirect ?page=1 to clean /bookings
 if (page === 1 && Astro.url.searchParams.has("page")) {
-  return Astro.redirect("/events", 301);
+  return Astro.redirect("/bookings", 301);
 }
 
-// const result = await getEventsPage({ page });
 
-// if ("redirect" in result) {
-//   return Astro.redirect("/bookings");
-// }
+const params = Astro.url.searchParams;
+const rawLocation = params.get("location_id");
 
-// const { events = [], perPage, totalCount, totalPages } = result;
+if (params.has("location_id") && rawLocation === "") {
+  return Astro.redirect(Astro.url.pathname);
+}
 
+const location_id = rawLocation ?? undefined;
+
+const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
+const DEFAULT_PER_PAGE = 25;
+
+let perPageParam = DEFAULT_PER_PAGE;
+const rawPerPage = params.get("perPage");
+
+if (rawPerPage !== null) {
+  const n = Number(rawPerPage);
+
+  if (ALLOWED_PER_PAGE.includes(n)) {
+    perPageParam = n;
+  } else {
+    params.delete("perPage");
+    return Astro.redirect(`${Astro.url.pathname}?${params.toString()}`);
+  }
+}
+
+const result = await getBookingsPage({
+  page,
+  perPage: perPageParam,
+  location_id,
+  author_user_id: user?.id,
+  client_id: user?.id
+});
+
+if ("redirect" in result) {
+  return Astro.redirect("/bookings");
+}
+
+const { bookings, locations, perPage, totalCount, clients, totalPages } = result;
+
+
+const config = bookingConfigRequired(locations, clients)
+const ctx = {
+  crud: "bookings" as const,
+  config,
+  headers: Object.keys(config)
+}
 // SEO metadata
 const canonicalUrl =
-  page === 1 ? `${Astro.site}/events` : `${Astro.site}/events?page=${page}`;
-const pageTitle = page === 1 ? "Events" : `Events - Page ${page}`;
+  page === 1 ? `${Astro.site}/bookings` : `${Astro.site}/bookings?page=${page}`;
+const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
 ---
 
-<BaseLayout>
+<CommonPageLayout>
   <Fragment slot="head">
     <link rel="canonical" href={canonicalUrl} />
     {
       page > 1 && (
         <link
           rel="prev"
-          href={page === 2 ? `/events` : `/events?page=${page - 1}`}
+          href={page === 2 ? `/bookings` : `/bookings?page=${page - 1}`}
         />
       )
     }
-    <!-- {page < totalPages && <link rel="next" href={`/events?page=${page + 1}`} />} -->
+    <!-- {page < totalPages && <link rel="next" href={`/bookings?page=${page + 1}`} />} -->
     <title>{pageTitle} | {SITE_TITLE}</title>
     <!-- <meta
       name="description"
-      content={`Browse events - page ${page} of ${totalPages}`}
+      content={`Browse bookings - page ${page} of ${totalPages}`}
     /> -->
+    <script type="module" src="/src/client/tablePerPage.ts"></script>
   </Fragment>
 
   <main>
+    <header>
+      <h1>Bookings {page > 1 && ` - Page ${page}`}</h1>
+    </header>
     <div data-layout="content">
-      <h1>Bookings{page > 1 && ` - Page ${page}`}</h1>
-
+      <TableMenu
+        page={page}
+        perPage={perPage}
+        model="bookings"
+        placeholder={"Search by subject, excerpt, or numerical date..."}
+      >
+        <fieldset slot="filters-fieldset">
+          <FilterSelect
+            name="location_id"
+            options={locations.map((loc) => ({
+              value: loc.id,
+              label: loc.name,
+            }))}
+            value={location_id}
+            model="locations"
+          />
+        </fieldset>
+      </TableMenu>
+      {
+        locations.length === 0 ? (
+          <p>
+            No locations set. First create a location on the{" "}
+            <a href="/attendance/admin/locations">locations page</a>
+          </p>
+        ) : bookings.length === 0 ? (
+          <p class="callout not-found">no bookings found</p>
+          <table data-crud={ctx.crud}>
+            <tbody id={`${ctx.crud}-table-body`}>
+            </tbody>
+          </table>
+        ) : (
+          <TableEditable
+            crud={ctx.crud}
+            rows={bookings}
+            config={ctx.config}
+            showCreateRow={true}
+          />
+        )
+      }
     </div>
+    <footer>
+      {
+        bookings.length > 0 ? (
+          <PaginationNav
+            path="/admin/bookings"
+            page={page}
+            perPage={perPage}
+            totalCount={totalCount}
+          />
+        ) : null
+      }
+    </footer>
   </main>
-</BaseLayout>
+</CommonPageLayout>

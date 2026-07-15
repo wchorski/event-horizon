@@ -2,15 +2,16 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 //? only use if wanting random generated data
-// import { seed } from "drizzle-seed";
-import * as schema from "./schema.js";
-import { seedData } from "./seed-data.js";
-import { createPgClient, getPGDatabaseUrl } from "./client.js";
-import { sql } from "drizzle-orm";
-import { createAssignmentsForBooking } from "./seed/bookingAssignments.js";
+import * as schema from "@db/schema.js";
+import { seedData } from "@db/seed-data.js";
+import { createPgClient, getPGDatabaseUrl } from "@db/client.js";
+import { createAssignmentsForBooking } from "@db/seed/bookingAssignments.js";
+import { auth } from "@lib/auth.js";
+import { uuidv7 } from "@client/uuidv7.js";
+import { hashPassword } from "better-auth/crypto";
 
 // ---- guards -------------------------------------------------
-
+const SECRET = process.env.BETTER_AUTH_SECRET;
 const isProd = process.env.NODE_ENV === "production";
 const allowSeed =
   process.argv.includes("--seed") || process.env.SEED_DB === "true";
@@ -43,6 +44,8 @@ try {
 
 const db = drizzle(client, {
   schema,
+  casing: "snake_case",
+  // logger: import.meta.env.DEV
   // logger: true
 });
 
@@ -54,10 +57,11 @@ if (process.argv.includes("--truncate")) {
   await db.delete(schema.Booking);
   await db.delete(schema.Ticket);
   await db.delete(schema.Event);
-  await db.delete(schema.User);
   await db.delete(schema.Location);
+  await db.delete(schema.User);
   await db.delete(schema.Role);
   await db.delete(schema.Organization);
+  await db.delete(schema.Account);
 }
 
 // if (process.argv.includes("--truncate")) {
@@ -97,47 +101,83 @@ if (process.argv.includes("--truncate")) {
 //     }) as any,
 // );
 
+const {
+  users,
+  locations,
+  organizations,
+  roles,
+  accounts,
+  events,
+  tickets,
+  bookings,
+} = seedData;
+
 console.log("🌱 Seeding Database 🌱");
-console.log(`=== Organizations (+${seedData.organizations.length}) ===`);
-const orgCoreced = seedData.organizations.map((item) => ({
+console.log(`=== Organizations (+${organizations.length}) ===`);
+const orgCoreced = organizations.map((item) => ({
   ...item,
-  date_created: new Date(item.date_created),
-  date_modified: new Date(item.date_modified),
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
 }));
 await db.insert(schema.Organization).values(orgCoreced);
 
-console.log(`=== Roles (+${seedData.roles.length})===`);
-await db.insert(schema.Role).values(seedData.roles);
+console.log(`=== Roles (+${roles.length})===`);
+await db.insert(schema.Role).values(roles);
 
-console.log(`=== Users (+${seedData.users.length}) ===`);
-const usersCoreced = seedData.users.map((item) => ({
+console.log(`=== Users (+${users.length}) ===`);
+const usersCoreced = users.map((item) => ({
   ...item,
-  date_created: new Date(item.date_created),
-  date_modified: new Date(item.date_modified),
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
 }));
 await db.insert(schema.User).values(usersCoreced);
 
-console.log(`=== Locations (+${seedData.locations.length})===`);
-await db.insert(schema.Location).values(seedData.locations);
-// seedData.roles.forEach((element) => {
-//   console.log(`+ ${element.label}`);
-// });
-// seedData.users.forEach((element) => {
-//   console.log(`+ ${element.email}`);
-// });
+console.log(`=== Accounts (+${accounts.length})===`);
+const accountsCoreced = await Promise.all(
+  accounts.map(async (item) => {
+    const usr = users.find((u) => u.id === item.userId);
+    if (!usr)
+      throw new Error(`usr not found: account.userId === ${item.userId}`);
+    const hashed = await hashPassword(usr.id + SECRET);
+    return {
+      ...item,
+      password: hashed,
+    };
+  }),
+);
+//! does not allow manual uuid insertion for user
+// for (const { email, image, username, ...user } of firstThreeUsers) {
+//   try {
+//     const result = await auth.api.signUpEmail({
+//       body: {
+//         email,
+//         password: uuidv7(),
+//         image: image || undefined,
+//         username: username || undefined,
+//         name: username || "",
+//         displayUsername: username || undefined,
+//       },
+//     });
+//     console.log(`✅ created account: ${email}`);
+//   } catch (err) {
+//     console.error(`❌ failed to create account for ${email}:`, err);
+//   }
+// }
+await db.insert(schema.Account).values(accountsCoreced);
 
-console.log(`=== Events (+${seedData.events.length})===`);
-const eventsCoreced = seedData.events.map((e) => ({
+console.log(`=== Locations (+${locations.length})===`);
+await db.insert(schema.Location).values(locations);
+
+console.log(`=== Events (+${events.length})===`);
+const eventsCoreced = events.map((e) => ({
   ...e,
   timestamp: new Date(e.timestamp),
-  date_created: new Date(e.date_created),
-  date_modified: new Date(e.date_modified),
+  createdAt: new Date(e.createdAt),
+  updatedAt: new Date(e.updatedAt),
 }));
 await db.insert(schema.Event).values(eventsCoreced);
-// seedData.events.forEach((element) => {
-//   console.log(`+ ${element.subject} | ${element.date_civil}`);
-// });
-const randomBookings = seedData.bookings;
+
+const randomBookings = bookings;
 console.log(`=== Bookings (+${randomBookings.length})===`);
 await db.insert(schema.Booking).values(randomBookings);
 
@@ -150,29 +190,32 @@ await db
   .values(bookingAssignments)
   .onConflictDoNothing();
 
-console.log(`=== Tickets (+${seedData.tickets.length})===`);
-const ticketsCoreced = seedData.tickets.map((t) => ({
+console.log(`=== Tickets (+${tickets.length})===`);
+const ticketsCoreced = tickets.map((t) => ({
   ...t,
   timestamp: new Date(t.timestamp),
-  date_created: new Date(t.date_created),
-  date_modified: new Date(t.date_modified),
+  createdAt: new Date(t.createdAt),
+  updatedAt: new Date(t.updatedAt),
 }));
 await db.insert(schema.Ticket).values(ticketsCoreced);
-// seedData.tickets.forEach((element) => {
-//   console.log(
-//     `+ event_id: ${element.event_id}, user_id: ${element.user_id}, attended: ${element.attended}`,
-//   );
-// });
+// const accountsCoreced = seedData.accounts.map((t) => ({
+//   ...t,
+//   timestamp: new Date(t.timestamp),
+//   createdAt: new Date(t.createdAt),
+//   updatedAt: new Date(t.updatedAt),
+// }));
+// await db.insert(schema.Account).values(seedData.accounts);
 
 await client.end();
 
 const total =
-  seedData.roles.length +
+  roles.length +
   randomBookings.length +
   bookingAssignments.length +
-  seedData.events.length +
-  seedData.locations.length +
-  seedData.tickets.length +
-  seedData.users.length;
+  events.length +
+  locations.length +
+  tickets.length +
+  users.length +
+  accounts.length;
 
 console.log(`🌲 Database seeded successfully. ${total} items added 🌲`);

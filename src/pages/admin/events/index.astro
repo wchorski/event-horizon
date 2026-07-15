@@ -1,6 +1,6 @@
 ---
 import ButtonCoursesImport from "@components/ButtonCoursesImport.astro";
-import CoursesEditableTable from "@components/CoursesEditableTable.astro";
+import EventsEditableTable from "@components/EventsEditableTable.astro";
 import AdminNav from "@components/navigation/AdminNav.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { getEventsPage } from "@lib/getEventsPage";
@@ -105,7 +105,7 @@ const pageTitle = page === 1 ? "Events" : `Events - Page ${page}`;
             <a href="/attendance/admin/locations">locations page</a>
           </p>
         ) : (
-          <CoursesEditableTable events={events} locations={locations} />
+          <EventsEditableTable events={events} locations={locations} />
         )
       }
 

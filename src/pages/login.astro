@@ -1,0 +1,73 @@
+---
+// src/pages/login.astro
+import InputField from "@components/form/InputField.astro";
+import SubmitButton from "@components/form/SubmitButton.astro";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import { login } from "@lib/auth/login";
+import type { LoginCredentials } from "@ty/Auth";
+// ...other imports
+
+const session = Astro.locals.session;
+let error: string | null = null;
+
+if (Astro.request.method === "POST") {
+  const formData = await Astro.request.formData();
+  const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
+
+  const result = await login(payload);
+
+  if (result.success) {
+    const redirectResponse = new Response(null, {
+      status: 302,
+      headers: { Location: "/" },
+    });
+    for (const cookie of result.setCookies) {
+      redirectResponse.headers.append("set-cookie", cookie);
+    }
+    return redirectResponse;
+  }
+
+  error = result.error;
+}
+---
+
+<CommonPageLayout>
+  <header>
+    <h1>Login</h1>
+  </header>
+  <div data-layout="content">
+    {
+      session ? (
+        <p>
+          You are currently logged in as{" "}
+          <pre>{JSON.stringify(session, null, 2)}</pre>
+        </p>
+      ) : null
+    }
+    <form id="sign-up-form" method="POST">
+      <InputField
+        name="email"
+        type={"email"}
+        id="email"
+        model={"accounts"}
+        required={true}
+      />
+      <InputField
+        name="password"
+        type={"password"}
+        id="password"
+        model={"accounts"}
+        required={true}
+      />
+
+      <SubmitButton />
+    </form>
+    {
+      error && (
+        <p class="form-error error callout" role="alert">
+          {error}
+        </p>
+      )
+    }
+  </div>
+</CommonPageLayout>

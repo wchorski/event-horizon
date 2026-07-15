@@ -9,6 +9,7 @@ import type {
   RoleSelect,
   BookingSelect,
   OrganizationSelect,
+  AccountInsert,
 } from "@ty/Schema";
 
 import users from "./seed/users";
@@ -18,6 +19,7 @@ import locations from "./seed/locations";
 import roles from "./seed/roles";
 import tickets from "./seed/tickets";
 import organizations from "./seed/organizations";
+import accounts from "./seed/accounts";
 
 type SeedData = {
   locations: LocationSelect[];
@@ -27,6 +29,7 @@ type SeedData = {
   roles: RoleSelect[];
   bookings: BookingSelect[];
   organizations: OrganizationSelect[];
+  accounts: AccountInsert[];
 };
 
 export const seedData: SeedData = {
@@ -37,4 +40,5 @@ export const seedData: SeedData = {
   events,
   bookings,
   organizations,
+  accounts,
 };

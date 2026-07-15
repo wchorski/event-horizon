@@ -66,6 +66,14 @@ npx drizzle-kit generate   # generates SQL migration files
 npx drizzle-kit migrate    # runs them against your DB
 ```
 
+### Better Auth config
+https://better-auth.com/docs/installation (with some help from https://www.giorgiosaud.io/notebook/better-auth-drizzle-neon-astro)
+```shell
+# generate auth-schema.ts
+pnpm dlx auth@latest generate
+# for this project, I've heavily modified and combined it with db/schema.ts
+```
+
 </details>
 
 <details>

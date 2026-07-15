@@ -14,6 +14,7 @@ import "@styles/animation.css";
 import styles from "@styles/layout_reading.module.css";
 import DialogConfirm from "@components/DialogConfirm.astro";
 import { ClientRouter } from "astro:transitions";
+import AccountAuthSelect from "@components/dev/AccountAuthSelect.astro";
 import { UMAMI_PROXY_PREFIX } from "../middleware";
 
 const { SITE_TITLE, SITE_EXCERPT, DOMAIN_URL, UMAMI_WEB_ID } = import.meta.env;
@@ -60,5 +61,6 @@ const {
     <slot />
     <slot name="footer" />
     <DialogConfirm />
+    <AccountAuthSelect />
   </body>
 </html>

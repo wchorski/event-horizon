@@ -1,0 +1,63 @@
+---
+import SelectField from "@components/form/SelectField.astro";
+import users from "@db/seed/users";
+import type { SelectOption } from "@ty/Form";
+const options: SelectOption[] = [
+  {
+    value: users[0].email,
+    label: `${users[0].username} <${users[0].email}>`,
+  },
+  {
+    value: users[1].email,
+    label: `${users[1].username} <${users[1].email}>`,
+  },
+  {
+    value: users[2].email,
+    label: `${users[2].username} <${users[2].email}>`,
+  },
+  {
+    value: "failed_Login@m.lan",
+    label: "Failed Login",
+  },
+  {
+    value: "",
+    label: "anonymous",
+  },
+];
+
+const isDev = import.meta.env.DEV;
+---
+
+{
+  isDev ? (
+    <menu>
+      <SelectField
+        hx-post="/api/dev/account-switcher"
+        id={"auth-quick-switch"}
+        errorId="auth_email-error"
+        label="auth quick switch"
+        name="auth_email"
+        options={options}
+        hx-post="/api/dev/account-switcher"
+        hx-trigger="change"
+        hx-target="#auth-quick-switch--error"
+        hx-target-error="#auth-quick-switch--error"
+        hx-swap="innerHTML"
+      />
+      <pre id="auth-quick-switch--error" />
+    </menu>
+  ) : null
+}
+
+<style>
+  menu {
+    padding-left: 0;
+    position: fixed;
+    bottom: 1rem;
+    left: 1rem;
+  }
+  :global(select) {
+    border-color: var(--c-accent, yellow);
+    box-shadow: black 2px 2px 10px;
+  }
+</style>

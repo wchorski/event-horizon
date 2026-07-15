@@ -7,6 +7,7 @@ export function toDatetimeLocalValue(
 ): string {
   if (!value) return "";
   const iso = typeof value === "string" ? value : value.toISOString();
+  console.log({iso});
   return iso.slice(0, 16);
 }
 

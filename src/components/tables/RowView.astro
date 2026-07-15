@@ -64,12 +64,15 @@ const anchorName =
         switch (field.type) {
           case "datetime-local":
             return row[key] != null
-              ? prettyPlainCivilDateFull(toDatetimeLocalValue(row[key] as Date))
+            // TODO why is this broken?
+              ? // ? prettyPlainCivilDateFull(toDatetimeLocalValue(row[key] as Date))
+                row[key]
               : "";
           default:
             return row[key] != null ? String(row[key]) : "";
         }
       })();
+      // console.log({ field, key, value: row[key], resolvedValue });
       const options =
         type === "select" && "options" in field ? field.options : undefined;
 

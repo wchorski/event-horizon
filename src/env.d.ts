@@ -21,8 +21,35 @@ interface ImportMetaEnv {
   readonly UMAMI_WEB_ID?: string;
   readonly UMAMI_PROXY_PREFIX?: string;
   readonly DOMAIN_URL?: string;
+  readonly BETTER_AUTH_SECRET?: string;
+  readonly BETTER_AUTH_URL?: string;
+  readonly GITHUB_CLIENT_ID?: string;
+  readonly GITHUB_CLIENT_SECRET?: string;
+  readonly GOOGLE_CLIENT_ID?: string;
+  readonly GOOGLE_CLIENT_SECRET?: string;
+  readonly FACEBOOK_CLIENT_ID?: string;
+  readonly FACEBOOK_CLIENT_SECRET?: string;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/// <reference path="../.astro/types.d.ts" />
+import type { auth } from "../src/lib/auth";
+
+declare global {
+  namespace App {
+    interface Locals {
+      user: typeof auth.$Infer.Session.user | null;
+      session: typeof auth.$Infer.Session.session | null;
+    }
+  }
+}
+// declare namespace App {
+//   // Note: 'import {} from ""' syntax does not work in .d.ts files.
+//   interface Locals {
+//     user: import("better-auth").User | null;
+//     session: import("better-auth").Session | null;
+//   }
+// }

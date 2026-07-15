@@ -18,7 +18,7 @@ import { relations, sql } from "drizzle-orm";
 import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
 
 export const Role = pgTable("roles", {
-  id: uuid("id")
+  id: uuid()
     .primaryKey()
     .default(sql`uuidv7()`),
   label: text().notNull().unique(),
@@ -32,7 +32,7 @@ export const Role = pgTable("roles", {
 export const Location = pgTable(
   "locations",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
     name: text().notNull().unique(),
@@ -63,22 +63,34 @@ export const User = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     role_id: uuid().references(() => Role.id),
+    role: text(),
     //? handled with `OrganizationMembership` relationship
     // organization_id: uuid()
     //   .notNull()
     //   .references(() => Organization.id, { onDelete: "cascade" }),
-    first_name: text().notNull(),
-    last_name: text().notNull(),
+    username: text().notNull().unique(),
+    displayUsername: text(),
+    name: text().notNull(),
+    first_name: text(),
+    last_name: text(),
     middle_initial: text(),
-    phone: text().notNull().unique(),
+    phone: text().unique(),
     email: text().notNull().unique(),
-    address_1: text().notNull(),
+    emailVerified: boolean().default(false).notNull(),
+    address_1: text(),
     address_2: text(),
-    city: text().notNull(),
-    state: text().notNull(),
-    zip: text().notNull(),
-    date_created: timestamp().notNull().defaultNow(),
-    date_modified: timestamp().notNull().defaultNow(),
+    city: text(),
+    state: text(),
+    zip: text(),
+    image: text(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    banned: boolean().default(false),
+    banReason: text(),
+    banExpires: timestamp(),
   },
   (table) => [index("users_role_id_idx").on(table.role_id)],
 );
@@ -102,7 +114,7 @@ export const BOOKING_STATUSES = bookingStatusEnum.enumValues;
 export const Booking = pgTable(
   "bookings",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
     // TODO handled with helper
@@ -114,8 +126,11 @@ export const Booking = pgTable(
     revision: integer().notNull().default(1),
     google_calendar: jsonb().$type<GoogleCalendarData>(),
     status: bookingStatusEnum("status").notNull().default("REQUESTED"),
-    date_created: timestamp().notNull().defaultNow(),
-    date_modified: timestamp().notNull().defaultNow(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
     // worker_ids: added with bookingRelations
     author_user_id: uuid()
       .notNull()
@@ -210,7 +225,7 @@ export const bookingAssignmentRelations = relations(
 );
 
 export const Timeline = pgTable("timelines", {
-  id: uuid("id")
+  id: uuid()
     .primaryKey()
     .default(sql`uuidv7()`),
   booking_id: uuid()
@@ -220,9 +235,12 @@ export const Timeline = pgTable("timelines", {
     // .notNull()
     .references(() => User.id, { onDelete: "cascade" }),
   rev: integer().notNull().default(1),
-  date_created: timestamp().notNull().defaultNow(),
+  createdAt: timestamp().notNull().defaultNow(),
   date: timestamp().notNull().defaultNow(),
-  date_modified: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
   timestamp: timestamp().notNull(),
   date_civil: text().notNull(),
   notes: text(),
@@ -234,7 +252,7 @@ export const Timeline = pgTable("timelines", {
   end: integer().notNull(),
   // TODO if i start supporting rev undo then I'll need this to nest like `{timeline_1: {}, timleline_2: {}}`
   // data: jsonb("data").$type<Record<string, TimelineData>>(),
-  data: jsonb("data").$type<TimelineData>(),
+  data: jsonb().$type<TimelineData>(),
 });
 
 export const timelineRelations = relations(Timeline, ({ one }) => ({
@@ -248,7 +266,7 @@ export const timelineRelations = relations(Timeline, ({ one }) => ({
 export const Event = pgTable(
   "events",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
     wp_post_id: integer().unique(),
@@ -268,8 +286,11 @@ export const Event = pgTable(
     author_user_id: uuid()
       .notNull()
       .references(() => User.id),
-    date_created: timestamp().notNull().defaultNow(),
-    date_modified: timestamp().notNull().defaultNow(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
   },
   (table) => [
     index("events_location_id_idx").on(table.location_id),
@@ -285,7 +306,7 @@ export const Event = pgTable(
 export const EventHost = pgTable(
   "event_hosts",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
     event_id: uuid()
@@ -321,7 +342,7 @@ export const eventHostRelations = relations(EventHost, ({ one }) => ({
     fields: [EventHost.event_id],
     references: [Event.id],
   }),
-  user: one(User, {
+  User: one(User, {
     fields: [EventHost.user_id],
     references: [User.id],
     relationName: "event_host_user",
@@ -331,21 +352,24 @@ export const eventHostRelations = relations(EventHost, ({ one }) => ({
 export const Ticket = pgTable(
   "tickets",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    user_id: uuid("user_id")
+    user_id: uuid()
       .notNull()
       .references(() => User.id),
-    event_id: uuid("event_id")
+    event_id: uuid()
       .notNull()
       .references(() => Event.id),
     timestamp: timestamp().notNull(),
     grade: text(),
     // TODO thinking about changing to `redeemed`
     attended: boolean().notNull().default(false),
-    date_created: timestamp().notNull().defaultNow(),
-    date_modified: timestamp().notNull().defaultNow(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
   },
   (table) => [
     index("tickets_user_id_idx").on(table.user_id),
@@ -359,7 +383,7 @@ export const Ticket = pgTable(
 );
 
 export const Organization = pgTable("organizations", {
-  id: uuid("id")
+  id: uuid()
     .primaryKey()
     .default(sql`uuidv7()`),
   name: text().notNull(),
@@ -369,8 +393,11 @@ export const Organization = pgTable("organizations", {
   color: text(),
   color_2: text(),
   logo: text(),
-  date_created: timestamp().notNull().defaultNow(),
-  date_modified: timestamp().notNull().defaultNow(),
+  createdAt: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
 });
 
 export const orgMemberRoleEnum = pgEnum("org_member_role", [
@@ -383,7 +410,7 @@ export const orgMemberRoleEnum = pgEnum("org_member_role", [
 export const OrganizationMembership = pgTable(
   "organization_memberships",
   {
-    id: uuid("id")
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
     organization_id: uuid()
@@ -397,3 +424,119 @@ export const OrganizationMembership = pgTable(
   },
   (table) => [unique().on(table.organization_id, table.user_id)],
 );
+
+export const Session = pgTable(
+  "sessions",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    expiresAt: timestamp().notNull(),
+    token: text().notNull().unique(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    ipAddress: text(),
+    userAgent: text(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    impersonatedBy: text(),
+  },
+  (table) => [index("session_user_id_idx").on(table.userId)],
+);
+
+export const Account = pgTable(
+  "accounts",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    accountId: text("account_id").notNull(),
+    providerId: text().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    accessToken: text(),
+    refreshToken: text(),
+    idToken: text(),
+    accessTokenExpiresAt: timestamp(),
+    refreshTokenExpiresAt: timestamp(),
+    scope: text(),
+    password: text(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("account_user_id_idx").on(table.userId)],
+);
+
+export const Verification = pgTable(
+  "verifications",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    identifier: text().notNull(),
+    value: text().notNull(),
+    expiresAt: timestamp().notNull(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("verification_identifier_idx").on(table.identifier)],
+);
+
+export const Passkey = pgTable(
+  "passkey",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    username: text(),
+    publicKey: text().notNull(),
+    userId: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    credentialId: text().notNull(),
+    counter: integer().notNull(),
+    deviceType: text().notNull(),
+    backedUp: boolean().notNull(),
+    transports: text(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    aaguid: text(),
+  },
+  (table) => [
+    index("passkey_userId_idx").on(table.userId),
+    index("passkey_credentialID_idx").on(table.credentialId),
+  ],
+);
+
+export const userRelations = relations(User, ({ many }) => ({
+  sessions: many(Session),
+  accounts: many(Account),
+  passkeys: many(Passkey),
+}));
+
+export const sessionRelations = relations(Session, ({ one }) => ({
+  User: one(User, {
+    fields: [Session.userId],
+    references: [User.id],
+  }),
+}));
+
+export const accountRelations = relations(Account, ({ one }) => ({
+  User: one(User, {
+    fields: [Account.userId],
+    references: [User.id],
+  }),
+}));

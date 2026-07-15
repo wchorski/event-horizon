@@ -1,14 +1,13 @@
 ---
-// partials/bookings/create.astro
-import { bookingConfigRequired, tableConfigs } from "@lib/tableConfigs";
+// partials/bookings/request/:author_user_id
+import { bookingConfigRequired } from "@lib/tableConfigs";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
   NotFoundError,
+  UnauthorizedError,
 } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
-import { parseOutUndefinedFormData } from "@lib/sanatizers";
-import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import type { BookingSelect } from "@ty/Schema";
 import type { ZodError } from "astro:schema";
 import { view } from "drizzle-orm/sqlite-core";
@@ -16,18 +15,20 @@ import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
 import { handleResult } from "@lib/handleRenderResult";
-import { Booking } from "@db/schema";
+import { Booking, Location } from "@db/schema";
 import { db } from "@db/db";
-import { eq } from "drizzle-orm";
-import { validate } from "@lib/validate";
+import {  validateBookingRequest } from "@lib/validate";
+import { auth } from "@lib/auth";
+import { parseNestedFormData } from "@lib/parseFormFields";
 
 type ZodErrorFlattened = ReturnType<ZodError<BookingSelect>["flatten"]>;
 
 let booking: BookingSelect | null | undefined = null;
 let error = null;
-const session = TEST_ADMIN_SESSION;
-const locations = await crud.locations.readMany(session);
-const users = await crud.users.readMany(session);
+const session = Astro.locals.session;
+const sessionUserId = session?.userId;
+const locations = await crud.locations.readMany({ user_id: 1, role: "idk" });
+const users = await crud.users.readMany({ user_id: 1, role: "idk" });
 const config = bookingConfigRequired(locations, users);
 const ctx = {
   crud: "bookings" as CrudRegistryType,
@@ -37,23 +38,62 @@ const ctx = {
 };
 
 if (Astro.request.method === "POST") {
+  
   try {
+    if (!sessionUserId) {
+      throw new UnauthorizedError("Must be logged in to submit form");
+    }
     const formData = await Astro.request.formData();
 
     const submitFields = Object.fromEntries(
       [...formData.entries()].filter(([key]) => !key.startsWith("_")),
     );
 
-    const validated = validate.bookingCreate.parse(submitFields);
+    const payload = parseNestedFormData({
+      ...submitFields,
+      author_user_id: sessionUserId || "",
+    });
+  
+    payload.end = payload.start;
+    payload.status = "REQUESTED";
+    const validated = validateBookingRequest.parse(payload);
+    let locationId = validated.location_id;
 
-    const [result] = await db.insert(Booking).values(validated).returning();
+    if (!locationId && validated.location) {
+      const [newLocation] = await db
+        .insert(Location)
+        .values({
+          ...validated.location,
+          author_user_id: sessionUserId,
+        })
+        .returning();
+
+      if (!newLocation) {
+        throw new Error("Location could not be created");
+      }
+
+      locationId = newLocation.id;
+    }
+
+    const [result] = await db
+      .insert(Booking)
+      .values({
+        start: validated.start,
+        end: validated.end,
+        notes: validated.notes,
+        status: validated.status,
+        author_user_id: validated.author_user_id,
+        client_id: validated.client_id,
+        location_id: locationId,
+      })
+      .returning();
     if (!result) throw new NotFoundError(`Booking not created`);
     booking = result;
+    
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
     error = err;
-    console.log(JSON.stringify(err, null, 2));
   }
 } else {
   return new Response("Method Not Allowed", { status: 405 });
@@ -90,6 +130,7 @@ const result = handleResult<BookingSelect>({
       headers={ctx.headers}
       crud={ctx.crud}
       message={result.message}
+      code={Astro.response.status}
     />
   ) : (
     <FormSuccess

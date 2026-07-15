@@ -7,23 +7,24 @@ interface Props {
   headers: string[];
   crud: CrudRegistryType;
   message: string;
+  code?: number;
 }
-const { id, headers, crud, message } = Astro.props;
+const { id, headers, crud, message, code } = Astro.props;
+const topLevelTargetId = `top-level-error-${crud}-${id}`;
+const fieldLevelTargetId = (fieldName: string) =>
+  `field-error-${crud}-${id}-${fieldName}`;
 ---
 
 <>
-  <span
-    id={`top-level-error-${crud}-${id}`}
-    class="anim-vibrate"
-    hx-swap-oob="outerHTML"
-  >
+  <span id={topLevelTargetId} class="anim-vibrate" hx-swap-oob="outerHTML">
+    {code ? `[CODE: ${code}] ` : ""}
     {message}
   </span>
 
   {
     headers.map((fieldName) => (
       <span
-        id={`field-error-${crud}-${id}-${fieldName}`}
+        id={fieldLevelTargetId(fieldName)}
         hx-swap-oob="outerHTML"
         class="field-error"
       />

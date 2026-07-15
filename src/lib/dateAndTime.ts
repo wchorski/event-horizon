@@ -1,4 +1,4 @@
-export function modifyHours(date: Date, hours: number) {
+export function modifyByNumOfHours(date: Date, hours: number) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 

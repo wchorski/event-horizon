@@ -24,6 +24,7 @@ interface Props extends Omit<
   value?: string;
   checked?: string | boolean | null;
   fieldError?: string | unknown | null;
+  isCreate?: boolean;
   datalist?: FieldOption[];
   inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
 }
@@ -39,6 +40,7 @@ const {
   type,
   value,
   fieldError,
+  isCreate,
   datalist,
   readonly,
   autofocus,
@@ -63,7 +65,7 @@ const prettyVal = (() => {
   }
 })();
 
-const errorId = `field-error-${model}-${id}-${name}`;
+const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
 ---
 
 {

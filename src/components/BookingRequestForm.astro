@@ -22,17 +22,19 @@ const {
   ...attr
 } = Astro.props;
 const model = "bookings";
-const errorTargetId = `top-level-error-${model}-${formId}`;
+const errorTargetId = `top-level-error-${model}-create`;
+const fieldErrorId = (fieldName: string) =>
+  `field-error-${model}-create-${fieldName}`;
 ---
 
 <form
   id={formId}
   class:list={[classList, "bookings-form"]}
   hx-ext="response-targets"
-  hx-post={`/partials/bookings/request/${author_user_id}`}
+  hx-post={`/partials/bookings/request`}
   hx-target={`#${formId}`}
   hx-target-error={`#${errorTargetId}`}
-  hx-swap="outerHTML"
+  hx-swap="innerHTML"
   hx-headers='{"X-Partial-Type": "single-page"}'
 >
   <legend>Create a Booking</legend>
@@ -44,38 +46,81 @@ const errorTargetId = `top-level-error-${model}-${formId}`;
       name={"start"}
       model={"bookings"}
       type={"datetime-local"}
+      isCreate={true}
     />
     <TextareaField name={"notes"} errorId={"notes-error"} />
   </fieldset>
 
   <fieldset>
-    <legend>Location</legend>
+    <legend>Select Location</legend>
     <SelectField
       label=""
       name="location_id"
       options={locationOptions}
-      errorId={"location_id-error"}
+      errorId={fieldErrorId("location_id")}
     >
-      <option slot="first-option">-- select location --</option>
+      <option slot="first-option" value="">-- select location --</option>
     </SelectField>
-
-    <legend>Or add a new location</legend>
-    <InputField id={"name"} name={"name"} model={"bookings"} type={"text"} />
-    <InputField
-      id={"address"}
-      name={"address"}
-      model={"bookings"}
-      type={"text"}
-    />
-    <InputField id={"city"} name={"city"} model={"bookings"} type={"text"} />
-    <InputField id={"state"} name={"state"} model={"bookings"} type={"text"} />
-    <InputField id={"zip"} name={"zip"} model={"bookings"} type={"text"} />
-    <InputField
-      id={"timezone"}
-      name={"timezone"}
-      model={"bookings"}
-      type={"text"}
-    />
+  </fieldset>
+  <fieldset>
+    <details open>
+      <summary>Or add a new location</summary>
+      <div class="grid gap-s" id="new-location-fields">
+        <InputField
+          id={"location.name"}
+          name={"location.name"}
+          model={"locations"}
+          type={"text"}
+          isCreate={true}
+        />
+        <InputField
+          id={"location.address"}
+          name={"location.address"}
+          model={"locations"}
+          type={"text"}
+          isCreate={true}
+        />
+        <InputField
+          id={"location.city"}
+          name={"location.city"}
+          model={"locations"}
+          type={"text"}
+          isCreate={true}
+        />
+        <InputField
+          id={"location.state"}
+          name={"location.state"}
+          model={"locations"}
+          type={"text"}
+          isCreate={true}
+        />
+        <InputField
+          id={"location.zip"}
+          name={"location.zip"}
+          model={"locations"}
+          type={"text"}
+        />
+        <InputField
+          id={"location.timezone"}
+          name={"location.timezone"}
+          model={"locations"}
+          type={"text"}
+          isCreate={true}
+        />
+      </div>
+    </details>
+  </fieldset>
+  <fieldset>
+    <legend>Connect a User</legend>
+    <p>TODO</p>
+    <!-- <SelectField
+        label=""
+        name="client_id"
+        options={userOptions}
+        errorId={"client_id-error"}
+      >
+        <option slot="first-option">-- select a user --</option>
+      </SelectField> -->
   </fieldset>
 
   <fieldset class="actions">

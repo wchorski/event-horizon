@@ -21,7 +21,10 @@ const datetimeLocalToDate = z
     return date;
   });
 
-const idNullUnion = z.union([z.string(), z.null()]).transform(val => val === "" ? null : val)
+const uuidv7OptionalNull = z.preprocess((val) => {
+  if (val === "") return null;
+  return val;
+}, z.uuidv7().nullable());
 
 const bookingValidation = z.object({
   id: z.uuidv7(),
@@ -30,15 +33,16 @@ const bookingValidation = z.object({
   end: datetimeLocalToDate,
   notes: z.string(),
   status: z.enum(BOOKING_STATUSES),
-  location_id: idNullUnion,
-  client_id: idNullUnion,
+  location_id: uuidv7OptionalNull,
+  client_id: uuidv7OptionalNull,
+  author_user_id: z.uuidv7(),
   // event_id: z.string(),
 });
 
 const withEndAfterStart = <T extends z.ZodTypeAny>(schema: T) =>
-  schema.refine((data: any) => data.end > data.start, {
-    message: "End must be after start",
-    path: ["end"],
+  schema.refine((data: any) => data.end >= data.start, {
+    message: "END time must be older than or equal to START time",
+    // path: [],
   });
 
 export const slugSchema = z
@@ -49,7 +53,7 @@ export const slugSchema = z
       .string()
       .min(1, "Slug cannot be empty")
       .max(200, "Slug too long")
-      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Invalid slug format")
+      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Invalid slug format"),
   );
 
 export const validate = {
@@ -140,6 +144,7 @@ export const validate = {
     zip: z.string().min(5, "Invalid ZIP code").max(5, "Invalid ZIP code"),
     timezone: z.string().min(8, "Must be more than 8 characters"),
     excerpt: z.string().optional(),
+    author_user_id: z.uuidv7(),
   }),
 
   get locationCreate() {
@@ -266,3 +271,69 @@ export const validate = {
     return this.organization;
   },
 };
+
+const uuidv7OrNullFromForm = z.preprocess((val) => {
+  if (val === "" || val === undefined) return null;
+  return val;
+}, z.uuidv7().nullable());
+
+const optionalLocation = z.preprocess(
+  (val) => {
+    if (
+      typeof val === "object" &&
+      val !== null &&
+      Object.values(val).every((v) => v === "" || v === undefined)
+    ) {
+      return undefined;
+    }
+
+    return val;
+  },
+  z
+    .object({
+      name: z.string().min(3, "Location name is required"),
+      address: z.string().min(3, "Address is required"),
+      city: z.string().min(2, "City is required"),
+      state: z.string().min(2, "State is required"),
+      zip: z.string().min(5, "ZIP code is required"),
+      timezone: z.string().min(1, "Timezone is required"),
+    })
+    .optional(),
+);
+
+export const validateBookingRequest = z
+  .object({
+    start: datetimeLocalToDate,
+    end: datetimeLocalToDate,
+    notes: z.string().optional(),
+    status: z.enum(BOOKING_STATUSES),
+    author_user_id: z.uuidv7(),
+    client_id: uuidv7OrNullFromForm,
+    location_id: uuidv7OrNullFromForm,
+    location: optionalLocation,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.location_id && !data.location) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["location_id"],
+        message: "An existing location or new location is required",
+      });
+    }
+
+    if (data.location_id && data.location) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["location_id"],
+        message: "Choose either an existing location or create a new location",
+      });
+    }
+
+    if (data.end < data.start) {
+      ctx.addIssue({
+        code: "custom",
+        // path: ["end"],
+        message: "End time must be after start time",
+      });
+    }
+  });

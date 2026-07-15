@@ -147,7 +147,7 @@ export const Booking = pgTable(
     // timeline_id: uuid().references(() => Timeline.id),
     // service_id:
   },
-  (table) => [check("end_after_start", sql`${table.end} > ${table.start}`)],
+  (table) => [check("end_after_start", sql`${table.end} >= ${table.start}`)],
 );
 
 // maybe connect this with "Roles" table as to make it configurable with labels and customize permissions

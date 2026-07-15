@@ -1,5 +1,5 @@
 import { ZodError } from "astro:schema";
-import { z } from 'astro/zod'
+import { z } from "astro/zod";
 // import { LibsqlError } from "@libsql/client";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
@@ -142,6 +142,8 @@ export function errorHandlingOnSubmit(e: unknown): {
   err: string | ReturnType<ZodError["flatten"]>;
   status: number;
 } {
+  console.log("❌ errorHandlingOnSubmit =>");
+  console.log(JSON.stringify(e, null, 2));
   if (e instanceof BadRequestError) {
     return { status: 400, err: e.message };
   }
@@ -164,8 +166,47 @@ export function errorHandlingOnSubmit(e: unknown): {
     return { status: 422, err: e.flattened };
   }
 
+  const constraintError = getDatabaseConstraintMessage(e);
+
+  if (constraintError) {
+    return {
+      err: constraintError,
+      status: 423,
+    };
+  }
+
   const msg = e instanceof Error ? e.message : String(e);
-  return { status: 500, err: "An unexpected error occurred: " + msg };
+  return { status: 500, err: "< An unexpected error occurred ≥ -- " + msg };
+}
+
+const dbConstraintMessages: Record<string, string> = {
+  end_after_start: "End time must be after start time",
+  booking_unique: "A booking already exists at this time",
+  // add future constraints here
+};
+
+function getDatabaseConstraintMessage(error: unknown) {
+  const cause = (error as any)?.cause;
+
+  if (!cause?.constraint) {
+    return null;
+  }
+
+  const message = dbConstraintMessages[cause.constraint];
+
+  if (!message) {
+    console.error(`Unmapped database constraint: ${cause.constraint}`);
+
+    return {
+      formErrors: ["Unmapped database constraint found. Check server logs"],
+      fieldErrors: {},
+    };
+  }
+
+  return {
+    formErrors: [message],
+    fieldErrors: {},
+  };
 }
 
 export class WordpressApiError extends Error {

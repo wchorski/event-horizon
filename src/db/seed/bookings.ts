@@ -3,7 +3,7 @@ import type { BookingSelect } from "@ty/Schema";
 import users from "./users";
 import locations from "./locations";
 import { randomDate, randomInt, randomItem } from "@lib/random";
-import { modifyHours } from "@lib/dateAndTime";
+import { modifyByNumOfHours } from "@lib/dateAndTime";
 import { uuidv7 } from "@client/uuidv7";
 
 const user_ids: (string | null)[] = users.map((u) => u.id);
@@ -35,14 +35,14 @@ function createBooking(i: number): BookingSelect {
 
   const start = randomDate(range);
   const durationHours = randomInt(1, 8); // 1–8 hour events
-  const end = modifyHours(start, durationHours);
+  const end = modifyByNumOfHours(start, durationHours);
 
   return {
     id,
     start,
     end,
-    createdAt: modifyHours(start, -500),
-    updatedAt: modifyHours(start, -300),
+    createdAt: modifyByNumOfHours(start, -500),
+    updatedAt: modifyByNumOfHours(start, -300),
     revision: Math.floor(Math.random() * 20),
     google_calendar: null,
     status: randomStatus(),

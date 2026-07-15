@@ -3,7 +3,31 @@ import type { FieldConfig } from "@ty/FieldConfig";
 
 type FieldValue = string | number | boolean | null;
 
-export function parseFormFields(raw: FormData, headers: string[], config: FieldConfig) {
+export function parseNestedFormData(data: Record<string, FormDataEntryValue>) {
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    const parts = key.split(".");
+
+    let obj = result;
+
+    while (parts.length > 1) {
+      const part = parts.shift()!;
+      obj[part] ??= {};
+      obj = obj[part];
+    }
+
+    obj[parts[0]] = value;
+  }
+
+  return result;
+}
+
+export function parseFormFields(
+  raw: FormData,
+  headers: string[],
+  config: FieldConfig,
+) {
   const fields: Record<string, FieldValue> = {};
   for (const key of headers) {
     const slot = config[key];
@@ -15,6 +39,13 @@ export function parseFormFields(raw: FormData, headers: string[], config: FieldC
   }
   return fields;
 }
+
+export const parseFormFieldsThatStartWith = (submitFields: Object) =>
+  Object.fromEntries(
+    Object.entries(submitFields)
+      .filter(([key]) => key.startsWith("location."))
+      .map(([key, value]) => [key.replace("location.", ""), value]),
+  );
 // TODO above. letting zod do the actual value parse and conversion. fields are natively strings
 // export function parseFormFields(
 //   raw: FormData,

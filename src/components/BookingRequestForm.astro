@@ -15,7 +15,7 @@ interface Props extends HTMLAttributes<"form"> {
   author_user_id: string;
   formId?: string;
   locationOptions?: SelectOption[];
-  userOptions?:SelectOption[]
+  userOptions?: SelectOption[];
 }
 const {
   author_user_id,
@@ -36,7 +36,7 @@ const fieldErrorId = (fieldName: string) =>
   class:list={[classList, "bookings-form"]}
   hx-ext="response-targets"
   hx-post={`/partials/bookings/request`}
-  hx-target={`#${formId}`}
+  hx-target={`#${formId}-success`}
   hx-target-error={`#${errorTargetId}`}
   hx-swap="innerHTML"
   hx-headers='{"X-Partial-Type": "single-page"}'
@@ -58,14 +58,23 @@ const fieldErrorId = (fieldName: string) =>
 
   <fieldset>
     <legend>Select Location</legend>
-    <SelectField
+    <SearchSelectAsync
+      endpoint="/partials/locations/search"
+      searchName="location.search"
+      name={"location_id"}
+      id={"location-search"}
+      label="Search by venu name or street address"
+      minChars={2}
+      debounce={300}
+    />
+    <!-- <SelectField
       label=""
       name="location_id"
       options={locationOptions}
       errorId={fieldErrorId("location_id")}
     >
       <option slot="first-option" value="">-- select location --</option>
-    </SelectField>
+    </SelectField> -->
   </fieldset>
   <fieldset>
     <details open>
@@ -117,15 +126,25 @@ const fieldErrorId = (fieldName: string) =>
   </fieldset>
   <fieldset>
     <legend>Connect a User</legend>
-    <SearchSelectAsync />
+    <SearchSelectAsync
+      endpoint="/partials/users/search"
+      searchName="user.search"
+      name={"client_id"}
+      id={"user-search"}
+      label="Search by name or email"
+      minChars={2}
+      debounce={300}
+    />
   </fieldset>
 
-  <fieldset class="actions">
+  <fieldset class="actions" id={`${formId}-success`}>
     <div class="row-error error top-level">
       <p class="message">
         <span id={errorTargetId}></span>
       </p>
     </div>
+
+    <!-- <div id={`${formId}-success`}></div> -->
     <SubmitButton />
   </fieldset>
 </form>

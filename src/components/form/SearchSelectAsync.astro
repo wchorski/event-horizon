@@ -1,146 +1,658 @@
 ---
-// components/form/user.searchAsync.astro
+/**
+ * SearchSelectAsync.astro
+ * ─────────────────────────────────────────────────────────────────────
+ * htmx-powered async combobox. htmx owns the network request/debounce/
+ * abort — this component only reacts to what htmx swaps into the list
+ * and turns a click into a selected value.
+ *
+ * Because selection is delegated to the .ss-list container (not bound
+ * per-<li>), htmx can freely replace the list's innerHTML on every
+ * keystroke without needing any rebinding step.
+ *
+ * ── Server contract ─────────────────────────────────────────────────
+ * Your endpoint receives POST { search: <string> } (or GET, see below)
+ * and must return an <ul>-less fragment of <li class="ss-option"> nodes
+ * matching the markup produced by <template data-tpl="option">, e.g.:
+ *
+ *   <li class="ss-option" role="option" data-value="usr_123">
+ *     <div class="ss-option-body">
+ *       <div class="ss-avatar pill">JS</div>
+ *       <div>
+ *         <div class="ss-primary">Jane Smith</div>
+ *         <div class="ss-secondary">jane@example.com</div>
+ *       </div>
+ *     </div>
+ *     <span class="ss-meta">#usr_123</span>
+ *   </li>
+ *
+ * ── Example ──────────────────────────────────────────────────────────
+ *  <SearchSelectAsync
+ *    endpoint="/partials/users/search"
+ *    name="client_id"
+ *    label="Connect a user"
+ *    fieldName="search"
+ *    minChars={2}
+ *    debounce={300}
+ *    value={existingUserId}
+ *    preloadInput="Jane Smith <jane@example.com>"
+ *  />
+ *
+ * ── Events ───────────────────────────────────────────────────────────
+ *  root element emits "ss:change" with the raw <li data-*> derived item
+ *  (see toItem() client-side note below — for the async variant this is
+ *  just { value, label } since the server owns rendering, not a full
+ *  template-derived record).
+ */
+import type { HTMLAttributes } from "astro/types";
+
+type Props = {
+  endpoint: string; // htmx POST target, e.g. "/partials/users/search"
+  searchName?: string; // form field name htmx sends, default "search"
+  minChars?: number;
+  debounce?: number; // ms
+  label?: string;
+  value?: string | number; // pre-selected id
+  preloadInput?: string; // display text to show for the pre-selected value
+} & Omit<HTMLAttributes<"input">, "value" | "type">;
+
+const {
+  endpoint,
+  searchName = "search",
+  minChars = 2,
+  debounce = 300,
+  label = "Select",
+  value,
+  preloadInput = "",
+  id = "ssa",
+  name = "searchSelectValue",
+  required,
+  ...inputAttrs
+} = Astro.props;
+
+const preValue = value !== undefined ? String(value) : "";
 ---
 
-<div class="search-select" data-search-select>
-  <input
-    type="text"
-    id="user.search"
-    name="user.search"
-    placeholder="Search by First Name, Last Name, and or Email"
-    autocomplete="off"
-    form="detached"
-    role="combobox"
-    aria-expanded="false"
-    aria-controls="contactListbox"
-    aria-autocomplete="list"
-    hx-post="/partials/users/search"
-    hx-trigger="keyup changed delay:500ms"
-    hx-target="#contactListbox"
-    hx-indicator=".htmx-indicator"
-    hx-headers='{"X-Partial-Type": "select-options"}'
-    hx-include="this"
-  />
-  <input type="hidden" name="client_id" id="client_id" />
-  <span class="htmx-indicator">Searching...</span>
+<search-select-async
+  class="ss-root"
+  id={id}
+  data-pre-value={preValue}
+  data-min-chars={minChars}
+>
+  <div class="ss-label-row">
+    <label class="ss-label" for={`${id}-input`}>{label}</label>
+    <span class="ss-badge" id={`${id}-badge`}>type to search</span>
+  </div>
 
-  <div id="contactListbox" role="listbox" hidden></div>
-</div>
+  <div class="ss-combobox" id={`${id}-combobox`}>
+
+    <input
+      type="hidden"
+      id={`${id}-hidden`}
+      name={name}
+      value={preValue}
+      required={required}
+    />
+
+    <div class="ss-trigger">
+      <svg
+        class="ss-icon ss-search-icon"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"
+        ></path>
+      </svg>
+      <svg
+        class="ss-icon ss-spinner"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        aria-hidden="true"
+      >
+        <path
+          d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+        ></path>
+      </svg>
+
+      <input
+        {...inputAttrs}
+        class="ss-input"
+        id={`${id}-input`}
+        type="text"
+        name={searchName}
+        autocomplete="off"
+        spellcheck={false}
+        form="detached"
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-controls={`${id}-listbox`}
+        value={preloadInput}
+        hx-post={endpoint}
+        hx-trigger={`input changed delay:${debounce}ms`}
+        hx-target={`#${id}-list`}
+        hx-swap="innerHTML"
+        hx-include="this"
+        hx-indicator={`#${id}-combobox`}
+        hx-headers='{"X-Partial-Type": "select-options"}'
+      />
+
+      <button
+        class="ss-clear"
+        id={`${id}-clear`}
+        type="button"
+        aria-label="Clear"
+        tabindex="-1"
+      >
+        <svg
+          width="13"
+          height="13"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <svg
+        class="ss-chevron"
+        width="15"
+        height="15"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    </div>
+
+    <div
+      class="ss-dropdown"
+      id={`${id}-listbox`}
+      role="listbox"
+      aria-label={label}
+    >
+      <div class="ss-drop-header" id={`${id}-drop-header`}></div>
+      <ul class="ss-list" id={`${id}-list`}></ul>
+    </div>
+  </div>
+
+  <template data-tpl="option">
+    <li class="ss-option" role="option">
+      <div class="ss-option-body">
+        <div class="ss-avatar pill"></div>
+        <div>
+          <div class="ss-primary"></div>
+          <div class="ss-secondary"></div>
+        </div>
+      </div>
+      <span class="ss-meta"></span>
+    </li>
+  </template>
+
+  <template data-tpl="empty">
+    <div class="ss-empty">
+      <div class="ss-empty-text"></div>
+      <small class="ss-empty-sub"></small>
+    </div>
+  </template>
+
+  <template data-tpl="skeleton">
+    <div class="ss-skeleton">
+      <div class="ss-skel-row">
+        <div class="ss-skel-avatar"></div>
+        <div class="ss-skel-lines">
+          <div class="ss-skel-line"></div>
+          <div class="ss-skel-line short"></div>
+        </div>
+        <div class="ss-skel-pill"></div>
+      </div>
+    </div>
+  </template>
+</search-select-async>
 
 <script>
-  document.body.addEventListener("htmx:afterRequest", (e) => {
-    document.getElementById("contactListbox").hidden = false;
-    this.setAttribute("aria-expanded", "true");
-  });
-  // Wire up once per combobox instance on the page
-  document.querySelectorAll("[data-search-select]").forEach((wrapper) => {
-    if (wrapper.dataset.bound) return;
-    wrapper.dataset.bound = "true";
+  import { SearchSelectBase } from "@lib/ss-core";
 
-    const input = wrapper.querySelector('input[name="user.search"]');
-    const hidden = wrapper.querySelector("#client_id");
-    const listbox = wrapper.querySelector("#contactListbox");
+  class SearchSelectAsync extends SearchSelectBase {
+    private minChars = 2;
 
-    const closeList = () => {
-      listbox.hidden = true;
-      input.setAttribute("aria-expanded", "false");
-      input.removeAttribute("aria-activedescendant");
-    };
+    protected onConnected() {
+      this.minChars = Number(this.dataset.minChars ?? 2);
+      this.hdr.textContent = "Type to search";
+      this.renderEmpty("Type to search", "");
 
-    // Delegate: handle option selection (options come from htmx swaps)
-    listbox.addEventListener("click", (e) => {
-      const option = e.target.closest('[role="option"]');
-      if (!option) return;
-      input.value = option.dataset.label;
-      hidden.value = option.dataset.id;
-      closeList();
-    });
+      // htmx owns the fetch; we just react to what it swaps in.
+      this.list.addEventListener("htmx:beforeRequest", () => {
+        this.cb.classList.add("fetching");
+        this.renderSkeleton();
+      });
+      this.input.addEventListener("htmx:afterRequest", () => {
+        this.cb.classList.remove("fetching");
+      });
+      this.list.addEventListener("htmx:afterSwap", () => {
+        this.hydrateSwappedOptions();
+        const count = this.list.querySelectorAll(".ss-option").length;
+        this.hdr.textContent = count ? `${count} results` : "No matches";
+      });
+      this.input.addEventListener("htmx:responseError", () => {
+        this.cb.classList.remove("fetching");
+        this.renderEmpty("Request failed", "Try again");
+      });
+    }
 
-    // Basic keyboard support: ArrowDown/ArrowUp/Enter/Escape
-    input.addEventListener("keydown", (e) => {
-      const options = [...listbox.querySelectorAll('[role="option"]')];
-      if (!options.length) return;
-      const active = listbox.querySelector('[aria-selected="true"]');
-      let idx = active ? options.indexOf(active) : -1;
+    // After htmx swaps server-rendered <li> nodes in, read their data-*
+    // attributes into `this.results` so select()/Escape/Enter (all
+    // inherited from the base) have real values to work with — the
+    // server renders the DOM, but the base class still needs the value
+    // list in memory to resolve a click.
+    private hydrateSwappedOptions() {
+      
+      this.results = [
+        ...this.list.querySelectorAll<HTMLElement>(".ss-option"),
+      ].map((el) => ({
+        _value: el.dataset.value ?? "",
+        _primary: el.querySelector(".ss-primary")?.textContent ?? "",
+        _secondary: el.querySelector(".ss-secondary")?.textContent ?? "",
+        _input:
+          el.querySelector(".ss-primary")?.textContent ??
+          el.dataset.value ??
+          "",
+        _meta: el.querySelector(".ss-meta")?.textContent ?? "",
+        _search: "",
+        _raw: { id: el.dataset.value },
+      }));
+    }
 
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        idx = (idx + 1) % options.length;
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        idx = (idx - 1 + options.length) % options.length;
-      } else if (e.key === "Enter") {
-        if (active) {
-          e.preventDefault();
-          active.click();
-        }
-        return;
-      } else if (e.key === "Escape") {
-        closeList();
-        return;
-      } else {
-        return;
+    // htmx's own hx-trigger fires the request on input — this component
+    // doesn't need to do anything on keystroke except gate short queries
+    // client-side so you don't send a request for 1 character.
+    protected onInput(query: string) {
+      if (query.length < this.minChars) {
+        this.renderEmpty("Type to search", `${this.minChars}+ characters`);
       }
+      // else: let it fall through — hx-trigger's own delay already fires
+    }
 
-      options.forEach((o) => o.removeAttribute("aria-selected"));
-      options[idx].setAttribute("aria-selected", "true");
-      input.setAttribute("aria-activedescendant", options[idx].id);
-      options[idx].scrollIntoView({ block: "nearest" });
-    });
+    protected onCleared() {
+      this.hdr.textContent = "Type to search";
+      this.renderEmpty("Type to search", "");
+    }
+  }
 
-    // Close when clicking outside
-    document.addEventListener("click", (e) => {
-      if (!wrapper.contains(e.target)) closeList();
-    });
-
-    // If the user edits the text after picking someone, the stale id
-    // shouldn't silently submit — clear it until they pick again.
-    input.addEventListener("input", () => {
-      hidden.value = "";
-    });
-  });
+  customElements.define("search-select-async", SearchSelectAsync);
 </script>
 
-<style>
-  .search-select {
+<style is:global>
+  /* identical to SearchSelect.astro's stylesheet — copy as-is */
+  .ss-root {
+    --surface: #141418;
+    --surface2: #1c1c22;
+    --surface3: #24242c;
+    --border: #2a2a36;
+    --border-hi: #5b54f0;
+    --text: #ededf2;
+    --text-2: #8888a0;
+    --text-3: #74747a;
+    --accent: #5b54f0;
+    --accent-soft: rgba(91, 84, 240, 0.13);
+    --accent-glow: rgba(91, 84, 240, 0.25);
+    --warn: #e8a030;
+    --mono: "DM Mono", "Fira Mono", ui-monospace, monospace;
+    --sans: "DM Sans", system-ui, sans-serif;
+    --r: 10px;
+    font-family: var(--sans);
+    color: var(--text);
+    width: 100%;
+  }
+  .ss-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 7px;
+  }
+  .ss-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-2);
+  }
+  .ss-badge {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-3);
+  }
+  .ss-combobox {
     position: relative;
   }
-  #contactListbox {
-    position: absolute;
-    inset-inline: 0;
-    top: 100%;
-    z-index: 10;
-    max-height: 240px;
-    overflow-y: auto;
-    background: var(--surface, #fff);
-    border: 1px solid var(--border, #ccc);
-    border-radius: 4px;
+  .ss-trigger {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 0.1rem 0.2rem;
+    cursor: text;
+    transition:
+      border-color 0.18s,
+      box-shadow 0.18s;
   }
-  #contactListbox [role="option"] {
-    padding: 0.5rem 0.75rem;
+  .ss-combobox.open .ss-trigger,
+  .ss-trigger:focus-within {
+    border-color: var(--border-hi);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .ss-icon {
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition: color 0.18s;
+  }
+  .ss-combobox.open .ss-search-icon {
+    color: var(--accent);
+  }
+  .ss-spinner {
+    display: none;
+  }
+  .ss-combobox.fetching .ss-search-icon {
+    display: none;
+  }
+  .ss-combobox.fetching .ss-spinner {
+    display: block;
+    color: var(--accent);
+    animation: ss-spin 0.75s linear infinite;
+  }
+  @keyframes ss-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .ss-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    caret-color: var(--accent);
+    border-style: none;
+  }
+  .ss-input::placeholder {
+    color: var(--text-2);
+  }
+  .ss-clear {
+    flex-shrink: 0;
+    background: none;
+    border: none;
     cursor: pointer;
+    color: var(--text-2);
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 0.15s,
+      color 0.15s,
+      background 0.15s;
   }
-  #contactListbox [role="option"][aria-selected="true"],
-  #contactListbox [role="option"]:hover {
-    background: var(--highlight, #eef);
+  .ss-combobox.has-value .ss-clear {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .ss-combobox.has-value .ss-trigger {
+    border-color: rgba(91, 84, 240, 0.4);
+  }
+  .ss-combobox:has(input[data-locked]) {
+    border: solid 1px var(--border);
+    border-radius: 10px;
+  }
+  .ss-combobox:has(input[data-locked]) .ss-icon,
+  .ss-combobox:has(input[data-locked]) .ss-chevron {
+    display: none;
+  }
+  .ss-combobox:has(input[data-locked]) input {
+    cursor: not-allowed;
+  }
+  .ss-clear:hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+  .ss-chevron {
+    flex-shrink: 0;
+    color: var(--text-2);
+    transition:
+      transform 0.2s,
+      color 0.18s;
+  }
+  .ss-combobox.open .ss-chevron {
+    transform: rotate(180deg);
+    color: var(--accent);
+  }
+  .ss-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    box-shadow:
+      0 16px 48px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(91, 84, 240, 0.06);
+    overflow: hidden;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
+  }
+  .ss-combobox.open .ss-dropdown {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .ss-drop-header {
+    padding: 7px 12px 5px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ss-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+    display: grid;
+    gap: 0.3rem;
+    list-style: none;
+  }
+  .ss-list::-webkit-scrollbar {
+    width: 4px;
+  }
+  .ss-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+  .ss-option {
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+  }
+  .ss-option:hover,
+  .ss-option.hl {
+    background: var(--surface2);
+  }
+  .ss-option.sel {
+    background: var(--accent-soft);
+  }
+  .ss-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-2);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-family: var(--mono);
+  }
+  .ss-option.sel .ss-avatar {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+  }
+  .ss-option-body {
+    min-width: 0;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .ss-primary {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-primary {
+    color: var(--accent);
+  }
+  .ss-secondary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    line-height: 1.3;
+  }
+  .ss-option.sel .ss-secondary {
+    color: rgba(91, 84, 240, 0.65);
+  }
+  .ss-meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .ss-option.sel .ss-meta {
+    background: rgba(91, 84, 240, 0.15);
+    border-color: rgba(91, 84, 240, 0.25);
+    color: rgba(91, 84, 240, 0.7);
+  }
+  .ss-skeleton {
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .ss-skel-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 48px;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 6px;
+    border-radius: 7px;
+  }
+  .ss-skel-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+  }
+  .ss-skel-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .ss-skel-line {
+    height: 9px;
+    border-radius: 4px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+  }
+  .ss-skel-line.short {
+    width: 55%;
+    animation-delay: 0.1s;
+  }
+  .ss-skel-pill {
+    height: 18px;
+    width: 44px;
+    border-radius: 5px;
+    background: var(--surface3);
+    animation: ss-shimmer 1.4s ease-in-out infinite;
+    animation-delay: 0.05s;
+  }
+  @keyframes ss-shimmer {
+    0% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 0.35;
+    }
+  }
+  .ss-empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .ss-empty small {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--text-3);
   }
 </style>
-<!-- <div>
-  <input
-    type="text"
-    name="user.search"
-    placeholder="Search by First Name, Last Name, and or Email"
-    list="contactList"
-    hx-post="/partials/users/search"
-    hx-trigger="keyup changed delay:500ms"
-    hx-target="#contactList"
-    hx-indicator=".htmx-indicator"
-    hx-headers='{"X-Partial-Type": "select-options"}'
-    hx-include="this"
-    form="detached"
-  />
-  <input type="hidden" name="client_id">
-  <span class="htmx-indicator"> Searching... </span>
-</div>
-
-<datalist id="contactList"></datalist> -->

@@ -99,6 +99,11 @@ tr[data-status="creating"] {
   opacity: 0.2;
   transform: translateY(14px);
   pointer-events: none;
+  height: 0;
+
+  & p {
+    margin: 0;
+  }
 }
 
 table tbody tr:hover {

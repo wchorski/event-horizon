@@ -1,5 +1,5 @@
 ---
-// partials/bookings/request/:author_user_id
+// partials/bookings/request
 import { bookingConfigRequired } from "@lib/tableConfigs";
 import {
   BadRequestError,
@@ -23,6 +23,8 @@ import { auth } from "@lib/auth";
 import { parseNestedFormData } from "@lib/parseFormFields";
 
 type ZodErrorFlattened = ReturnType<ZodError<BookingSelect>["flatten"]>;
+
+export const partial = true;
 
 let booking: BookingSelect | null | undefined = null;
 let error = null;
@@ -112,6 +114,7 @@ if (Astro.request.method === "POST") {
       .returning();
     if (!result) throw new NotFoundError(`Booking not created`);
     booking = result;
+    Astro.response.headers.set("HX-Redirect", "/dashboard");
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;

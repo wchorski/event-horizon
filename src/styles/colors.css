@@ -197,6 +197,10 @@ hr {
   }
 }
 
+.success {
+  border-color: var(--c-success);
+}
+
 input,
 select,
 textarea {

@@ -1,24 +1,17 @@
 ---
 import { db } from "@db/db";
-import { or, ilike, like, eq, getTableColumns } from "drizzle-orm";
-import { Event, Ticket, Location } from "@db/schema";
-import { crud, type CrudRegistryType } from "@lib/crudRegistry";
+import { or, ilike, like } from "drizzle-orm";
+import { Location } from "@db/schema";
+import { type CrudRegistryType } from "@lib/crudRegistry";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import type { LocationSelect } from "@ty/Schema";
-import { handleResult } from "@lib/handleRenderResult";
-import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
-import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
-import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
-import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import { tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
-import { getUsersPage } from "@lib/getUsersPage";
 import { handleQueryResult } from "@lib/handleQueryResult";
-import { getTicketsPage } from "@lib/getTicketsPage";
-import { getLocationsPage } from "@lib/getLocationsPage";
 
 let locations: LocationSelect[] | null | undefined = null;
 let error = null;
-const config = tableConfigs.locations.required
+const config = tableConfigs.locations.required;
 const ctx = {
   crud: "locations" as CrudRegistryType,
   config,
@@ -26,11 +19,12 @@ const ctx = {
   headers: Object.keys(config),
 };
 
-
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const searchQuery = formData.get("search")?.toString()?.trim();
+    const searchQuery =
+      formData.get("query")?.toString()?.trim() ??
+      formData.get("location.search")?.toString()?.trim();
 
     const url = new URL(Astro.request.url);
     const page = Number(url.searchParams.get("page") ?? 1);
@@ -39,29 +33,27 @@ if (Astro.request.method === "POST") {
 
     const digitsOnly = searchQuery?.replace(/\D/g, "");
 
-    if (searchQuery) {
-      const conditions = [
-        ilike(Location.name, `%${searchQuery}%`),
-        ilike(Location.address, `%${searchQuery}%`),
-        ilike(Location.city, `%${searchQuery}%`),
-        ilike(Location.state, `%${searchQuery}%`),
-        ilike(Location.excerpt, `%${searchQuery}%`),
-      ];
+    if (!searchQuery) throw new BadRequestError("search query was not formed");
 
-      if (digitsOnly && digitsOnly.length >= 3) {
-        conditions.push(like(Location.zip, `%${digitsOnly}%`));
-      }
+    const conditions = [
+      ilike(Location.name, `%${searchQuery}%`),
+      ilike(Location.address, `%${searchQuery}%`),
+      ilike(Location.city, `%${searchQuery}%`),
+      ilike(Location.state, `%${searchQuery}%`),
+      // ilike(Location.zip, `%${searchQuery}%`),
+      // ilike(Location.timezone, `%${searchQuery}%`),
+      ilike(Location.excerpt, `%${searchQuery}%`),
+    ];
 
-      locations = await db
-        .select()
-        .from(Location)
-        .where(or(...conditions))
-        .limit(10);
-    } else {
-      // Empty search - return no results (or all users if you prefer)
-      const result = await getLocationsPage({ page });
-      locations = result.locations;
+    if (digitsOnly && digitsOnly.length >= 3) {
+      conditions.push(like(Location.zip, `%${digitsOnly}%`));
     }
+
+    locations = await db
+      .select()
+      .from(Location)
+      .where(or(...conditions))
+      .limit(10);
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -75,11 +67,11 @@ if (Astro.request.method === "POST") {
 enum PartialType {
   TableRow = "table-row",
   SinglePage = "single-page",
+  SelectOptions = "select-options",
 }
 
 const partialType = Astro.request.headers.get("X-Partial-Type") as
-  | PartialType
-  | undefined;
+  PartialType | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
 const result = handleQueryResult<LocationSelect>({
@@ -92,7 +84,23 @@ const result = handleQueryResult<LocationSelect>({
 
 {
   locations && locations.length > 0 ? (
-    locations.map((entity) => <RowView row={entity} {...ctx} />)
+    partialType === "select-options" ? (
+      locations.map(({ id, name, address, city, state }) => (
+        <li class="ss-option" role="option" data-value={id}>
+          <div class="ss-option-body">
+            <div class="ss-avatar pill">👤</div>
+            <div>
+              <div class="ss-primary">{name}</div>
+              <div class="ss-secondary">{`${address}, ${city} ${state}`}</div>
+            </div>
+          </div>
+        </li>
+      ))
+    ) : partialType === "table-row" ? (
+      locations.map((entity) => <RowView row={entity} {...ctx} />)
+    ) : (
+      <p class="error">partial type not supported</p>
+    )
   ) : (
     <tr>
       <td colspan="100%" class="callout">

@@ -27,38 +27,33 @@ const ctx = {
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const searchQuery = formData.get("query")?.toString()?.trim() ?? formData.get("user.search")?.toString()?.trim();;
+    const searchQuery =
+      formData.get("query")?.toString()?.trim() ??
+      formData.get("user.search")?.toString()?.trim();
     const url = new URL(Astro.request.url);
     const page = Number(url.searchParams.get("page") ?? 1);
-    console.log({ formData, searchQuery });
 
     // if (!searchQuery) throw new BadRequestError("search query is blank");
 
     const digitsOnly = searchQuery?.replace(/\D/g, "");
-    console.log({ formData, searchQuery, page });
 
-    if (searchQuery) {
-      const conditions = [
-        ilike(User.first_name, `%${searchQuery}%`),
-        ilike(User.last_name, `%${searchQuery}%`),
-        ilike(User.email, `%${searchQuery}%`),
-      ];
+    if (!searchQuery) throw new BadRequestError("search query was not formed");
 
-      if (digitsOnly && digitsOnly.length >= 3) {
-        conditions.push(like(User.phone, `%${digitsOnly}%`));
-      }
+    const conditions = [
+      ilike(User.first_name, `%${searchQuery}%`),
+      ilike(User.last_name, `%${searchQuery}%`),
+      ilike(User.email, `%${searchQuery}%`),
+    ];
 
-      users = await db
-        .select()
-        .from(User)
-        .where(or(...conditions))
-        .limit(10);
-    } else {
-      // Empty search - return no results (or all users if you prefer)
-      const result = await getUsersPage({ page });
-      users = result.users;
-      console.log({ usersFoundLength: users?.length });
+    if (digitsOnly && digitsOnly.length >= 3) {
+      conditions.push(like(User.phone, `%${digitsOnly}%`));
     }
+
+    users = await db
+      .select()
+      .from(User)
+      .where(or(...conditions))
+      .limit(10);
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -90,7 +85,19 @@ const result = handleQueryResult<UserSelect>({
 {
   users && users.length > 0 ? (
     partialType === "select-options" ? (
-      users.map((entity) => <option value={entity.id}>{`${entity.first_name} ${entity.last_name} <${entity.email}>`}</option>)
+      users.map(({ id, first_name, last_name, email }) => (
+        <li class="ss-option" role="option" data-value={id}>
+          <div class="ss-option-body">
+            <div class="ss-avatar pill">👤</div>
+            <div>
+              <div class="ss-primary">
+                {first_name} {last_name}
+              </div>
+              <div class="ss-secondary">{email}</div>
+            </div>
+          </div>
+        </li>
+      ))
     ) : partialType === "table-row" ? (
       users.map((entity) => <RowView row={entity} {...ctx} />)
     ) : (

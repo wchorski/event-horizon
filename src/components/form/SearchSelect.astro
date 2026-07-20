@@ -381,7 +381,6 @@ const badgeCount = options?.length ?? items.length;
 </search-select>
 
 <script>
-import { undefined } from "astro:schema";
 
   type AnyRecord = Record<string, unknown>;
 
@@ -425,7 +424,7 @@ import { undefined } from "astro:schema";
 
     private cb!: HTMLElement;
     private input!: HTMLInputElement;
-    private hidden!: HTMLInputElement;
+    private hiddenInput!: HTMLInputElement;
     private clearBtn!: HTMLButtonElement;
     private list!: HTMLElement;
     private hdr!: HTMLElement;
@@ -459,7 +458,7 @@ import { undefined } from "astro:schema";
       // ✅ scoped queries ONLY inside this component
       this.cb = this.querySelector(".ss-combobox");
       this.input = this.querySelector(".ss-input");
-      this.hidden = this.querySelector('input[type="hidden"]');
+      this.hiddenInput = this.querySelector('input[type="hidden"]');
       this.clearBtn = this.querySelector(".ss-clear");
       this.list = this.querySelector(".ss-list");
       this.hdr = this.querySelector(".ss-drop-header");
@@ -620,7 +619,7 @@ import { undefined } from "astro:schema";
       if (!item) return;
 
       this.state.selVal = val;
-      this.hidden.value = val;
+      this.hiddenInput.value = val;
       this.input.value = item._input;
 
       this.dispatchEvent(new CustomEvent("ss:change", { detail: item._raw }));
@@ -628,7 +627,7 @@ import { undefined } from "astro:schema";
 
     clear() {
       this.state.selVal = "";
-      this.hidden.value = "";
+      this.hiddenInput.value = "";
       this.input.value = "";
       this.renderStatic();
     }
@@ -665,7 +664,7 @@ import { undefined } from "astro:schema";
     private bindEvents() {
       // ── open ─────────────────────────────
       this.input.addEventListener("focus", () => {
-        if (this.input.hasAttribute("data-locked")) return;
+        if (this.input.hasAttribute(  "data-locked")) return;
         this.open();
       });
 
@@ -679,7 +678,7 @@ import { undefined } from "astro:schema";
         if (!this.cb.classList.contains("open")) this.open();
 
         this.state.selVal = "";
-        this.hidden.value = "";
+        this.hiddenInput.value = "";
 
         if (this.cfg.isAsync) {
           const q = this.input.value.trim();

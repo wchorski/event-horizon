@@ -175,7 +175,7 @@ export const organizationConfigRequired = () =>
 
 export const bookingConfigRequired = (
   locations: LocationSelect[],
-  clients: UserSelect[],
+  users: UserSelect[],
 ) =>
   ({
     id: {
@@ -217,7 +217,15 @@ export const bookingConfigRequired = (
       label: "Client",
       type: "select",
       // required: true,
-      options: clients.map((user) => ({
+      options: users.map((user) => ({
+        value: user.id,
+        label: `${user.first_name} ${user.last_name} <${user.email}>`,
+      })),
+    },
+    author_user_id: {
+      label: "Author",
+      type: "select",
+      options: users.map((user) => ({
         value: user.id,
         label: `${user.first_name} ${user.last_name} <${user.email}>`,
       })),

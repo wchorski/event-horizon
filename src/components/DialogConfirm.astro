@@ -46,7 +46,7 @@ const { id = "confirm-dialog" } = Astro.props;
     dialog.classList.add("closing");
   }
 
-  document.addEventListener("htmx:confirm", (e: any) => {
+  dialog.addEventListener("htmx:confirm", (e: any) => {
     console.log("DialogConfirm");
     console.log({ e });
     if (!e.detail.question) return;

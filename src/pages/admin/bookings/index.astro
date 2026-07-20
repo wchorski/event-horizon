@@ -58,11 +58,12 @@ if ("redirect" in result) {
   return Astro.redirect("/admin/bookings");
 }
 
-const { bookings, locations, perPage, totalCount, clients, totalPages } = result;
+const { bookings, locations, perPage, totalCount, clients, authors, totalPages } = result;
 // SEO metadata
 const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
 
-const config = bookingConfigRequired(locations, clients)
+// TODO this is a hack. how should i make this less data wasteful?
+const config = bookingConfigRequired(locations, [...clients, ...authors])
 const ctx = {
   crud: "bookings" as const,
   config,

@@ -67,6 +67,7 @@ export async function getBookingsPage({
       },
       client: true,
       location: true,
+      author: true,
     },
   });
 
@@ -83,6 +84,7 @@ export async function getBookingsPage({
     totalPages,
     perPage,
     clients: bookings.flatMap((b) => (b.client ? [b.client] : [])),
+    authors: bookings.flatMap((b) => (b.author ? [b.author] : [])),
     // workers: bookings.map((b) => b.assignments).map((a) => a.user),
     event_ids: bookings.flatMap((b) => b.event_id),
   };

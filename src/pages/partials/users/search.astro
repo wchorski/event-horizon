@@ -27,14 +27,15 @@ const ctx = {
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const searchQuery = formData.get("search")?.toString()?.trim();
-
+    const searchQuery = formData.get("query")?.toString()?.trim() ?? formData.get("user.search")?.toString()?.trim();;
     const url = new URL(Astro.request.url);
     const page = Number(url.searchParams.get("page") ?? 1);
+    console.log({ formData, searchQuery });
 
     // if (!searchQuery) throw new BadRequestError("search query is blank");
 
     const digitsOnly = searchQuery?.replace(/\D/g, "");
+    console.log({ formData, searchQuery, page });
 
     if (searchQuery) {
       const conditions = [
@@ -56,6 +57,7 @@ if (Astro.request.method === "POST") {
       // Empty search - return no results (or all users if you prefer)
       const result = await getUsersPage({ page });
       users = result.users;
+      console.log({ usersFoundLength: users?.length });
     }
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
@@ -70,11 +72,11 @@ if (Astro.request.method === "POST") {
 enum PartialType {
   TableRow = "table-row",
   SinglePage = "single-page",
+  SelectOptions = "select-options",
 }
 
 const partialType = Astro.request.headers.get("X-Partial-Type") as
-  | PartialType
-  | undefined;
+  PartialType | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 
 const result = handleQueryResult<UserSelect>({
@@ -87,7 +89,13 @@ const result = handleQueryResult<UserSelect>({
 
 {
   users && users.length > 0 ? (
-    users.map((entity) => <RowView row={entity} {...ctx} />)
+    partialType === "select-options" ? (
+      users.map((entity) => <option value={entity.id}>{`${entity.first_name} ${entity.last_name} <${entity.email}>`}</option>)
+    ) : partialType === "table-row" ? (
+      users.map((entity) => <RowView row={entity} {...ctx} />)
+    ) : (
+      <p class="error">partial type not supported</p>
+    )
   ) : (
     <tr>
       <td colspan="100%" class="callout">

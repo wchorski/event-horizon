@@ -3,8 +3,13 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import BookingRequestForm from "@components/BookingRequestForm.astro";
 import { getLocationsPage } from "@lib/getLocationsPage";
 import { seedData } from "@db/seed-data";
-import { undefined } from "astro:schema";
+import { getUsersPage } from "@lib/getUsersPage";
 
+const { users } = await getUsersPage({ page: 1, perPage: 200 });
+const usersOptions = users?.map((usr) => ({
+  value: usr.id,
+  label: `${usr.first_name} ${usr.last_name} <${usr.email}>`,
+}));
 const { locations } = await getLocationsPage({ page: 1, perPage: 25 });
 const locationOptions = locations?.map((loc) => ({
   value: loc.id,
@@ -22,6 +27,7 @@ const locationOptions = locations?.map((loc) => ({
 
     <div data-layout="content" class="content">
       <BookingRequestForm
+        userOptions={usersOptions}
         locationOptions={locationOptions}
         author_user_id={seedData.users[0].id}
       />

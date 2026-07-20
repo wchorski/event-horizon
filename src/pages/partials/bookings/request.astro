@@ -9,6 +9,7 @@ import {
 } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import type { BookingSelect } from "@ty/Schema";
+//@ts-ignore
 import type { ZodError } from "astro:schema";
 import { view } from "drizzle-orm/sqlite-core";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
@@ -17,7 +18,7 @@ import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
 import { handleResult } from "@lib/handleRenderResult";
 import { Booking, Location } from "@db/schema";
 import { db } from "@db/db";
-import {  validateBookingRequest } from "@lib/validate";
+import { validateBookingRequest } from "@lib/validate";
 import { auth } from "@lib/auth";
 import { parseNestedFormData } from "@lib/parseFormFields";
 
@@ -37,8 +38,27 @@ const ctx = {
   headers: Object.keys(config),
 };
 
+type Payload = {
+  start: string;
+  end?: string;
+  status?: string;
+  notes: string;
+  location_id?: string;
+
+  location: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    timezone: string;
+  };
+  user: {
+    id: string;
+  };
+};
+
 if (Astro.request.method === "POST") {
-  
   try {
     if (!sessionUserId) {
       throw new UnauthorizedError("Must be logged in to submit form");
@@ -52,8 +72,11 @@ if (Astro.request.method === "POST") {
     const payload = parseNestedFormData({
       ...submitFields,
       author_user_id: sessionUserId || "",
-    });
-  
+    }) as Payload;
+
+    // TODO payload.booking.start
+    console.log({ payload });
+
     payload.end = payload.start;
     payload.status = "REQUESTED";
     const validated = validateBookingRequest.parse(payload);
@@ -89,7 +112,6 @@ if (Astro.request.method === "POST") {
       .returning();
     if (!result) throw new NotFoundError(`Booking not created`);
     booking = result;
-    
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;

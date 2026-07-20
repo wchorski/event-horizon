@@ -1,0 +1,146 @@
+---
+// components/form/user.searchAsync.astro
+---
+
+<div class="search-select" data-search-select>
+  <input
+    type="text"
+    id="user.search"
+    name="user.search"
+    placeholder="Search by First Name, Last Name, and or Email"
+    autocomplete="off"
+    form="detached"
+    role="combobox"
+    aria-expanded="false"
+    aria-controls="contactListbox"
+    aria-autocomplete="list"
+    hx-post="/partials/users/search"
+    hx-trigger="keyup changed delay:500ms"
+    hx-target="#contactListbox"
+    hx-indicator=".htmx-indicator"
+    hx-headers='{"X-Partial-Type": "select-options"}'
+    hx-include="this"
+  />
+  <input type="hidden" name="client_id" id="client_id" />
+  <span class="htmx-indicator">Searching...</span>
+
+  <div id="contactListbox" role="listbox" hidden></div>
+</div>
+
+<script>
+  document.body.addEventListener("htmx:afterRequest", (e) => {
+    document.getElementById("contactListbox").hidden = false;
+    this.setAttribute("aria-expanded", "true");
+  });
+  // Wire up once per combobox instance on the page
+  document.querySelectorAll("[data-search-select]").forEach((wrapper) => {
+    if (wrapper.dataset.bound) return;
+    wrapper.dataset.bound = "true";
+
+    const input = wrapper.querySelector('input[name="user.search"]');
+    const hidden = wrapper.querySelector("#client_id");
+    const listbox = wrapper.querySelector("#contactListbox");
+
+    const closeList = () => {
+      listbox.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    };
+
+    // Delegate: handle option selection (options come from htmx swaps)
+    listbox.addEventListener("click", (e) => {
+      const option = e.target.closest('[role="option"]');
+      if (!option) return;
+      input.value = option.dataset.label;
+      hidden.value = option.dataset.id;
+      closeList();
+    });
+
+    // Basic keyboard support: ArrowDown/ArrowUp/Enter/Escape
+    input.addEventListener("keydown", (e) => {
+      const options = [...listbox.querySelectorAll('[role="option"]')];
+      if (!options.length) return;
+      const active = listbox.querySelector('[aria-selected="true"]');
+      let idx = active ? options.indexOf(active) : -1;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        idx = (idx + 1) % options.length;
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        idx = (idx - 1 + options.length) % options.length;
+      } else if (e.key === "Enter") {
+        if (active) {
+          e.preventDefault();
+          active.click();
+        }
+        return;
+      } else if (e.key === "Escape") {
+        closeList();
+        return;
+      } else {
+        return;
+      }
+
+      options.forEach((o) => o.removeAttribute("aria-selected"));
+      options[idx].setAttribute("aria-selected", "true");
+      input.setAttribute("aria-activedescendant", options[idx].id);
+      options[idx].scrollIntoView({ block: "nearest" });
+    });
+
+    // Close when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!wrapper.contains(e.target)) closeList();
+    });
+
+    // If the user edits the text after picking someone, the stale id
+    // shouldn't silently submit — clear it until they pick again.
+    input.addEventListener("input", () => {
+      hidden.value = "";
+    });
+  });
+</script>
+
+<style>
+  .search-select {
+    position: relative;
+  }
+  #contactListbox {
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    z-index: 10;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #ccc);
+    border-radius: 4px;
+  }
+  #contactListbox [role="option"] {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+  }
+  #contactListbox [role="option"][aria-selected="true"],
+  #contactListbox [role="option"]:hover {
+    background: var(--highlight, #eef);
+  }
+</style>
+<!-- <div>
+  <input
+    type="text"
+    name="user.search"
+    placeholder="Search by First Name, Last Name, and or Email"
+    list="contactList"
+    hx-post="/partials/users/search"
+    hx-trigger="keyup changed delay:500ms"
+    hx-target="#contactList"
+    hx-indicator=".htmx-indicator"
+    hx-headers='{"X-Partial-Type": "select-options"}'
+    hx-include="this"
+    form="detached"
+  />
+  <input type="hidden" name="client_id">
+  <span class="htmx-indicator"> Searching... </span>
+</div>
+
+<datalist id="contactList"></datalist> -->

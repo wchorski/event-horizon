@@ -8,17 +8,21 @@ import type { HTMLAttributes } from "astro/types";
 import type { SelectOption } from "@ty/Form";
 import SelectField from "./form/SelectField.astro";
 import TextareaField from "./form/TextareaField.astro";
+import SearchSelect from "./form/SearchSelect.astro";
+import SearchSelectAsync from "./form/SearchSelectAsync.astro";
 
 interface Props extends HTMLAttributes<"form"> {
   author_user_id: string;
   formId?: string;
   locationOptions?: SelectOption[];
+  userOptions?:SelectOption[]
 }
 const {
   author_user_id,
   formId = "create_a_booking",
   class: classList,
   locationOptions = [],
+  userOptions = [],
   ...attr
 } = Astro.props;
 const model = "bookings";
@@ -36,6 +40,7 @@ const fieldErrorId = (fieldName: string) =>
   hx-target-error={`#${errorTargetId}`}
   hx-swap="innerHTML"
   hx-headers='{"X-Partial-Type": "single-page"}'
+  hx-include="[name^='booking'], [name^='location']"
 >
   <legend>Create a Booking</legend>
 
@@ -112,15 +117,7 @@ const fieldErrorId = (fieldName: string) =>
   </fieldset>
   <fieldset>
     <legend>Connect a User</legend>
-    <p>TODO</p>
-    <!-- <SelectField
-        label=""
-        name="client_id"
-        options={userOptions}
-        errorId={"client_id-error"}
-      >
-        <option slot="first-option">-- select a user --</option>
-      </SelectField> -->
+    <SearchSelectAsync />
   </fieldset>
 
   <fieldset class="actions">

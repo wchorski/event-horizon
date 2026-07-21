@@ -57,8 +57,7 @@ type CrudEntry<T = TableRow> = {
   update: UpdateFn<T>;
   delete: DeleteFn<T>;
 };
-
-const { DEFAULT_ROLE_ID, WP_USERNAME, WP_APP_PASSWORD } = import.meta.env;
+import { DEFAULT_ROLE_ID, WP_USERNAME, WP_APP_PASSWORD } from "astro:env/server";
 
 export const crud = {
   // TODO how to prevent create/update users from giving themselves elevated permissions?

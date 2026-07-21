@@ -1,10 +1,9 @@
 import htmx from "htmx.org";
 import "htmx-ext-response-targets";
+import { PUBLIC_HTMX_LOGS } from "astro:env/client";
+const isDev = import.meta.env.DEV;
 
-if (
-  import.meta.env.DEV === true &&
-  import.meta.env.PUBLIC_HTMX_LOGS === "true"
-) {
+if (isDev && PUBLIC_HTMX_LOGS) {
   // Enable logging in development mode
   htmx.logAll();
 }

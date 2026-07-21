@@ -1,13 +1,12 @@
 // src/middleware.ts
 import { auth } from "@lib/auth";
 import { defineMiddleware } from "astro:middleware";
+import { UMAMI_HOST_URL, UMAMI_PROXY_PREFIX, UMAMI_SCRIPT } from "astro:env/client";
 
-const UMAMI_HOST = process.env.UMAMI_HOST;
-export const UMAMI_PROXY_PREFIX =
-  process.env.UMAMI_PROXY_PREFIX ?? "/assets/ramen";
+const isDev = import.meta.env.DEV;
 
 const ROUTE_MAP: Record<string, string> = {
-  [UMAMI_PROXY_PREFIX]: "/ramen", // script
+  [UMAMI_PROXY_PREFIX]: `/${UMAMI_SCRIPT}`, // script
   [`${UMAMI_PROXY_PREFIX}/api/send`]: "/api/send", // data collection
 };
 
@@ -25,15 +24,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   // skip analytics if on dev
-  if (import.meta.env.DEV) {
+  if (isDev) {
     return next();
   }
 
   const url = new URL(context.request.url);
   const remotePath = ROUTE_MAP[url.pathname];
 
-  if (remotePath && UMAMI_HOST) {
-    const targetUrl = `${UMAMI_HOST}${remotePath}${url.search}`;
+  if (remotePath && UMAMI_HOST_URL) {
+    const targetUrl = `${UMAMI_HOST_URL}${remotePath}${url.search}`;
     const isBodyMethod = !["GET", "HEAD"].includes(context.request.method);
 
     const res = await fetch(targetUrl, {

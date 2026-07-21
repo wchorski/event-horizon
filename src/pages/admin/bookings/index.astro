@@ -12,8 +12,9 @@ import RowCreate from "@components/tables/RowCreate.astro";
 import { and, desc, eq } from "drizzle-orm";
 import { Booking } from "@db/schema";
 import { db } from "@db/db";
-const { SITE_TITLE, WORDPRESS_ENDPOINT } = import.meta.env;
 
+import { SITE_TITLE } from "astro:env/client";
+import { WORDPRESS_ENDPOINT } from "astro:env/server";
 const params = Astro.url.searchParams;
 const rawLocation = params.get("location_id");
 

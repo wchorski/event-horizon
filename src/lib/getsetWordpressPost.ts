@@ -22,8 +22,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "./errors";
-
-const { WP_USERNAME, WP_APP_PASSWORD, WORDPRESS_ENDPOINT } = import.meta.env;
+import { WORDPRESS_ENDPOINT, WP_USERNAME, WP_APP_PASSWORD } from "astro:env/server";
 
 function basicAuth(username: string, appPassword: string) {
   // WordPress app passwords often contain spaces for readability; remove them.

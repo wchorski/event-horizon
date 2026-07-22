@@ -103,6 +103,7 @@ export type MomentStep = {
 
 export type Timeline = {
   id: string;
+  booking_uuid: string | null,
   summary: string | null;
   date: Date;
   date_civil: string;

@@ -1,6 +1,7 @@
 ---
 import { baseTemplates } from "@client/templates/timelineTemplates";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+const bookingId = Astro.url.searchParams.get("bookingId");
 ---
 
 <CommonPageLayout>
@@ -27,6 +28,7 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
                 data-type="timelines"
                 data-action="create"
                 data-template-id={id}
+                data-booking-id={bookingId}
                 class="btn m"
               >
                 Create Timeline
@@ -133,6 +135,7 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
     if (action !== "create" && type !== "timelines") return;
 
     const templateId = target.dataset.templateId;
+    const bookingId = target.dataset.bookingId ?? null;
 
     const base = baseTemplates.find((t) => t.id === templateId);
 
@@ -142,7 +145,11 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 
     const timeline_uuid = uuidv7();
 
-    const template = buildInsertableTimelineGraph(base, timeline_uuid);
+    const template = buildInsertableTimelineGraph(
+      base,
+      timeline_uuid,
+      bookingId,
+    );
 
     if (!template) throw new Error(`template not found with id ${templateId}`);
 

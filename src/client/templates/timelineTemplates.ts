@@ -45,10 +45,12 @@ export const buildFromTemplate = (
 export function buildInsertableTimelineGraph(
   base: TimelineState,
   timeline_uuid: string,
+  booking_uuid: string | null,
 ): InsertableTimelineGraph {
   return {
     ...base,
     id: timeline_uuid,
+    booking_uuid,
 
     groups: base.groups.map(({ id, ...g }) => ({
       ...g,
@@ -81,6 +83,7 @@ export function buildInsertableTimelineGraph(
 
 export const baseTemplates: TimelineState[] = [
   {
+    booking_uuid: null,
     id: "001",
     summary: "DJ: Full Wedding (Ceremony, Reception, & Dancing)",
     date: new Date("2026-03-01"),
@@ -378,6 +381,7 @@ export const baseTemplates: TimelineState[] = [
     ],
   },
   {
+    booking_uuid: null,
     id: "002",
     summary: "DJ: Bar/Bat Mitzvah",
     date: now,
@@ -616,6 +620,7 @@ export const baseTemplates: TimelineState[] = [
     ],
   },
   {
+    booking_uuid: null,
     id: "003",
     summary: "DJ: Corporate Event",
     date: now,
@@ -767,6 +772,7 @@ export const baseTemplates: TimelineState[] = [
   },
   {
     id: "004",
+    booking_uuid: null,
     summary: "Start from Scratch",
     date: now,
     date_modified: now,

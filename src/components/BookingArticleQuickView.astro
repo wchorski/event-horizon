@@ -56,7 +56,7 @@ const { id, start, status, location, author, client, timeline } = booking;
             VIEW TIMELINE
           </a>
         ) : (
-          <a href="/timelines">add timeline</a>
+          <a href={`/timelines?bookingId=${id}`}>add timeline</a>
         )
       }
     </div>

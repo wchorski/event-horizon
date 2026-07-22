@@ -23,11 +23,12 @@ if (Astro.request.method === "POST") {
   try {
     const body: TimelineState = await Astro.request.json();
     if (!body) return new Response("Bad Request", { status: 400 });
-    const { moments, steps, groups, skills, ...restTimeline } = body;
+    const { moments, steps, groups, skills, booking_uuid, ...restTimeline } =
+      body;
     const payload: TimelineInsert = {
       ...restTimeline,
       owner_user_id: null,
-      booking_id: null,
+      booking_id: booking_uuid,
       color: "pink",
       data: {
         moments,
@@ -40,8 +41,8 @@ if (Astro.request.method === "POST") {
       // booking_id: "NEEDS_REAL_UUID",
       // owner_user_id: "NEEDS_REAL_UUID",
       date: new Date(restTimeline.date), // ← gets overwritten
-      date_created: new Date(restTimeline.date_created), // ← gets overwritten
-      date_modified: new Date(),
+      createdAt: new Date(restTimeline.date_created), // ← gets overwritten
+      updatedAt: new Date(),
       timestamp: new Date(restTimeline.date ?? Date.now()),
     };
 

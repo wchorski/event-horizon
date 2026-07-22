@@ -1,0 +1,53 @@
+---
+// components/Address.astro
+
+export interface Props {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  timezone?: string | null;
+  excerpt?: string | null;
+}
+
+const { id, name, address, city, state, zip, timezone, excerpt } = Astro.props;
+---
+
+<address class="address">
+  <strong class="address__name"><a href={`/locations/${id}`}>{name}</a></strong>
+
+  <div>{address}</div>
+
+  <div>
+    {city}, {state}
+    {" "}{zip}
+  </div>
+
+  {timezone && <div class="address__timezone">{timezone}</div>}
+
+  {excerpt && <p class="address__excerpt">{excerpt}</p>}
+</address>
+
+<style>
+  .address {
+    font-style: normal;
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .address__name {
+    font-weight: 600;
+  }
+
+  .address__timezone {
+    color: var(--color-text-muted, #666);
+    font-size: 0.9em;
+  }
+
+  .address__excerpt {
+    margin: 0;
+    color: var(--color-text-muted, #666);
+  }
+</style>

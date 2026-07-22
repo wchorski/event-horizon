@@ -24,7 +24,7 @@ if (Astro.request.method === "POST") {
     const formData = await Astro.request.formData();
     const searchQuery =
       formData.get("query")?.toString()?.trim() ??
-      formData.get("location.search")?.toString()?.trim();
+      formData.get("search.locations")?.toString()?.trim();
 
     const url = new URL(Astro.request.url);
     const page = Number(url.searchParams.get("page") ?? 1);

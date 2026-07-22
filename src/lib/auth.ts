@@ -17,7 +17,7 @@ import { db } from "@db/db";
 import * as schema from "@db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, username } from "better-auth/plugins";
+import { admin, username, organization } from "better-auth/plugins";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -49,9 +49,17 @@ export const auth = betterAuth({
       session: schema.Session,
       account: schema.Account,
       verification: schema.Verification,
-        passkey: schema.Passkey,
+      passkey: schema.Passkey,
     },
   }),
+  user: {
+    additionalFields: {
+      phone: { type: "string", required: false },
+      first_name: { type: "string", required: true },
+      last_name: { type: "string", required: true },
+      // username is already placed here by plugin
+    },
+  },
   secret: BETTER_AUTH_SECRET,
   baseURL: BETTER_AUTH_URL,
   emailAndPassword: {
@@ -75,10 +83,11 @@ export const auth = betterAuth({
       origin: BETTER_AUTH_URL,
     }),
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
+    // organization(),
   ],
   advanced: {
     cookiePrefix: "eh",
-    useSecureCookies: isProd, 
+    useSecureCookies: isProd,
     database: {
       generateId: false, // let database generate ID
     },

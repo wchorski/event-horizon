@@ -108,7 +108,10 @@ docker compose up --remove-orphans
 - [ ] timeline: when moment is deleted, delete all steps from idb
 - [ ] timeline: when `+ add item` auto focus the generated input field
 - [ ] timeline: sepearte rows (TBD marker bleed together)
+- [ ] timeline: update step counter when adding new step
+- [ ] timeline: auto re-order moments when time change. bonus -- add drag and drop (keep time duration, shift all other rows when dropped)
 - [ ] `+ add moment` double adds moment....
+- [ ] use Better Auth Organizations https://better-auth.com/docs/plugins/organization
 - [ ] convert all env to use https://docs.astro.build/en/guides/environment-variables/
 - [ ] add "organization" in schema that allows SaaS multi tenant multi buisness to use this app, but seperate users, locations, bookings, etc to respective user base.
 - [ ] if user is not apart of org then only self created/owned Events, Bookings, Timelines, etc are viewable. 

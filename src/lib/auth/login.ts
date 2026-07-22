@@ -1,10 +1,10 @@
 // src/lib/login.ts
 import { auth } from "@lib/auth";
-import type { LoginCredentials, LoginResult } from "@ty/Auth";
+import type { LoginCredentials, LoginSignupResult } from "@ty/Auth";
 
 export async function login(
   credentials: LoginCredentials
-): Promise<LoginResult> {
+): Promise<LoginSignupResult> {
   const { email, password } = credentials;
 
   if (!email || !password) {

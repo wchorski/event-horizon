@@ -3,11 +3,25 @@ import { z } from "astro/zod";
 // import { LibsqlError } from "@libsql/client";
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
+export interface DottedFlattenedError {
+  formErrors: string[];
+  fieldErrors: Record<string, string[]>;
+}
+
 // --- Error Classes ---
 // 422
+// export class ValidationError<T> extends Error {
+//   flattened: ReturnType<ZodError["flatten"]>;
+//   constructor(flattened: z.core.$ZodFlattenedError<T>) {
+//     super("Validation failed");
+//     this.name = "ValidationError";
+//     this.flattened = flattened;
+//   }
+// }
 export class ValidationError<T> extends Error {
-  flattened: ReturnType<ZodError["flatten"]>;
-  constructor(flattened: z.core.$ZodFlattenedError<T>) {
+  flattened: DottedFlattenedError;
+
+  constructor(flattened: DottedFlattenedError) {
     super("Validation failed");
     this.name = "ValidationError";
     this.flattened = flattened;
@@ -160,7 +174,7 @@ export function errorHandlingOnSubmit(e: unknown): {
     return { status: 409, err: e.message };
   }
   if (e instanceof ZodError) {
-    return { err: z.flattenError(e), status: 422 };
+    return { err: flattenWithDottedPaths(e), status: 422 };
   }
   if (e instanceof ValidationError) {
     return { status: 422, err: e.flattened };
@@ -232,4 +246,20 @@ export class WordpressApiError extends Error {
     this.wpData = opts.wpData;
     this.responseBody = opts.responseBody;
   }
+}
+
+function flattenWithDottedPaths(error: ZodError): DottedFlattenedError {
+  const formErrors: string[] = [];
+  const fieldErrors: Record<string, string[]> = {};
+
+  for (const issue of error.issues) {
+    if (issue.path.length === 0) {
+      formErrors.push(issue.message);
+    } else {
+      const key = issue.path.join(".");
+      (fieldErrors[key] ??= []).push(issue.message);
+    }
+  }
+
+  return { formErrors, fieldErrors };
 }

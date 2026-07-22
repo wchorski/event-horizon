@@ -4,7 +4,7 @@ import SvgSiteLogo from "@public/favicon.svg";
 import homeStyles from "@styles/home.module.css";
 import gridStyles from "@styles/grid.module.css";
 
-const session = Astro.locals.session;
+// const session = Astro.locals.session;
 const user = Astro.locals.user;
 
 const displayName = user
@@ -20,6 +20,6 @@ const displayName = user
     <SvgSiteLogo class={homeStyles.logo} />
   </a>
   <span class="pill">
-    <a href={`/users/${session?.userId}`}>{displayName}</a>
+    <a href={`/dashboard`}>{displayName}</a>
   </span>
 </header>

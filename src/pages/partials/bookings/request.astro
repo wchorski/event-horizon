@@ -21,6 +21,7 @@ import { db } from "@db/db";
 import { validateBookingRequest } from "@lib/validate";
 import { auth } from "@lib/auth";
 import { parseNestedFormData } from "@lib/parseFormFields";
+import { createUser } from "@lib/auth/createUser";
 
 type ZodErrorFlattened = ReturnType<ZodError<BookingSelect>["flatten"]>;
 
@@ -37,7 +38,20 @@ const ctx = {
   crud: "bookings" as CrudRegistryType,
   config,
   endpoint: "/bookings",
-  headers: Object.keys(config),
+  // TODO is there a better way to make sure error ids sync with partials?
+  headers: [
+    ...Object.keys(config),
+    "user.phone",
+    "user.first_name",
+    "user.last_name",
+    "user.email",
+    "location.name",
+    "location.address",
+    "location.city",
+    "location.state",
+    "location.zip",
+    "location.timezone",
+  ],
 };
 
 type Payload = {
@@ -76,13 +90,11 @@ if (Astro.request.method === "POST") {
       author_user_id: sessionUserId || "",
     }) as Payload;
 
-    // TODO payload.booking.start
-    console.log({ payload });
-
     payload.end = payload.start;
     payload.status = "REQUESTED";
     const validated = validateBookingRequest.parse(payload);
     let locationId = validated.location_id;
+    let clientId = validated.client_id;
 
     if (!locationId && validated.location) {
       const [newLocation] = await db
@@ -100,6 +112,14 @@ if (Astro.request.method === "POST") {
       locationId = newLocation.id;
     }
 
+    if (!clientId && validated.user) {
+      const userResult = await createUser(validated.user);
+
+      if (!userResult.success)
+        throw new Error(`User Create Error: ${userResult.error}`);
+      clientId = userResult.user.id;
+    }
+
     const [result] = await db
       .insert(Booking)
       .values({
@@ -108,7 +128,7 @@ if (Astro.request.method === "POST") {
         notes: validated.notes,
         status: validated.status,
         author_user_id: validated.author_user_id,
-        client_id: validated.client_id,
+        client_id: clientId,
         location_id: locationId,
       })
       .returning();

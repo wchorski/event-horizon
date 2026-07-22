@@ -12,7 +12,11 @@ interface Props {
   errors: FlattenedZodError;
 }
 const { id, model, headers, errors } = Astro.props;
-const fieldId = (name: string) => `field-error-${model}-${id}-${name}`;
+const fieldId = (name: string) => {
+  console.log(`field-error-${model}-${id}-${name}`);
+  return `field-error-${model}-${id}-${name}`;
+};
+console.log({ errors: JSON.stringify(errors, null, 2) });
 // console.log(">>>>> FieldErrors.partial", `field-error-${model}-${id}-${name}`);
 ---
 

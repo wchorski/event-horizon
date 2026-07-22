@@ -68,6 +68,7 @@ export async function getBookingsPage({
       client: true,
       location: true,
       author: true,
+      timeline: true,
     },
   });
 

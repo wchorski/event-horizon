@@ -1,9 +1,37 @@
 ---
+import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import { getBookingsPage } from "@lib/getBookingsPage";
+
+const user = Astro.locals.user;
+
+if (user === null) return Astro.redirect("/login");
+if (!user) throw new Error("Must be logged in to view page");
+
+const { bookings } = await getBookingsPage({
+  author_user_id: user.id,
+  page: 1,
+});
 ---
 
 <CommonPageLayout>
   <header>
     <h1>Dashboard</h1>
   </header>
+  <div data-layout="content">
+    <h2>Bookings</h2>
+    <ul id="bookings" class="unstyled grid gap-s">
+      {
+        bookings ? (
+          bookings.map((bk) => (
+            <li>
+              <BookingArticleQuickView booking={bk} />
+            </li>
+          ))
+        ) : (
+          <li class="callout ghost">no bookings found</li>
+        )
+      }
+    </ul>
+  </div>
 </CommonPageLayout>

@@ -48,16 +48,20 @@ import type { HTMLAttributes } from "astro/types";
 
 type Props = {
   endpoint: string; // htmx POST target, e.g. "/partials/users/search"
+  model: string,
   searchName?: string; // form field name htmx sends, default "search"
   minChars?: number;
   debounce?: number; // ms
   label?: string;
   value?: string | number; // pre-selected id
   preloadInput?: string; // display text to show for the pre-selected value
+  fieldError?: string | unknown | null;
+  isCreate?:boolean
 } & Omit<HTMLAttributes<"input">, "value" | "type">;
 
 const {
   endpoint,
+  model,
   searchName = "search",
   minChars = 2,
   debounce = 300,
@@ -67,10 +71,13 @@ const {
   id = "ssa",
   name = "searchSelectValue",
   required,
+  isCreate = false,
+  fieldError,
   ...inputAttrs
 } = Astro.props;
 
 const preValue = value !== undefined ? String(value) : "";
+const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
 ---
 
 <search-select-async
@@ -85,7 +92,6 @@ const preValue = value !== undefined ? String(value) : "";
   </div>
 
   <div class="ss-combobox" id={`${id}-combobox`}>
-
     <input
       type="hidden"
       id={`${id}-hidden`}
@@ -190,6 +196,10 @@ const preValue = value !== undefined ? String(value) : "";
       <div class="ss-drop-header" id={`${id}-drop-header`}></div>
       <ul class="ss-list" id={`${id}-list`}></ul>
     </div>
+
+    <span id={errorId} class="anim-vibrate field-error">
+      {fieldError ?? ""}
+    </span>
   </div>
 
   <template data-tpl="option">
@@ -262,7 +272,6 @@ const preValue = value !== undefined ? String(value) : "";
     // server renders the DOM, but the base class still needs the value
     // list in memory to resolve a click.
     private hydrateSwappedOptions() {
-      
       this.results = [
         ...this.list.querySelectorAll<HTMLElement>(".ss-option"),
       ].map((el) => ({

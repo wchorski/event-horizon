@@ -65,26 +65,10 @@ h1 {
   }
 }
 
-.status[data-status="success"] {
-  --status-color: var(--c-success);
-}
-
-.status[data-status="error"] {
-  --status-color: var(--c-error);
-}
-
 .status {
-  /* default fallback */
-  --status-color: #999;
-
-  border-left: 8px solid var(--status-color);
-  padding: 1rem;
-
-  background: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--status-color) 10%, var(--c-txt-bg)),
-    var(--c-txt-bg)
-  );
+  border-left-width: 8px;
+  border-left-style: solid;
+  padding: var(--size-xs) var(--size-s);
 }
 
 .card h2 {
@@ -99,6 +83,7 @@ button,
   text-decoration: none;
   display: inline-moment;
   border-radius: 4px;
+  padding-inline: var(--size-xs);
 }
 
 button.m,

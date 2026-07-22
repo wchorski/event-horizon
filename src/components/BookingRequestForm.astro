@@ -10,6 +10,7 @@ import SelectField from "./form/SelectField.astro";
 import TextareaField from "./form/TextareaField.astro";
 import SearchSelect from "./form/SearchSelect.astro";
 import SearchSelectAsync from "./form/SearchSelectAsync.astro";
+import { DATALIST_TIMEZONES } from "astro:env/client";
 
 interface Props extends HTMLAttributes<"form"> {
   author_user_id: string;
@@ -29,6 +30,11 @@ const model = "bookings";
 const errorTargetId = `top-level-error-${model}-create`;
 const fieldErrorId = (fieldName: string) =>
   `field-error-${model}-create-${fieldName}`;
+
+const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
+  value: str,
+  label: str,
+}));
 ---
 
 <form
@@ -60,21 +66,15 @@ const fieldErrorId = (fieldName: string) =>
     <legend>Select Location</legend>
     <SearchSelectAsync
       endpoint="/partials/locations/search"
-      searchName="location.search"
+      searchName="search.locations"
+      model="locations"
+      isCreate={true}
       name={"location_id"}
       id={"location-search"}
       label="Search by venu name or street address"
       minChars={2}
       debounce={300}
     />
-    <!-- <SelectField
-      label=""
-      name="location_id"
-      options={locationOptions}
-      errorId={fieldErrorId("location_id")}
-    >
-      <option slot="first-option" value="">-- select location --</option>
-    </SelectField> -->
   </fieldset>
   <fieldset>
     <details open>
@@ -83,43 +83,44 @@ const fieldErrorId = (fieldName: string) =>
         <InputField
           id={"location.name"}
           name={"location.name"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
           isCreate={true}
         />
         <InputField
           id={"location.address"}
           name={"location.address"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
           isCreate={true}
         />
         <InputField
           id={"location.city"}
           name={"location.city"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
           isCreate={true}
         />
         <InputField
           id={"location.state"}
           name={"location.state"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
           isCreate={true}
         />
         <InputField
           id={"location.zip"}
           name={"location.zip"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
         />
         <InputField
           id={"location.timezone"}
           name={"location.timezone"}
-          model={"locations"}
+          model={"bookings"}
           type={"text"}
           isCreate={true}
+          datalist={cityOptions}
         />
       </div>
     </details>
@@ -128,13 +129,57 @@ const fieldErrorId = (fieldName: string) =>
     <legend>Connect a User</legend>
     <SearchSelectAsync
       endpoint="/partials/users/search"
-      searchName="user.search"
+      searchName="search.users"
+      model="users"
+      isCreate={true}
       name={"client_id"}
       id={"user-search"}
       label="Search by name or email"
       minChars={2}
       debounce={300}
     />
+  </fieldset>
+  <fieldset>
+    <details open>
+      <summary>Or register a new User</summary>
+      <div class="grid gap-s" id="new-user-fields">
+        <InputField
+          label="first name"
+          id={"new-user.first_name"}
+          name={"user.first_name"}
+          model={"bookings"}
+          type={"text"}
+          required={true}
+          isCreate={true}
+        />
+        <InputField
+          label="last name"
+          id={"new-user.last_name"}
+          name={"user.last_name"}
+          model={"bookings"}
+          type={"text"}
+          required={true}
+          isCreate={true}
+        />
+        <InputField
+          label="email"
+          id={"new-user.email"}
+          name={"user.email"}
+          model={"bookings"}
+          type={"text"}
+          required={true}
+          isCreate={true}
+        />
+        <InputField
+          label="phone"
+          id={"new-user.phone"}
+          name={"user.phone"}
+          model={"bookings"}
+          type={"text"}
+          isCreate={true}
+        />
+      </div>
+    </details>
   </fieldset>
 
   <fieldset class="actions" id={`${formId}-success`}>

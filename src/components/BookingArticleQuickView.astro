@@ -1,0 +1,75 @@
+---
+import { prettyDateToLocale } from "@lib/formatters";
+import type {
+  BookingSelect,
+  LocationSelect,
+  TimelineSelect,
+  UserSelect,
+} from "@ty/Schema";
+import Address from "@components/Address.astro";
+
+interface Props {
+  booking: BookingSelect & {
+    location: LocationSelect | null;
+    author: UserSelect;
+    client: UserSelect | null;
+    timeline: TimelineSelect | null;
+  };
+}
+const { booking } = Astro.props;
+const { id, start, status, location, author, client, timeline } = booking;
+---
+
+<article class="card">
+  <header class="callout">
+    <div>
+      {
+        client ? (
+          <h3>
+            {" "}
+            <a
+              href={`/users/${client.id}`}
+            >{`${client.name} <${client.email}>`}</a>
+          </h3>
+        ) : (
+          <h3>No Client Set</h3>
+        )
+      }
+    </div>
+    <time datetime={start.toISOString()}>{prettyDateToLocale(start)}</time>
+    <p>
+      {location ? <Address {...location} /> : "address not set"}
+    </p>
+    <span class="status" data-status={status}>{status}</span>
+  </header>
+
+  <div class="flex space-between">
+    <div>
+      <span>author: </span>
+      {`${author.name} <${author.email}>`}
+    </div>
+    <div class="actions flex gap-s">
+      <a class="btn" href={`/bookings/${id}`}>booking</a>
+      {
+        timeline ? (
+          <a class="btn" href={`/timelines/${timeline.id}`}>
+            VIEW TIMELINE
+          </a>
+        ) : (
+          <a href="/timelines">add timeline</a>
+        )
+      }
+    </div>
+  </div>
+</article>
+
+<style>
+  article {
+    position: relative;
+  }
+  .status {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+</style>

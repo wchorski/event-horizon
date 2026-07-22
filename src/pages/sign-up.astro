@@ -4,6 +4,8 @@ import SubmitButton from "@components/form/SubmitButton.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { auth } from "@lib/auth";
+import { signup } from "@lib/auth/signup";
+import type { SignupCredentials } from "@ty/Auth";
 
 type SignUpFields = {
   email: string;
@@ -19,11 +21,13 @@ let error: string | null = null;
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
 
-  const payload = Object.fromEntries(formData.entries());
+  const payload = Object.fromEntries(formData.entries()) as SignUpFields;
 
-  const { email, password, image, username } = payload as SignUpFields;
+  const { email, password, image, username } = payload;
 
   console.log({ payload });
+
+  // const result = await signup(payload)
 
   if (!email || !password) {
     error = "Email and password are required.";

@@ -68,6 +68,24 @@
   --c-disabled: gray;
 }
 
+.status {
+  /* default fallback */
+  --status-color: #999;
+  border-left-color: var(--status-color);
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--status-color) 10%, var(--c-txt-bg)),
+    var(--c-txt-bg)
+  );
+}
+.status[data-status="success"] {
+  --status-color: var(--c-success);
+}
+
+.status[data-status="error"] {
+  --status-color: var(--c-error);
+}
+
 .sub-text {
   color: var(--c-seperator-light);
 }

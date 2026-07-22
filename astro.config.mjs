@@ -163,16 +163,18 @@ export default defineConfig({
       WP_USERNAME: envField.string({
         context: "server",
         access: "secret",
+        optional: true,
       }),
       WP_APP_PASSWORD: envField.string({
         context: "server",
         access: "secret",
+        optional: true,
       }),
       WORDPRESS_ENDPOINT: envField.string({
         context: "server",
         access: "public",
+        optional: true,
       }),
-      API_SECRET: envField.string({ context: "server", access: "secret" }),
     },
   },
   // integrations: [db()]

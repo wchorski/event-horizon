@@ -62,6 +62,15 @@ export const validate = {
   datetimeLocalToDate,
   id: z.uuidv7(),
   bookingStatus: z.enum(BOOKING_STATUSES),
+  phoneOptional: z.preprocess(
+    (val) => (val === "" || val == null ? undefined : val),
+    z
+      .string()
+      .trim()
+      .transform((val) => normalizePhoneToE164Manual(val))
+      .refine((val) => val !== null, "Phone must be 10 digits or E.164 format")
+      .optional(),
+  ),
   phone: z
     .string()
     .trim()
@@ -300,6 +309,27 @@ const optionalLocation = z.preprocess(
     })
     .optional(),
 );
+const optionalUser = z.preprocess(
+  (val) => {
+    if (
+      typeof val === "object" &&
+      val !== null &&
+      Object.values(val).every((v) => v === "" || v === undefined)
+    ) {
+      return undefined;
+    }
+
+    return val;
+  },
+  z
+    .object({
+      first_name: z.string().min(3, "First name is required"),
+      last_name: z.string().min(3, "Last name is required"),
+      email: z.string().min(3, "Email is required"),
+      phone: validate.phoneOptional,
+    })
+    .optional(),
+);
 
 export const validateBookingRequest = z
   .object({
@@ -309,6 +339,7 @@ export const validateBookingRequest = z
     status: z.enum(BOOKING_STATUSES),
     author_user_id: z.uuidv7(),
     client_id: uuidv7OrNullFromForm,
+    user: optionalUser,
     location_id: uuidv7OrNullFromForm,
     location: optionalLocation,
   })
@@ -316,7 +347,7 @@ export const validateBookingRequest = z
     if (!data.location_id && !data.location) {
       ctx.addIssue({
         code: "custom",
-        path: ["location_id"],
+        path: ["search.locations"],
         message: "An existing location or new location is required",
       });
     }
@@ -324,8 +355,24 @@ export const validateBookingRequest = z
     if (data.location_id && data.location) {
       ctx.addIssue({
         code: "custom",
-        path: ["location_id"],
+        path: ["search.locations"],
         message: "Choose either an existing location or create a new location",
+      });
+    }
+
+    if (!data.client_id && !data.user) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["search.users"],
+        message: "An existing client or new user is required",
+      });
+    }
+
+    if (data.client_id && data.user) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["search.users"],
+        message: "Choose either an existing client or create a new user",
       });
     }
 

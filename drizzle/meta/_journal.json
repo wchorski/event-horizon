@@ -22,6 +22,13 @@
       "when": 1784064427587,
       "tag": "0002_dark_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784681017859,
+      "tag": "0003_wise_ink",
+      "breakpoints": true
     }
   ]
 }

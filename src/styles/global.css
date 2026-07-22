@@ -371,7 +371,7 @@ ul.steps {
     }
 
     & > textarea {
-      height: 15px;
+      min-height: 1lh;
     }
   }
 }

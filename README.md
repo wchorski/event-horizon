@@ -105,6 +105,10 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] timeline: when moment is deleted, delete all steps from idb
+- [ ] timeline: when `+ add item` auto focus the generated input field
+- [ ] timeline: sepearte rows (TBD marker bleed together)
+- [ ] `+ add moment` double adds moment....
 - [ ] convert all env to use https://docs.astro.build/en/guides/environment-variables/
 - [ ] add "organization" in schema that allows SaaS multi tenant multi buisness to use this app, but seperate users, locations, bookings, etc to respective user base.
 - [ ] if user is not apart of org then only self created/owned Events, Bookings, Timelines, etc are viewable. 

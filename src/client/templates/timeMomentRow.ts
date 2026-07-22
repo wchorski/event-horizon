@@ -71,6 +71,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   });
   const noteTextarea = Object.assign(document.createElement("textarea"), {
     name: "note",
+    className: "auto-size resize",
     value: step.note,
   });
   const deleteBtn = createElement(

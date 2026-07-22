@@ -84,8 +84,7 @@ enum PartialType {
 }
 
 const partialType = Astro.request.headers.get("X-Partial-Type") as
-  | PartialType
-  | undefined;
+  PartialType | undefined;
 if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
 type ZodErrorFlattened = ReturnType<ZodError<TicketSelect>["flatten"]>;
 type RenderResult =
@@ -149,3 +148,4 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
       ctx={ctx}
     />
   )
+}

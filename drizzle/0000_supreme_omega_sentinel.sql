@@ -25,14 +25,14 @@ CREATE TABLE "bookings" (
 	"revision" integer DEFAULT 1 NOT NULL,
 	"google_calendar" jsonb,
 	"status" "booking_status" DEFAULT 'REQUESTED' NOT NULL,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"author_user_id" uuid NOT NULL,
 	"client_id" uuid,
 	"location_id" uuid,
 	"event_id" uuid,
 	"organization_id" uuid,
-	CONSTRAINT "end_after_start" CHECK ("bookings"."end" > "bookings"."start")
+	CONSTRAINT "end_after_start" CHECK ("bookings"."end" >= "bookings"."start")
 );
 --> statement-breakpoint
 CREATE TABLE "booking_assignments" (
@@ -55,8 +55,8 @@ CREATE TABLE "events" (
 	"location_id" uuid NOT NULL,
 	"organization_id" uuid,
 	"author_user_id" uuid NOT NULL,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "events_wp_post_id_unique" UNIQUE("wp_post_id")
 );
 --> statement-breakpoint
@@ -90,8 +90,8 @@ CREATE TABLE "organizations" (
 	"color" text,
 	"color_2" text,
 	"logo" text,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
@@ -104,7 +104,7 @@ CREATE TABLE "organization_memberships" (
 	CONSTRAINT "organization_memberships_organization_id_user_id_unique" UNIQUE("organization_id","user_id")
 );
 --> statement-breakpoint
-CREATE TABLE "passkeys" (
+CREATE TABLE "passkey" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"username" text,
 	"public_key" text NOT NULL,
@@ -132,8 +132,8 @@ CREATE TABLE "sessions" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"expires_at" timestamp NOT NULL,
 	"token" text NOT NULL,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp NOT NULL,
 	"ip_address" text,
 	"user_agent" text,
 	"user_id" uuid NOT NULL,
@@ -148,8 +148,8 @@ CREATE TABLE "tickets" (
 	"timestamp" timestamp NOT NULL,
 	"grade" text,
 	"attended" boolean DEFAULT false NOT NULL,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "timelines" (
@@ -157,9 +157,9 @@ CREATE TABLE "timelines" (
 	"booking_id" uuid,
 	"owner_user_id" uuid,
 	"rev" integer DEFAULT 1 NOT NULL,
-	"date_created" timestamp DEFAULT now() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
 	"date" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"timestamp" timestamp NOT NULL,
 	"date_civil" text NOT NULL,
 	"notes" text,
@@ -176,25 +176,28 @@ CREATE TABLE "timelines" (
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"role_id" uuid,
-	"name" text,
-	"first_name" text NOT NULL,
-	"last_name" text NOT NULL,
+	"role" text,
+	"username" text NOT NULL,
+	"display_username" text,
+	"name" text NOT NULL,
+	"first_name" text,
+	"last_name" text,
 	"middle_initial" text,
-	"phone" text NOT NULL,
+	"phone" text,
 	"email" text NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
-	"address_1" text NOT NULL,
+	"address_1" text,
 	"address_2" text,
-	"city" text NOT NULL,
-	"state" text NOT NULL,
-	"zip" text NOT NULL,
-	"image_url" text,
-	"date_created" timestamp DEFAULT now() NOT NULL,
-	"date_modified" timestamp DEFAULT now() NOT NULL,
+	"city" text,
+	"state" text,
+	"zip" text,
+	"image" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"banned" boolean DEFAULT false,
 	"ban_reason" text,
 	"ban_expires" timestamp,
-	CONSTRAINT "users_name_unique" UNIQUE("name"),
+	CONSTRAINT "users_username_unique" UNIQUE("username"),
 	CONSTRAINT "users_phone_unique" UNIQUE("phone"),
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
@@ -226,7 +229,7 @@ ALTER TABLE "locations" ADD CONSTRAINT "locations_author_user_id_users_id_fk" FO
 ALTER TABLE "locations" ADD CONSTRAINT "locations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "passkeys" ADD CONSTRAINT "passkeys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roles" ADD CONSTRAINT "roles_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tickets" ADD CONSTRAINT "tickets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -239,8 +242,8 @@ CREATE INDEX "events_location_id_idx" ON "events" USING btree ("location_id");--
 CREATE UNIQUE INDEX "events_subject_date_location_unique" ON "events" USING btree ("subject","date_civil","location_id");--> statement-breakpoint
 CREATE INDEX "locations_city_idx" ON "locations" USING btree ("city");--> statement-breakpoint
 CREATE INDEX "locations_state_idx" ON "locations" USING btree ("state");--> statement-breakpoint
-CREATE INDEX "passkey_userId_idx" ON "passkeys" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "passkey_credentialID_idx" ON "passkeys" USING btree ("credential_id");--> statement-breakpoint
+CREATE INDEX "passkey_userId_idx" ON "passkey" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "passkey_credentialID_idx" ON "passkey" USING btree ("credential_id");--> statement-breakpoint
 CREATE INDEX "session_user_id_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "tickets_user_id_idx" ON "tickets" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "tickets_event_id_idx" ON "tickets" USING btree ("event_id");--> statement-breakpoint

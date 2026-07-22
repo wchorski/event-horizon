@@ -11,9 +11,9 @@ import { Pool } from "pg";
 
 const pool = createPgAstroPool();
 // await client.connect();
-
 const DB_LOGGER =
   process.env.DB_LOGGER === "true" && process.env.NODE_ENV !== "production";
+console.log({ DB_LOGGER });
 
 export const db = drizzle(pool, {
   schema,

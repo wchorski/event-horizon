@@ -9,23 +9,33 @@ for (const key of required) {
   }
 }
 
-const DATABASE_PORT = process.env.NODE_ENV === "production" ? "5432" : process.env.PGPORT
+const { NODE_ENV, PGPORT, PGUSER, PGPASSWORD, PGHOST, PGDATABASE } =
+  process.env;
+
+console.log({ NODE_ENV });
+
+const DATABASE_PORT = NODE_ENV === "production" ? "5432" : PGPORT;
 // drizzle-kit ONLY accepts a URL → construct it ONCE here
 const DATABASE_URL =
-  `postgres://${process.env.PGUSER}:` +
-  `${encodeURIComponent(process.env.PGPASSWORD!)}` +
-  `@${process.env.PGHOST}:${DATABASE_PORT}/${process.env.PGDATABASE}`;
+  `postgres://${PGUSER}:` +
+  `${encodeURIComponent(PGPASSWORD!)}` +
+  `@${PGHOST}:${DATABASE_PORT}/${PGDATABASE}`;
 
-console.log("drizzle.config.ts DATABASE_URL: ", DATABASE_URL);
+console.log(
+  "drizzle.config.ts DATABASE_URL: ",
+  `postgres://${PGUSER}:` +
+    `PGPASSWORD` +
+    `@${PGHOST}:${DATABASE_PORT}/${PGDATABASE}`,
+);
 
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   casing: "snake_case",
-  verbose: process.env.NODE_ENV === "development" ? true : false,
+  verbose: NODE_ENV === "development" ? true : false,
   dbCredentials: {
     url: DATABASE_URL,
-    ssl: process.env.NODE_ENV === "production" ? "require" : undefined,
+    ssl: NODE_ENV === "production" ? "require" : undefined,
   },
 });

@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1784063296244,
-      "tag": "0000_yellow_doorman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1784064382863,
-      "tag": "0001_dashing_talkback",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1784064427587,
-      "tag": "0002_dark_the_watchers",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1784681017859,
-      "tag": "0003_wise_ink",
+      "when": 1784684410144,
+      "tag": "0000_supreme_omega_sentinel",
       "breakpoints": true
     }
   ]

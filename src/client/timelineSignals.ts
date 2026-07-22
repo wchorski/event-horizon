@@ -200,16 +200,19 @@ moments.onChange((change) => {
   }
 });
 // TODO setup steps signal. not exactly necessary because no other data type depends on step update
-// steps.onChange(change => {
-//   switch (change.type) {
-//     case 'added':
+steps.onChange(change => {
+  switch (change.type) {
+    case 'added':
+      break;
+    case 'removed':
+      const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
+      li.remove()
+      break;
 
-//       break;
-
-//     default:
-//       break;
-//   }
-// })
+    default:
+      break;
+  }
+})
 
 skills.onChange((change) => {
   switch (change.type) {
@@ -349,7 +352,6 @@ table.addEventListener("input", (e) => {
 
   const stepItem = target.closest("li[data-step-id]");
   if (stepItem) {
-    console.log('table.addEventListener("input", (e) => {');
     const stepId = Number((stepItem as HTMLElement).dataset.stepId);
     const field = target.name as keyof MomentStep;
     debouncedSaveStep(stepId, field, target.value);

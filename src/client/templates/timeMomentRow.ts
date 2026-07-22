@@ -75,7 +75,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   });
   const deleteBtn = createElement(
     "button",
-    { className: "delete", textContent: "␡", title: "delete" },
+    { className: `delete`, textContent: "␡", title: `delete (id:${step.id})` },
     { action: "delete", type: STEPS_STORE },
   );
 
@@ -115,7 +115,7 @@ function createSubRowSteps(
     { className: "ghost", textContent: "+ add item" },
     { momentId: String(parentId), action: "create", type: STEPS_STORE },
   );
-
+  
   details.append(summary, ul, addBtn);
   tdSub.append(details);
   trSub.appendChild(tdSub);

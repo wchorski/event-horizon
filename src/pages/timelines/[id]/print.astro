@@ -240,10 +240,14 @@ if (!id) return Astro.redirect("/404");
     tr.append(tdStartEnd, tdDesc, tdSkill, tdGroup, tdNote);
 
     if (steps.length > 0) {
-      const trSub = createElement("tr", {
-        id: `timeline-moment-anchor-${id}`,
-        className: `time-moment-steps`,
-      });
+      const trSub = createElement(
+        "tr",
+        {
+          id: `timeline-moment-step-${id}`,
+          className: `time-moment-steps`,
+        },
+        { "moment-id": String(id) },
+      );
       const stepsCell = createElement("td", { colSpan: 999 });
       const stepsDetails = createElement("details", { open: true });
       const stepsSummary = createElement("summary", {

@@ -5,6 +5,9 @@ import { getLocationsPage } from "@lib/getLocationsPage";
 import { seedData } from "@db/seed-data";
 import { getUsersPage } from "@lib/getUsersPage";
 
+const timelineId = Astro.url.searchParams.get("timelineId");
+const start = Astro.url.searchParams.get("start");
+
 const { users } = await getUsersPage({ page: 1, perPage: 200 });
 const usersOptions = users?.map((usr) => ({
   value: usr.id,
@@ -15,14 +18,15 @@ const locationOptions = locations?.map((loc) => ({
   value: loc.id,
   label: `${loc.name} <${loc.address}>`,
 }));
+
 //? handled with html slot instead
 // locationOptions?.unshift({ value: "", label: "-- select location --" });
 ---
 
 <CommonPageLayout>
   <main>
-    <header>
-      <h1>Create a Booking</h1>
+    <header class="display none">
+      <h1>Request a Booking</h1>
     </header>
 
     <div data-layout="content" class="content">
@@ -30,6 +34,8 @@ const locationOptions = locations?.map((loc) => ({
         userOptions={usersOptions}
         locationOptions={locationOptions}
         author_user_id={seedData.users[0].id}
+        timelineId={timelineId}
+        start={start}
       />
     </div>
   </main>

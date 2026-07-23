@@ -1,6 +1,5 @@
 header.hero {
   place-items: center;
-  margin-block: var(--size-xl);
 
   & a:visited {
     color: var(--c-txt) !important;

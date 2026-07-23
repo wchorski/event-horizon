@@ -1,4 +1,4 @@
-console.log("--- script timelineSignals ---");
+// src/client/timelineSignals.ts
 import {
   idbCreateMoment,
   idbDeleteMoment,
@@ -45,98 +45,6 @@ import {
   prettyDateToLocale,
 } from "@lib/formatters";
 import { skillListItem } from "@client/templates/skillListItem";
-
-const pageHeader = document.getElementById("page-header")!;
-const timelineRevSpan = document.getElementById("timeline-revision")!;
-const divTimelineGraph = document.getElementById("timeline");
-const table = document.getElementById("timeline-moment-table")!;
-const tbody = document.getElementById("time-moment-list")!;
-const skillList = document.getElementById("skills-list")!;
-const groupsList = document.getElementById("time-groups-list")!;
-const skillCreateBtn = document.getElementById("create-skill-item")!;
-const groupCreateBtn = document.getElementById("create-group-item")!;
-const momentCreateBtn = document.getElementById("create-moment-item")!;
-const bannerMsgP = document.getElementById("banner-message")!;
-// let timelineData: TimelineData | null = null;
-
-const timeline_uuid = window.location.pathname.split("/").at(-1);
-
-async function fetchData() {
-  if (!timeline_uuid)
-    throw new Error(
-      `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
-    );
-  try {
-    // TODO preven user from default seed. force them to pick from a preset/template
-    await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
-    const local = await idbGetSingleTimelineData(timeline_uuid);
-
-    // check server for a newer version
-    const response = await fetch(`/api/timelines/${timeline_uuid}`);
-
-    if (response.ok) {
-      const server: TimelineSelect = await response.json();
-
-      if (
-        !local ||
-        server.rev > local.rev
-        // server date is a string not Date object
-        // && server.date_modified < local.date_modified
-      ) {
-        const {
-          data,
-          booking_id,
-          owner_user_id,
-          timestamp,
-          color,
-          ...restOfServer
-        } = server;
-
-        if (data) {
-          // wipe and rebuild all IDB stores from server state
-
-          const template = buildInsertableTimelineGraph(
-            {
-              ...restOfServer,
-              booking_uuid: null,
-              moments: data.moments,
-              steps: data.steps,
-              groups: data.groups,
-              skills: data.skills,
-              date_modified: new Date(),
-              date_created: new Date(),
-            },
-            timeline_uuid,
-            booking_id,
-          );
-          console.log("inserting timeline from server into local idb");
-          return await idbInsertTimelineState(template);
-        } else {
-          // server has no jsonb data yet — just sync top-level fields
-          await idbUpdateTimeline(timeline_uuid, {
-            ...restOfServer,
-            rev: server.rev,
-            date_modified: new Date(server.updatedAt),
-          });
-          return await idbGetSingleTimelineData(timeline_uuid);
-        }
-      }
-    } else {
-      uiBanner("Not synced to server. Commit to sync", "info");
-    }
-    // if nothing else found then return local data
-    return local;
-  } catch (error) {
-    uiBanner(String(error), "error");
-    throw new Error(`fetchData, ${error}`);
-  }
-}
-
-const tmlnState = await fetchData();
-if (!tmlnState) throw new Error(`no timeline data found`);
-
-// const { skills, groups, moments } = tmlnData;
-
 import {
   signal,
   computed,
@@ -146,748 +54,867 @@ import {
 } from "@client/signals";
 import { buildInsertableTimelineGraph } from "./templates/timelineTemplates";
 
-const {
-  moments: m,
-  steps: st,
-  groups: g,
-  skills: sk,
-  ...timelineFields
-} = tmlnState;
+async function init() {
+  const match = window.location.pathname.match(/^\/timelines\/([0-9a-f-]{36})/);
+  // TODO seem a bit lazy to let this check run on every other page it's loaded on. but it's more of a headache to make remove the listener after it's been loaded on the page
+  if (!match) return; // not a timeline page — do nothing
+  const timeline_uuid = match[1];
 
-const timeline = signal<Timeline>(timelineFields);
-const moments = collection<TimelineMoment>(m);
-const skills = collection<TimelineSkill>(sk);
-const groups = collection<TimelineGroup>(g);
-const steps = collection<MomentStep>(st);
+  const pageHeader = document.getElementById("page-header")!;
+  const timelineRevSpan = document.getElementById("timeline-revision")!;
+  const divTimelineGraph = document.getElementById("timeline");
+  const table = document.getElementById("timeline-moment-table")!;
+  const tbody = document.getElementById("time-moment-list")!;
+  const skillList = document.getElementById("skills-list")!;
+  const groupsList = document.getElementById("time-groups-list")!;
+  const skillCreateBtn = document.getElementById("create-skill-item")!;
+  const groupCreateBtn = document.getElementById("create-group-item")!;
+  const momentCreateBtn = document.getElementById("create-moment-item")!;
+  const bannerMsgP = document.getElementById("banner-message")!;
+  // let timelineData: TimelineData | null = null;
 
-const sortedMoments = computed(() =>
-  [...moments.value].sort((a, b) => a.start - b.start),
-);
+  async function fetchData() {
+    if (!timeline_uuid)
+      throw new Error(
+        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+      );
+    try {
+      // TODO preven user from default seed. force them to pick from a preset/template
+      await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
+      const local = await idbGetSingleTimelineData(timeline_uuid);
 
-initTimelineUI(timeline.value);
-renderMomentsUI(sortedMoments.value, skills.value, groups.value, steps.value);
-renderGraphUI(moments.value, skills.value);
-renderSkillsUI(skills.value);
-renderGroupsUI(groups.value, sortedMoments.value);
+      // check server for a newer version
+      const response = await fetch(`/api/timelines/${timeline_uuid}`);
 
-effect(() => uiTimelineMeta(timeline.value));
+      if (response.ok) {
+        const server: TimelineSelect = await response.json();
 
-moments.onChange((change) => {
-  switch (change.type) {
-    case "added": {
-      const [tr] = timeMomentRowEl(change.item, skills.value, groups.value, []);
-      tr.dataset.momentId = String(change.item.id);
-      tbody.appendChild(tr);
-      break;
-    }
-    case "inserted":
-      // DOM placement handled at call site — only graph needs updating
-      renderGraphUI(moments.value, skills.value);
-      break;
-    case "removed":
-      const trs = tbody.querySelectorAll(`tr[data-moment-id="${change.id}"]`)!;
-      // remove moment and sibling steps rows
-      trs.forEach((tr) => tr.remove());
-      break;
-    case "updated":
-      renderGraphUI(moments.value, skills.value);
-      // if group assignment changed, re-render the groups UI
-      if (change.previous?.group_id !== change.item.group_id) {
-        renderGroupsUI(groups.value, moments.value);
+        if (
+          !local ||
+          server.rev > local.rev
+          // server date is a string not Date object
+          // && server.date_modified < local.date_modified
+        ) {
+          const {
+            data,
+            booking_id,
+            owner_user_id,
+            timestamp,
+            color,
+            ...restOfServer
+          } = server;
+
+          if (data) {
+            // wipe and rebuild all IDB stores from server state
+
+            const template = buildInsertableTimelineGraph(
+              {
+                ...restOfServer,
+                booking_uuid: null,
+                moments: data.moments,
+                steps: data.steps,
+                groups: data.groups,
+                skills: data.skills,
+                date_modified: new Date(),
+                date_created: new Date(),
+              },
+              timeline_uuid,
+              booking_id,
+            );
+            console.log("inserting timeline from server into local idb");
+            return await idbInsertTimelineState(template);
+          } else {
+            // server has no jsonb data yet — just sync top-level fields
+            await idbUpdateTimeline(timeline_uuid, {
+              ...restOfServer,
+              rev: server.rev,
+              date_modified: new Date(server.updatedAt),
+            });
+            return await idbGetSingleTimelineData(timeline_uuid);
+          }
+        }
+      } else {
+        uiBanner("Not synced to server. Commit to sync", "info");
       }
-      break;
-    case "reordered":
-      renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
-      break;
-    case "replaced":
-      renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
-  }
-});
-// TODO setup steps signal. not exactly necessary because no other data type depends on step update
-steps.onChange((change) => {
-  switch (change.type) {
-    case "added":
-      break;
-    case "removed":
-      const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
-      li.remove();
-      break;
-
-    default:
-      break;
-  }
-});
-
-skills.onChange((change) => {
-  switch (change.type) {
-    case "added": {
-      const li = skillListItem(change.item);
-      li.dataset.skillId = String(change.item.id);
-      skillList.appendChild(li);
-      tbody
-        .querySelectorAll<HTMLSelectElement>("select[name='skill_id']")
-        .forEach((sel) => {
-          const opt = document.createElement("option");
-          opt.value = String(change.item.id);
-          opt.textContent = change.item.name;
-          sel.appendChild(opt);
-        });
-      break;
+      // if nothing else found then return local data
+      return local;
+    } catch (error) {
+      uiBanner(String(error), "error");
+      throw new Error(`fetchData, ${error}`);
     }
-    case "inserted":
-      // DOM placement handled at call site — only graph needs updating
-      renderGraphUI(moments.value, skills.value);
-      break;
-    case "removed":
-      skillList.querySelector(`li[data-skill-id="${change.id}"]`)?.remove();
-      const options = tbody.querySelectorAll<HTMLOptionElement>(
-        `select[name='skill_id'] option[value="${change.id}"]`,
-      );
-      options.forEach((o) => o.remove());
-      renderGraphUI(moments.value, skills.value);
-      break;
-    case "updated": {
-      const li = skillList.querySelector(
-        `li[data-skill-id="${change.item.id}"]`,
-      );
-      // only replace the element if it's a structural change (name shown in table options)
-      // not a field edit from within the list itself
-      if (li && !change.fromSelf) {
-        li.replaceWith(skillListItem(change.item));
-      }
-      tbody
-        .querySelectorAll<HTMLOptionElement>(
-          `select[name='skill_id'] option[value="${change.item.id}"]`,
-        )
-        .forEach((opt) => {
-          // TODO how to set --color on select el here?
-          opt.textContent = `${change.item.icon} ${change.item.name}`;
-        });
-      break;
-    }
-    case "replaced":
-      renderSkillsUI(skills.value);
   }
-});
 
-groups.onChange((change) => {
-  switch (change.type) {
-    case "added": {
-      const div = groupCard(change.item, []);
-      div.dataset.groupId = String(change.item.id);
-      groupsList.appendChild(div);
-      tbody
-        .querySelectorAll<HTMLSelectElement>("select[name='group_id']")
-        .forEach((sel) => {
-          const opt = document.createElement("option");
-          opt.value = String(change.item.id);
-          opt.textContent = change.item.name;
-          sel.appendChild(opt);
-        });
-      break;
-    }
-    case "inserted":
-      // DOM placement handled at call site — only graph needs updating
-      renderGraphUI(moments.value, skills.value);
-      break;
-    case "removed":
-      groupsList.querySelector(`[data-group-id="${change.id}"]`)?.remove();
-      const options = tbody.querySelectorAll<HTMLOptionElement>(
-        `select[name='group_id'] option[value="${change.id}"]`,
-      );
-      options.forEach((o) => o.remove());
-      break;
-    case "updated": {
-      const el = groupsList.querySelector(
-        `[data-group-id="${change.item.id}"]`,
-      );
-      // fromSelf do not re render if editing direct card input field
-      if (el && !change.fromSelf)
-        el.replaceWith(
-          groupCard(
-            change.item,
-            moments.value.filter((m) => m.group_id === change.item.id),
-          ),
+  const tmlnState = await fetchData();
+  if (!tmlnState) throw new Error(`no timeline data found`);
+
+  // const { skills, groups, moments } = tmlnData;
+
+  const {
+    moments: m,
+    steps: st,
+    groups: g,
+    skills: sk,
+    ...timelineFields
+  } = tmlnState;
+
+  const timeline = signal<Timeline>(timelineFields);
+  const moments = collection<TimelineMoment>(m);
+  const skills = collection<TimelineSkill>(sk);
+  const groups = collection<TimelineGroup>(g);
+  const steps = collection<MomentStep>(st);
+
+  const sortedMoments = computed(() =>
+    [...moments.value].sort((a, b) => a.start - b.start),
+  );
+
+  initTimelineUI(timeline.value);
+  renderMomentsUI(sortedMoments.value, skills.value, groups.value, steps.value);
+  renderGraphUI(moments.value, skills.value);
+  renderSkillsUI(skills.value);
+  renderGroupsUI(groups.value, sortedMoments.value);
+
+  effect(() => uiTimelineMeta(timeline.value));
+
+  moments.onChange((change) => {
+    switch (change.type) {
+      case "added": {
+        const [tr] = timeMomentRowEl(
+          change.item,
+          skills.value,
+          groups.value,
+          [],
         );
-      tbody
-        .querySelectorAll<HTMLOptionElement>(
-          `select[name='group_id'] option[value="${change.item.id}"]`,
-        )
-        .forEach((opt) => {
-          opt.textContent = change.item.name;
-        });
-      break;
+        tr.dataset.momentId = String(change.item.id);
+        tbody.appendChild(tr);
+        break;
+      }
+      case "inserted":
+        // DOM placement handled at call site — only graph needs updating
+        renderGraphUI(moments.value, skills.value);
+        break;
+      case "removed":
+        const trs = tbody.querySelectorAll(
+          `tr[data-moment-id="${change.id}"]`,
+        )!;
+        // remove moment and sibling steps rows
+        trs.forEach((tr) => tr.remove());
+        break;
+      case "updated":
+        renderGraphUI(moments.value, skills.value);
+        // if group assignment changed, re-render the groups UI
+        if (change.previous?.group_id !== change.item.group_id) {
+          renderGroupsUI(groups.value, moments.value);
+        }
+        break;
+      case "reordered":
+        renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
+        break;
+      case "replaced":
+        renderMomentsUI(moments.value, skills.value, groups.value, steps.value);
     }
-    case "replaced":
-      renderGraphUI(moments.value, skills.value);
-  }
-});
-
-// Mutations
-pageHeader.addEventListener("input", (e) => {
-  const target = e.target as HTMLInputElement;
-  if (!target.matches("input, textarea")) return;
-  const field = target.name;
-  if (!field) return;
-  debouncedSaveTimeline(timeline.value.id, field, target.value);
-});
-momentCreateBtn.addEventListener("pointerup", async (e) => {
-  // TODO don't need to do this if i have them always sorted
-  const lastMoment =
-    moments.value.length > 0
-      ? moments.value.reduce((max, m) => (m.start > max.start ? m : max))
-      : { start: 0, end: 0 };
-
-  const created = await idbCreateMoment({
-    desc: "",
-    timeline_uuid: timeline.value.id,
-    note: "",
-    start: lastMoment.end,
-    end: lastMoment.end + 15,
-    skill_id: skills.value[0]?.id || 0,
-    group_id: groups.value[0]?.id || 0,
   });
-  moments.add(created);
-});
-table.addEventListener("input", (e) => {
-  const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-  if (!target.matches("input, textarea")) return;
-  if (target.matches("input[type='checkbox']")) return;
+  // TODO setup steps signal. not exactly necessary because no other data type depends on step update
+  steps.onChange((change) => {
+    switch (change.type) {
+      case "added":
+        break;
+      case "removed":
+        const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
+        li.remove();
+        break;
 
-  const stepItem = target.closest("li[data-step-id]");
-  if (stepItem) {
-    const stepId = Number((stepItem as HTMLElement).dataset.stepId);
-    const field = target.name as keyof MomentStep;
-    debouncedSaveStep(stepId, field, target.value);
-    return;
-  }
+      default:
+        break;
+    }
+  });
 
-  const row = target.closest("tr[data-moment-id]") as HTMLTableRowElement;
-  if (!row) return;
-  const momentId = Number(row.dataset.momentId);
-  const field = target.name;
-  if (!momentId || !field) return;
+  skills.onChange((change) => {
+    switch (change.type) {
+      case "added": {
+        const li = skillListItem(change.item);
+        li.dataset.skillId = String(change.item.id);
+        skillList.appendChild(li);
+        tbody
+          .querySelectorAll<HTMLSelectElement>("select[name='skill_id']")
+          .forEach((sel) => {
+            const opt = document.createElement("option");
+            opt.value = String(change.item.id);
+            opt.textContent = change.item.name;
+            sel.appendChild(opt);
+          });
+        break;
+      }
+      case "inserted":
+        // DOM placement handled at call site — only graph needs updating
+        renderGraphUI(moments.value, skills.value);
+        break;
+      case "removed":
+        skillList.querySelector(`li[data-skill-id="${change.id}"]`)?.remove();
+        const options = tbody.querySelectorAll<HTMLOptionElement>(
+          `select[name='skill_id'] option[value="${change.id}"]`,
+        );
+        options.forEach((o) => o.remove());
+        renderGraphUI(moments.value, skills.value);
+        break;
+      case "updated": {
+        const li = skillList.querySelector(
+          `li[data-skill-id="${change.item.id}"]`,
+        );
+        // only replace the element if it's a structural change (name shown in table options)
+        // not a field edit from within the list itself
+        if (li && !change.fromSelf) {
+          li.replaceWith(skillListItem(change.item));
+        }
+        tbody
+          .querySelectorAll<HTMLOptionElement>(
+            `select[name='skill_id'] option[value="${change.item.id}"]`,
+          )
+          .forEach((opt) => {
+            // TODO how to set --color on select el here?
+            opt.textContent = `${change.item.icon} ${change.item.name}`;
+          });
+        break;
+      }
+      case "replaced":
+        renderSkillsUI(skills.value);
+    }
+  });
 
-  // TODO quick bandaid to not allow checkbox 'on' value to be passed. this is handled in "change" event listener but needs to be ignored here
-  //@ts-ignore
-  if (!target.checked) {
-    debouncedSaveMoment(momentId, field, target.value);
-  }
-});
-// selects will have instant save, no debounce
-table.addEventListener("change", async (e) => {
-  const target = e.target;
-  if (
-    !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)
-  ) {
-    return;
-  }
-  if (!target.matches("select, input[type='checkbox']")) return;
-
-  const value =
-    target instanceof HTMLInputElement && target.type === "checkbox"
-      ? target.checked
-      : target.value;
-
-  // step update
-  const stepItem = target.closest("li[data-step-id]");
-  if (stepItem) {
-    const stepId = Number((stepItem as HTMLElement).dataset.stepId);
-    const field = target.name as keyof MomentStep;
-    // TODO change this to use signal?
-    // steps.update(updated);
-    debouncedSaveStep(stepId, field, value);
-    return;
-  }
-
-  // moment update
-  const row = target.closest<HTMLTableRowElement>("tr[data-moment-id]");
-  if (!row) return;
-  const momentId = Number(row.dataset.momentId);
-  const field = target.name;
-  if (!momentId || !field) return;
-
-  if (field === "skill_id") {
-    const skill = skills.value.find((s) => s.id === Number(target.value));
-    target.style.setProperty("--color", skill?.color || "gray");
-  }
-
-  const updated = await idbUpdateMoment(momentId, { [field]: value });
-  moments.update(updated);
-});
-table.addEventListener("click", async (e) => {
-  const target = e.target as HTMLElement;
-  const btn = target.closest("button");
-  if (!btn) return;
-
-  const btnAction = btn.dataset.action as BtnAction;
-  const btnType = btn.dataset.type;
-  const btnDirection = btn.dataset.direction as BtnDirection | undefined;
-
-  const rowEl = btn.closest("tr[data-moment-id]") as HTMLTableRowElement;
-  const momentId = Number(rowEl?.dataset.momentId);
-
-  switch (btnAction) {
-    case "delete": {
-      switch (btnType) {
-        case MOMENTS_STORE: {
-          if (isNaN(momentId))
-            throw new Error(`moment id invalid: ${momentId}`);
-          // delete cascaded steps from IDB first
-          const momentSteps = steps.value.filter(
-            (s) => s.moment_id === momentId,
+  groups.onChange((change) => {
+    switch (change.type) {
+      case "added": {
+        const div = groupCard(change.item, []);
+        div.dataset.groupId = String(change.item.id);
+        groupsList.appendChild(div);
+        tbody
+          .querySelectorAll<HTMLSelectElement>("select[name='group_id']")
+          .forEach((sel) => {
+            const opt = document.createElement("option");
+            opt.value = String(change.item.id);
+            opt.textContent = change.item.name;
+            sel.appendChild(opt);
+          });
+        break;
+      }
+      case "inserted":
+        // DOM placement handled at call site — only graph needs updating
+        renderGraphUI(moments.value, skills.value);
+        break;
+      case "removed":
+        groupsList.querySelector(`[data-group-id="${change.id}"]`)?.remove();
+        const options = tbody.querySelectorAll<HTMLOptionElement>(
+          `select[name='group_id'] option[value="${change.id}"]`,
+        );
+        options.forEach((o) => o.remove());
+        break;
+      case "updated": {
+        const el = groupsList.querySelector(
+          `[data-group-id="${change.item.id}"]`,
+        );
+        // fromSelf do not re render if editing direct card input field
+        if (el && !change.fromSelf)
+          el.replaceWith(
+            groupCard(
+              change.item,
+              moments.value.filter((m) => m.group_id === change.item.id),
+            ),
           );
-          await Promise.all(momentSteps.map((s) => idbDeleteStep(s.id)));
-          await idbDeleteMoment(momentId);
-          // update collections — effects handle DOM removal
-          momentSteps.forEach((s) => steps.remove(s.id));
-          moments.remove(momentId);
-          break;
-        }
-        case STEPS_STORE: {
-          const stepLi = btn.closest("li[data-step-id]")! as HTMLElement;
-          const stepId = Number(stepLi?.dataset.stepId);
-          if (isNaN(stepId)) throw new Error(`step id invalid: ${stepId}`);
-          await idbDeleteStep(stepId);
-          steps.remove(stepId);
-          break;
-        }
+        tbody
+          .querySelectorAll<HTMLOptionElement>(
+            `select[name='group_id'] option[value="${change.item.id}"]`,
+          )
+          .forEach((opt) => {
+            opt.textContent = change.item.name;
+          });
+        break;
       }
-      break;
+      case "replaced":
+        renderGraphUI(moments.value, skills.value);
+    }
+  });
+
+  // Mutations
+  pageHeader.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.matches("input, textarea")) return;
+    const field = target.name;
+    if (!field) return;
+    debouncedSaveTimeline(timeline.value.id, field, target.value);
+  });
+  momentCreateBtn.addEventListener("pointerup", async (e) => {
+    // TODO don't need to do this if i have them always sorted
+    const lastMoment =
+      moments.value.length > 0
+        ? moments.value.reduce((max, m) => (m.start > max.start ? m : max))
+        : { start: 0, end: 0 };
+
+    const created = await idbCreateMoment({
+      desc: "",
+      timeline_uuid: timeline.value.id,
+      note: "",
+      start: lastMoment.end,
+      end: lastMoment.end + 15,
+      skill_id: skills.value[0]?.id || 0,
+      group_id: groups.value[0]?.id || 0,
+    });
+    moments.add(created);
+  });
+  table.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    if (target.matches("input[type='checkbox']")) return;
+
+    const stepItem = target.closest("li[data-step-id]");
+    if (stepItem) {
+      const stepId = Number((stepItem as HTMLElement).dataset.stepId);
+      const field = target.name as keyof MomentStep;
+      debouncedSaveStep(stepId, field, target.value);
+      return;
     }
 
-    case "create": {
-      if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
-      const newStep = await idbCreateStep({
-        text: "",
-        tbd: false,
-        moment_id: momentId,
-        note: "",
-        order: 1,
-        timeline_uuid: timeline.value.id,
-      });
-      steps.add(newStep);
-      // Step UI is nested inside the row so append directly —
-      // the steps collection doesn't own this DOM region
-      const stepList = btn.closest("td")!.querySelector("ul.steps");
-      stepList?.appendChild(createStepEl(newStep));
-      break;
+    const row = target.closest("tr[data-moment-id]") as HTMLTableRowElement;
+    if (!row) return;
+    const momentId = Number(row.dataset.momentId);
+    const field = target.name;
+    if (!momentId || !field) return;
+
+    // TODO quick bandaid to not allow checkbox 'on' value to be passed. this is handled in "change" event listener but needs to be ignored here
+    //@ts-ignore
+    if (!target.checked) {
+      debouncedSaveMoment(momentId, field, target.value);
+    }
+  });
+  // selects will have instant save, no debounce
+  table.addEventListener("change", async (e) => {
+    const target = e.target;
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement
+      )
+    ) {
+      return;
+    }
+    if (!target.matches("select, input[type='checkbox']")) return;
+
+    const value =
+      target instanceof HTMLInputElement && target.type === "checkbox"
+        ? target.checked
+        : target.value;
+
+    // step update
+    const stepItem = target.closest("li[data-step-id]");
+    if (stepItem) {
+      const stepId = Number((stepItem as HTMLElement).dataset.stepId);
+      const field = target.name as keyof MomentStep;
+      // TODO change this to use signal?
+      // steps.update(updated);
+      debouncedSaveStep(stepId, field, value);
+      return;
     }
 
-    case "insert": {
-      if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
-      const targetMoment = moments.value.find((m) => m.id === momentId);
+    // moment update
+    const row = target.closest<HTMLTableRowElement>("tr[data-moment-id]");
+    if (!row) return;
+    const momentId = Number(row.dataset.momentId);
+    const field = target.name;
+    if (!momentId || !field) return;
 
-      let newStart = 0;
-      let newEnd = 0;
+    if (field === "skill_id") {
+      const skill = skills.value.find((s) => s.id === Number(target.value));
+      target.style.setProperty("--color", skill?.color || "gray");
+    }
 
-      switch (btnDirection) {
-        case "above":
-          newStart = targetMoment ? targetMoment.start - 15 : 0;
-          newEnd = targetMoment ? targetMoment.start : 0;
-          break;
-        case "below":
-          newStart = targetMoment ? targetMoment.end : 0;
-          newEnd = targetMoment ? targetMoment.end + 15 : 0;
-          break;
-        default:
-          console.error(`unsupported direction: ${btnDirection}`);
-          return;
-      }
+    const updated = await idbUpdateMoment(momentId, { [field]: value });
+    moments.update(updated);
+  });
+  table.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest("button");
+    if (!btn) return;
 
-      const newMoment = await idbCreateMoment(
-        createEmptyMoment(timeline.value.id, { start: newStart, end: newEnd }),
-      );
+    const btnAction = btn.dataset.action as BtnAction;
+    const btnType = btn.dataset.type;
+    const btnDirection = btn.dataset.direction as BtnDirection | undefined;
 
-      moments.insert(newMoment);
+    const rowEl = btn.closest("tr[data-moment-id]") as HTMLTableRowElement;
+    const momentId = Number(rowEl?.dataset.momentId);
 
-      // Insert needs positional DOM placement that collection.add can't express,
-      // so we handle it directly here after the signal fires
-      const [newRow, newSubRow] = timeMomentRowEl(
-        newMoment,
-        skills.value,
-        groups.value,
-        [],
-      );
-
-      switch (btnDirection) {
-        case "above":
-          rowEl.insertAdjacentElement("beforebegin", newRow);
-          newRow.insertAdjacentElement("afterend", newSubRow);
-          break;
-        case "below": {
-          const existingSubRow = rowEl.nextElementSibling;
-          const anchor = existingSubRow ?? rowEl;
-          anchor.insertAdjacentElement("afterend", newRow);
-          newRow.insertAdjacentElement("afterend", newSubRow);
-          break;
+    switch (btnAction) {
+      case "delete": {
+        switch (btnType) {
+          case MOMENTS_STORE: {
+            if (isNaN(momentId))
+              throw new Error(`moment id invalid: ${momentId}`);
+            // delete cascaded steps from IDB first
+            const momentSteps = steps.value.filter(
+              (s) => s.moment_id === momentId,
+            );
+            await Promise.all(momentSteps.map((s) => idbDeleteStep(s.id)));
+            await idbDeleteMoment(momentId);
+            // update collections — effects handle DOM removal
+            momentSteps.forEach((s) => steps.remove(s.id));
+            moments.remove(momentId);
+            break;
+          }
+          case STEPS_STORE: {
+            const stepLi = btn.closest("li[data-step-id]")! as HTMLElement;
+            const stepId = Number(stepLi?.dataset.stepId);
+            if (isNaN(stepId)) throw new Error(`step id invalid: ${stepId}`);
+            await idbDeleteStep(stepId);
+            steps.remove(stepId);
+            break;
+          }
         }
+        break;
       }
-      break;
+
+      case "create": {
+        if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
+        const newStep = await idbCreateStep({
+          text: "",
+          tbd: false,
+          moment_id: momentId,
+          note: "",
+          order: 1,
+          timeline_uuid: timeline.value.id,
+        });
+        steps.add(newStep);
+        // Step UI is nested inside the row so append directly —
+        // the steps collection doesn't own this DOM region
+        const stepList = btn.closest("td")!.querySelector("ul.steps");
+        stepList?.appendChild(createStepEl(newStep));
+        break;
+      }
+
+      case "insert": {
+        if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
+        const targetMoment = moments.value.find((m) => m.id === momentId);
+
+        let newStart = 0;
+        let newEnd = 0;
+
+        switch (btnDirection) {
+          case "above":
+            newStart = targetMoment ? targetMoment.start - 15 : 0;
+            newEnd = targetMoment ? targetMoment.start : 0;
+            break;
+          case "below":
+            newStart = targetMoment ? targetMoment.end : 0;
+            newEnd = targetMoment ? targetMoment.end + 15 : 0;
+            break;
+          default:
+            console.error(`unsupported direction: ${btnDirection}`);
+            return;
+        }
+
+        const newMoment = await idbCreateMoment(
+          createEmptyMoment(timeline.value.id, {
+            start: newStart,
+            end: newEnd,
+          }),
+        );
+
+        moments.insert(newMoment);
+
+        // Insert needs positional DOM placement that collection.add can't express,
+        // so we handle it directly here after the signal fires
+        const [newRow, newSubRow] = timeMomentRowEl(
+          newMoment,
+          skills.value,
+          groups.value,
+          [],
+        );
+
+        switch (btnDirection) {
+          case "above":
+            rowEl.insertAdjacentElement("beforebegin", newRow);
+            newRow.insertAdjacentElement("afterend", newSubRow);
+            break;
+          case "below": {
+            const existingSubRow = rowEl.nextElementSibling;
+            const anchor = existingSubRow ?? rowEl;
+            anchor.insertAdjacentElement("afterend", newRow);
+            newRow.insertAdjacentElement("afterend", newSubRow);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  });
+  groupsList.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    const cardEl = target.closest("div")!;
+    const groupId = Number(cardEl.dataset.groupId);
+    const field = target.name;
+    if (!groupId || !field) return;
+    debouncedSaveGroup(groupId, field, target.value);
+  });
+  groupsList.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.action !== "delete") return;
+
+    const divEl = btn.closest("div[data-group-id]") as HTMLElement;
+    const groupId = Number(divEl?.dataset.groupId);
+    if (isNaN(groupId)) throw new Error(`group id invalid: ${groupId}`);
+
+    await idbDeleteTimeGroup(groupId);
+    groups.remove(groupId);
+  });
+  groupCreateBtn.addEventListener("pointerup", async (e) => {
+    const created = await idbCreateTimelineGroup({
+      name: "",
+      timeline_uuid: timeline.value.id,
+    });
+    groups.add(created);
+  });
+  skillList.addEventListener("input", (e) => {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (!target.matches("input, textarea")) return;
+    const itemEl = target.closest("li")!;
+    const skillId = Number(itemEl.dataset.skillId);
+    const field = target.name;
+    if (!skillId || !field) return;
+    debouncedSaveSkill(skillId, field, target.value);
+  });
+  skillList.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest("button");
+    if (!btn) return;
+    if (btn.dataset.action !== "delete") return;
+
+    const liEl = btn.closest("li[data-skill-id]") as HTMLElement;
+    const skillId = Number(liEl?.dataset.skillId);
+    if (isNaN(skillId)) throw new Error(`skill id invalid: ${skillId}`);
+
+    await idbDeleteTimeSkill(skillId);
+    skills.remove(skillId);
+  });
+  skillCreateBtn.addEventListener("pointerup", async (e) => {
+    const created = await idbCreateTimelineSkill({
+      name: "",
+      icon: "☘",
+      color: "grey",
+      timeline_uuid: timeline.value.id,
+    });
+
+    skills.add(created);
+  });
+
+  function initTimelineUI(data: Timeline) {
+    const summaryInput = pageHeader.querySelector<HTMLInputElement>(
+      'input[name="summary"]',
+    );
+    const dateCivilInput = pageHeader.querySelector<HTMLInputElement>(
+      'input[name="date_civil"]',
+    );
+    const timezoneInput = pageHeader.querySelector<HTMLInputElement>(
+      'input[name="timezone"]',
+    );
+    if (!summaryInput || !dateCivilInput || !timezoneInput)
+      throw new Error("timeline inputs not found");
+
+    summaryInput.value = data.summary || "";
+    dateCivilInput.value = data.date_civil || "";
+    timezoneInput.value = data.timezone || "";
+    uiTimelineMeta(data);
+  }
+  function uiTimelineMeta(data: Timeline) {
+    const dateCreatedEl = pageHeader.querySelector(
+      'dt[data-field="date_created"]',
+    );
+    const dateModifiedEl = pageHeader.querySelector(
+      'dt[data-field="date_modified"]',
+    );
+    const revEl = pageHeader.querySelector('dt[data-field="rev"]');
+
+    if (dateCreatedEl)
+      dateCreatedEl.textContent = prettyDateToLocale(data.date_created);
+    if (dateModifiedEl)
+      dateModifiedEl.textContent = prettyDateToLocale(data.date_modified);
+    if (revEl) revEl.textContent = String(data.rev);
+    timelineRevSpan.textContent = String(data.rev);
+
+    const bookingLink = document.getElementById(
+      "booking-link",
+    ) as HTMLAnchorElement;
+    if (!bookingLink) throw new Error("bookingLink not set");
+
+    // TODO rev gt zero means it's been commited to the server at least once. is this resilent or do i need a `server commit link` boolean flag?
+    if (data.rev > 0 && data.booking_uuid) {
+      bookingLink.innerText = "view booking";
+      bookingLink.href = `/bookings/${data.booking_uuid}`;
+    } else if (data.rev > 0) {
+      bookingLink.innerText = "create new booking";
+      bookingLink.href = `/bookings/request?timelineId=${data.id}&start=${data.date_civil}`;
+    } else {
+      bookingLink.innerText =
+        "Must commit to server (rev 1) to link to booking";
+      bookingLink.classList.add("ghost");
     }
   }
-});
-groupsList.addEventListener("input", (e) => {
-  const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-  if (!target.matches("input, textarea")) return;
-  const cardEl = target.closest("div")!;
-  const groupId = Number(cardEl.dataset.groupId);
-  const field = target.name;
-  if (!groupId || !field) return;
-  debouncedSaveGroup(groupId, field, target.value);
-});
-groupsList.addEventListener("click", async (e) => {
-  const target = e.target as HTMLElement;
-  const btn = target.closest("button");
-  if (!btn) return;
-  if (btn.dataset.action !== "delete") return;
 
-  const divEl = btn.closest("div[data-group-id]") as HTMLElement;
-  const groupId = Number(divEl?.dataset.groupId);
-  if (isNaN(groupId)) throw new Error(`group id invalid: ${groupId}`);
-
-  await idbDeleteTimeGroup(groupId);
-  groups.remove(groupId);
-});
-groupCreateBtn.addEventListener("pointerup", async (e) => {
-  const created = await idbCreateTimelineGroup({
-    name: "",
-    timeline_uuid: timeline.value.id,
-  });
-  groups.add(created);
-});
-skillList.addEventListener("input", (e) => {
-  const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-  if (!target.matches("input, textarea")) return;
-  const itemEl = target.closest("li")!;
-  const skillId = Number(itemEl.dataset.skillId);
-  const field = target.name;
-  if (!skillId || !field) return;
-  debouncedSaveSkill(skillId, field, target.value);
-});
-skillList.addEventListener("click", async (e) => {
-  const target = e.target as HTMLElement;
-  const btn = target.closest("button");
-  if (!btn) return;
-  if (btn.dataset.action !== "delete") return;
-
-  const liEl = btn.closest("li[data-skill-id]") as HTMLElement;
-  const skillId = Number(liEl?.dataset.skillId);
-  if (isNaN(skillId)) throw new Error(`skill id invalid: ${skillId}`);
-
-  await idbDeleteTimeSkill(skillId);
-  skills.remove(skillId);
-});
-skillCreateBtn.addEventListener("pointerup", async (e) => {
-  const created = await idbCreateTimelineSkill({
-    name: "",
-    icon: "☘",
-    color: "grey",
-    timeline_uuid: timeline.value.id,
-  });
-
-  skills.add(created);
-});
-
-function initTimelineUI(data: Timeline) {
-  const summaryInput = pageHeader.querySelector<HTMLInputElement>(
-    'input[name="summary"]',
-  );
-  const dateCivilInput = pageHeader.querySelector<HTMLInputElement>(
-    'input[name="date_civil"]',
-  );
-  const timezoneInput = pageHeader.querySelector<HTMLInputElement>(
-    'input[name="timezone"]',
-  );
-  if (!summaryInput || !dateCivilInput || !timezoneInput)
-    throw new Error("timeline inputs not found");
-
-  summaryInput.value = data.summary || "";
-  dateCivilInput.value = data.date_civil || "";
-  timezoneInput.value = data.timezone || "";
-  uiTimelineMeta(data);
-}
-function uiTimelineMeta(data: Timeline) {
-  const dateCreatedEl = pageHeader.querySelector(
-    'dt[data-field="date_created"]',
-  );
-  const dateModifiedEl = pageHeader.querySelector(
-    'dt[data-field="date_modified"]',
-  );
-  const revEl = pageHeader.querySelector('dt[data-field="rev"]');
-
-  if (dateCreatedEl)
-    dateCreatedEl.textContent = prettyDateToLocale(data.date_created);
-  if (dateModifiedEl)
-    dateModifiedEl.textContent = prettyDateToLocale(data.date_modified);
-  if (revEl) revEl.textContent = String(data.rev);
-  timelineRevSpan.textContent = String(data.rev);
-
-  const bookingLink = document.getElementById(
-    "booking-link",
-  ) as HTMLAnchorElement;
-  if (!bookingLink) throw new Error("bookingLink not set");
-
-  // TODO rev gt zero means it's been commited to the server at least once. is this resilent or do i need a `server commit link` boolean flag?
-  if (data.rev > 0 && data.booking_uuid) {
-    bookingLink.innerText = "view booking";
-    bookingLink.href = `/bookings/${data.booking_uuid}`;
-  } else if (data.rev > 0) {
-    bookingLink.innerText = "create new booking";
-    bookingLink.href = `/bookings?timelineId=${data.id}`;
-  } else {
-    bookingLink.innerText =
-      "Must commit to server (rev > 0) to link to booking";
-    bookingLink.classList.add("callout");
+  function renderGraphUI(moments: TimelineMoment[], skills: TimelineSkill[]) {
+    document.dispatchEvent(
+      new CustomEvent("timeline:load", {
+        detail: { moments, skills },
+      }),
+    );
   }
-}
 
-function renderGraphUI(moments: TimelineMoment[], skills: TimelineSkill[]) {
-  document.dispatchEvent(
-    new CustomEvent("timeline:load", {
-      detail: { moments, skills },
-    }),
-  );
-}
-
-function renderMomentsUI(
-  moments: TimelineMoment[],
-  skills: TimelineSkill[],
-  groups: TimelineGroup[],
-  steps: MomentStep[],
-) {
-  tbody.replaceChildren(); // clear existing
-  // no sort needed here — sortedMoments computed handles it
-  moments.forEach((b) =>
-    tbody.append(
-      ...timeMomentRowEl(
-        b,
-        skills,
-        groups,
-        steps.filter((t) => t.moment_id === b.id),
-      ),
-    ),
-  );
-}
-
-function renderSkillsUI(skills: TimelineSkill[]) {
-  skillList.replaceChildren();
-  skills.forEach((s) => {
-    const li = skillListItem(s);
-    li.dataset.skillId = String(s.id);
-    skillList.appendChild(li);
-  });
-}
-
-function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
-  groupsList.replaceChildren(); // clear before re-render
-  // TODO render in li for symatics
-  groups.forEach((g) =>
-    groupsList.appendChild(
-      groupCard(
-        g,
-        moments.filter((m) => m.group_id === g.id),
-      ),
-    ),
-  );
-  const momentsUngrouped = moments.filter(
-    (m) => !m.group_id || !groups.find((g) => g.id === m.group_id),
-  );
-  if (momentsUngrouped.length > 0) {
-    groupsList.appendChild(
-      groupCard(
-        { name: "ungrouped", id: 0, timeline_uuid: timeline.value.id },
-        momentsUngrouped,
+  function renderMomentsUI(
+    moments: TimelineMoment[],
+    skills: TimelineSkill[],
+    groups: TimelineGroup[],
+    steps: MomentStep[],
+  ) {
+    tbody.replaceChildren(); // clear existing
+    // no sort needed here — sortedMoments computed handles it
+    moments.forEach((b) =>
+      tbody.append(
+        ...timeMomentRowEl(
+          b,
+          skills,
+          groups,
+          steps.filter((t) => t.moment_id === b.id),
+        ),
       ),
     );
   }
-}
 
-function uiBanner(
-  message: string,
-  type: "success" | "error" | "info" = "info",
-  autoClear = false,
-) {
-  bannerMsgP.dataset.state = type;
-  bannerMsgP.textContent = message;
-  if (autoClear) setTimeout(uiBannerClear, 3000);
-}
-function uiBannerClear() {
-  delete bannerMsgP.dataset.state;
-  bannerMsgP.textContent = "";
-}
+  function renderSkillsUI(skills: TimelineSkill[]) {
+    skillList.replaceChildren();
+    skills.forEach((s) => {
+      const li = skillListItem(s);
+      li.dataset.skillId = String(s.id);
+      skillList.appendChild(li);
+    });
+  }
 
-const debouncedSaveMoment = debounce(
-  async (momentId: number, field: string, value: string) => {
-    const updated = await idbUpdateMoment(momentId, { [field]: value });
-    moments.update(updated);
-  },
-  500,
-);
-const debouncedSaveStep = debounce(
-  async (momentId: number, field: string, value: string | boolean) => {
-    await idbUpdateStep(momentId, { [field]: value });
-  },
-  500,
-);
-const debouncedSaveSkill = debounce(
-  async (skillId: number, field: string, value: string) => {
-    const updated = await idbUpdateTimeSkill(skillId, { [field]: value });
-    skills.update(updated, true);
-  },
-  500,
-);
-const debouncedSaveGroup = debounce(
-  async (groupId: number, field: string, value: string) => {
-    const updated = await idbUpdateTimeGroup(groupId, { [field]: value });
-    groups.update(updated, true);
-  },
-  500,
-);
-const debouncedSaveTimeline = debounce(
-  async (uuid: string, field: string, value: string) => {
-    const updated = await idbUpdateTimeline(uuid, { [field]: value });
-    timeline.value = updated;
-  },
-  500,
-);
+  function renderGroupsUI(groups: TimelineGroup[], moments: TimelineMoment[]) {
+    groupsList.replaceChildren(); // clear before re-render
+    // TODO render in li for symatics
+    groups.forEach((g) =>
+      groupsList.appendChild(
+        groupCard(
+          g,
+          moments.filter((m) => m.group_id === g.id),
+        ),
+      ),
+    );
+    const momentsUngrouped = moments.filter(
+      (m) => !m.group_id || !groups.find((g) => g.id === m.group_id),
+    );
+    if (momentsUngrouped.length > 0) {
+      groupsList.appendChild(
+        groupCard(
+          { name: "ungrouped", id: 0, timeline_uuid: timeline.value.id },
+          momentsUngrouped,
+        ),
+      );
+    }
+  }
 
-const timelineActionMenu = document.getElementById("timeline-action-menu")!;
+  function uiBanner(
+    message: string,
+    type: "success" | "error" | "info" = "info",
+    autoClear = false,
+  ) {
+    bannerMsgP.dataset.state = type;
+    bannerMsgP.textContent = message;
+    if (autoClear) setTimeout(uiBannerClear, 3000);
+  }
+  function uiBannerClear() {
+    delete bannerMsgP.dataset.state;
+    bannerMsgP.textContent = "";
+  }
 
-timelineActionMenu.addEventListener("click", async (e) => {
-  const btn = (e.target as HTMLElement).closest("button");
-  if (!btn) return;
-  const action = btn.dataset.action as TimelineBtnAction | undefined;
-  if (!action) throw new Error("TimelineBtnAction not defined");
+  const debouncedSaveMoment = debounce(
+    async (momentId: number, field: string, value: string) => {
+      const updated = await idbUpdateMoment(momentId, { [field]: value });
+      moments.update(updated);
+    },
+    500,
+  );
+  const debouncedSaveStep = debounce(
+    async (momentId: number, field: string, value: string | boolean) => {
+      await idbUpdateStep(momentId, { [field]: value });
+    },
+    500,
+  );
+  const debouncedSaveSkill = debounce(
+    async (skillId: number, field: string, value: string) => {
+      const updated = await idbUpdateTimeSkill(skillId, { [field]: value });
+      skills.update(updated, true);
+    },
+    500,
+  );
+  const debouncedSaveGroup = debounce(
+    async (groupId: number, field: string, value: string) => {
+      const updated = await idbUpdateTimeGroup(groupId, { [field]: value });
+      groups.update(updated, true);
+    },
+    500,
+  );
+  const debouncedSaveTimeline = debounce(
+    async (uuid: string, field: string, value: string) => {
+      const updated = await idbUpdateTimeline(uuid, { [field]: value });
+      timeline.value = updated;
+    },
+    500,
+  );
 
-  switch (action) {
-    case "commit":
-      console.log("POST to server DB");
+  const timelineActionMenu = document.getElementById("timeline-action-menu")!;
 
-      const response = await fetch(
-        `/partials/timelines/${timeline.value.id}/commit`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+  timelineActionMenu.addEventListener("click", async (e) => {
+    const btn = (e.target as HTMLElement).closest("button");
+    if (!btn) return;
+    const action = btn.dataset.action as TimelineBtnAction | undefined;
+    if (!action) throw new Error("TimelineBtnAction not defined");
+
+    switch (action) {
+      case "commit":
+        console.log("POST to server DB");
+        btn.disabled = true;
+        btn.innerText = "Commiting...";
+
+        let response;
+        try {
+          response = await fetch(
+            `/partials/timelines/${timeline.value.id}/commit`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...timeline.value,
+                moments: moments.value,
+                steps: steps.value,
+                groups: groups.value,
+                skills: skills.value,
+              }),
+            },
+          );
+        } catch (err) {
+          const msg = navigator.onLine
+            ? "Commit failed: network error"
+            : "Commit failed: you're offline";
+          uiBanner(msg, "error");
+          return;
+        }
+
+        btn.disabled = false;
+        btn.innerText = "Commit Rev";
+
+        if (!response.ok) {
+          uiBanner(`Commit failed: ${response.statusText}`, "error");
+          return;
+        }
+
+        // let htmx handle the swap from the html response
+        const text = await response.text();
+        const newRev = Number(response.headers.get("X-Rev"));
+
+        const updated = await idbUpdateTimeline(timeline.value.id, {
+          rev: newRev,
+        });
+        timeline.value = updated;
+
+        uiBanner(text, "success");
+        return;
+
+      // moved to `timelineActionMenu.addEventListener("change",`
+      // case "import":
+      //   return console.log("import");
+
+      case "print":
+        return console.log("print");
+
+      case "export":
+        console.log("export");
+        // const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
+        const { summary, rev, date_modified } = timeline.value;
+        return downloadAsJSON(
+          {
             ...timeline.value,
             moments: moments.value,
             steps: steps.value,
-            groups: groups.value,
             skills: skills.value,
-          }),
-        },
-      );
+            groups: groups.value,
+          },
+          `${summary} rev-${rev} ${formatDateToYYYY_MM_DD__HH_MM(date_modified)}`,
+        );
 
-      if (!response.ok) {
-        uiBanner(`Commit failed: ${response.statusText}`, "error");
-        return;
-      }
-
-      // let htmx handle the swap from the html response
-      const text = await response.text();
-      const newRev = Number(response.headers.get("X-Rev"));
-
-      const updated = await idbUpdateTimeline(timeline.value.id, {
-        rev: newRev,
-      });
-      timeline.value = updated;
-
-      uiBanner(text, "success");
-      // console.log(btn.getAttribute("hx-target"));
-      // htmx.swap(btn.getAttribute("hx-target") ?? btn, html, {
-      //   swapStyle: btn.dataset.hxSwap ?? "innerHTML",
-      //   swapDelay: 0,
-      //   settleDelay: 20,
-      // });
-      return;
-
-    // moved to `timelineActionMenu.addEventListener("change",`
-    // case "import":
-    //   return console.log("import");
-
-    case "print":
-      return console.log("print");
-
-    case "export":
-      console.log("export");
-      // const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
-      const { summary, rev, date_modified } = timeline.value;
-      return downloadAsJSON(
-        {
-          ...timeline.value,
-          moments: moments.value,
-          steps: steps.value,
-          skills: skills.value,
-          groups: groups.value,
-        },
-        `${summary} rev-${rev} ${formatDateToYYYY_MM_DD__HH_MM(date_modified)}`,
-      );
-
-    default:
-      throw new Error(`TimelineBtnAction not supported: ${action}`);
-  }
-});
-timelineActionMenu.addEventListener("change", async (e) => {
-  const target = e.target as HTMLInputElement;
-  if (!target.matches('input[type="file"]')) return;
-  const action = target.dataset.action as TimelineBtnAction | undefined;
-  if (!action) throw new Error("TimelineBtnAction not defined");
-
-  const file = target.files?.[0];
-  if (!file) return;
-
-  // Validate it's JSON by extension + type
-  if (!file.name.endsWith(".json") || file.type !== "application/json") {
-    alert("Please select a valid .json file");
-    return;
-  }
-
-  if (action === "import") {
-    try {
-      const text = await file.text();
-      const base = JSON.parse(text) as TimelineState;
-
-      // Validate shape before writing — at minimum check required fields
-      if (!base.id || !base.summary) {
-        throw new Error("Invalid timeline format");
-      }
-
-      const template = buildInsertableTimelineGraph(
-        base,
-        timeline.value.id,
-        timeline.value.booking_uuid,
-      );
-
-      console.log(base);
-      if (!template)
-        throw new Error(`template not created with id ${timeline.value.id}`);
-
-      // console.log(timeline_uuid);
-
-      await idbDeleteAllByTimelineUuid(template.id);
-      const inserted = await idbInsertTimelineState(template);
-      console.log({ inserted });
-      const {
-        groups: g,
-        skills: sk,
-        moments: m,
-        steps: st,
-        ...rest
-      } = inserted;
-
-      timeline.value = rest;
-      moments.replace(m);
-      steps.replace(st);
-      groups.replace(g);
-      skills.replace(sk);
-      // Because timeline does not have onChange reaction
-      initTimelineUI(timeline.value);
-    } catch (err) {
-      console.error("Import failed:", err);
-      alert("Failed to import: invalid or corrupted file");
-    } finally {
-      target.value = ""; // reset so the same file can be re-imported
+      default:
+        throw new Error(`TimelineBtnAction not supported: ${action}`);
     }
-  }
-});
+  });
+  timelineActionMenu.addEventListener("change", async (e) => {
+    const target = e.target as HTMLInputElement;
+    if (!target.matches('input[type="file"]')) return;
+    const action = target.dataset.action as TimelineBtnAction | undefined;
+    if (!action) throw new Error("TimelineBtnAction not defined");
+
+    const file = target.files?.[0];
+    if (!file) return;
+
+    // Validate it's JSON by extension + type
+    if (!file.name.endsWith(".json") || file.type !== "application/json") {
+      alert("Please select a valid .json file");
+      return;
+    }
+
+    if (action === "import") {
+      try {
+        const text = await file.text();
+        const base = JSON.parse(text) as TimelineState;
+
+        // Validate shape before writing — at minimum check required fields
+        if (!base.id || !base.summary) {
+          throw new Error("Invalid timeline format");
+        }
+
+        const template = buildInsertableTimelineGraph(
+          base,
+          timeline.value.id,
+          timeline.value.booking_uuid,
+        );
+
+        console.log(base);
+        if (!template)
+          throw new Error(`template not created with id ${timeline.value.id}`);
+
+        // console.log(timeline_uuid);
+
+        await idbDeleteAllByTimelineUuid(template.id);
+        const inserted = await idbInsertTimelineState(template);
+        console.log({ inserted });
+        const {
+          groups: g,
+          skills: sk,
+          moments: m,
+          steps: st,
+          ...rest
+        } = inserted;
+
+        timeline.value = rest;
+        moments.replace(m);
+        steps.replace(st);
+        groups.replace(g);
+        skills.replace(sk);
+        // Because timeline does not have onChange reaction
+        initTimelineUI(timeline.value);
+      } catch (err) {
+        console.error("Import failed:", err);
+        alert("Failed to import: invalid or corrupted file");
+      } finally {
+        target.value = ""; // reset so the same file can be re-imported
+      }
+    }
+  });
+}
+
+document.addEventListener("astro:page-load", init);

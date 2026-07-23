@@ -1,0 +1,75 @@
+---
+import { toAttributeString } from "astro/runtime/server/render/util.js";
+import type { HTMLAttributes } from "astro/types";
+import SvgArrowLeft from '@public/icons/arrow-left-2-bold.svg'
+import SvgArrowRight from '@public/icons/arrow-right-2-bold.svg'
+
+// components/navigation/MiniPaginationControls.astro
+export interface Props extends HTMLAttributes<"menu"> {
+  paramKey: string; // e.g. "bookings_page" — namespaces this widget's param
+  page: number;
+  totalPages: number;
+  partialUrl: string; // e.g. "/partials/bookings"
+  pageUrl: string, // user-facing URL to push, e.g. "/dashboard"
+  target: string; // CSS selector of the element to swap, e.g. "#bookings-list"
+  id: string; // element id for this pager, used for OOB re-targeting
+}
+const { paramKey, page, totalPages, partialUrl, pageUrl, target, id, ...attrs } = Astro.props;
+
+// merge with *all* current query params so other widgets' pages aren't clobbered
+function buildUrl(
+  base: string,
+  params: URLSearchParams,
+  key: string,
+  value: number,
+) {
+  const p = new URLSearchParams(params);
+  p.set(key, String(value));
+  return `${base}?${p.toString()}`;
+}
+
+const currentParams = Astro.url.searchParams;
+const prevGet = buildUrl(partialUrl, currentParams, paramKey, page - 1);
+const nextGet = buildUrl(partialUrl, currentParams, paramKey, page + 1);
+const prevPush = buildUrl(
+  pageUrl,
+  currentParams,
+  paramKey,
+  page - 1,
+);
+const nextPush = buildUrl(
+  pageUrl,
+  currentParams,
+  paramKey,
+  page + 1,
+);
+const isLastPage = page === totalPages;
+const isFirstPage = page === 1;
+---
+
+<menu class="pagination m-0" id={id} data-param={paramKey} data-page={page} {...attrs}>
+  <button
+    class="clear"
+    type="button"
+    hx-get={prevGet}
+    hx-target={target}
+    hx-swap="innerHTML"
+    hx-push-url={prevPush}
+    disabled={isFirstPage}
+    title={`previous ${paramKey}`}
+  >
+    <SvgArrowLeft />
+  </button>
+  <button
+    class="clear"
+    type="button"
+    hx-get={nextGet}
+    hx-target={target}
+    hx-swap="innerHTML"
+    hx-push-url={nextPush}
+    disabled={isLastPage}
+    title={`next ${paramKey}`}
+  >
+    <SvgArrowRight />
+  </button>
+</menu>

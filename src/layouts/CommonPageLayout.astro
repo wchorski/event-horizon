@@ -12,6 +12,8 @@ const { title, excerpt } = Astro.props;
 
 <BaseLayout title={title} excerpt={excerpt}>
   <SiteNav slot={"header"} />
-  <slot />
+  <main>
+    <slot />
+  </main>
   <Footer slot={"footer"} />
 </BaseLayout>

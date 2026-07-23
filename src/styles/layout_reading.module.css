@@ -2,9 +2,13 @@
   max-width: 1200px;
   /* margin-inline: auto; */
 
+  & > header {
+    margin-bottom: 4rem;
+  }
+
   & > main {
     padding-inline: 0;
-    /* padding-inline: var(--size-m, 1rem); */
+  
   }
 
   &:has(> footer) {

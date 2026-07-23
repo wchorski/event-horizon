@@ -341,6 +341,7 @@ export const validateBookingRequest = z
     client_id: uuidv7OrNullFromForm,
     user: optionalUser,
     location_id: uuidv7OrNullFromForm,
+    timeline_id: uuidv7OrNullFromForm,
     location: optionalLocation,
   })
   .superRefine((data, ctx) => {

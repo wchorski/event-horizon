@@ -15,12 +15,16 @@ import { DATALIST_TIMEZONES } from "astro:env/client";
 interface Props extends HTMLAttributes<"form"> {
   author_user_id: string;
   formId?: string;
+  timelineId?: string | null;
+  start?: string | null;
   locationOptions?: SelectOption[];
   userOptions?: SelectOption[];
 }
 const {
   author_user_id,
   formId = "create_a_booking",
+  timelineId,
+  start,
   class: classList,
   locationOptions = [],
   userOptions = [],
@@ -48,7 +52,22 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
   hx-headers='{"X-Partial-Type": "single-page"}'
   hx-include="[name^='booking'], [name^='location']"
 >
-  <legend>Create a Booking</legend>
+  <legend>Request a Booking</legend>
+
+  <fieldset>
+    <legend>Connect Timeline by ID</legend>
+    <InputField
+      id={"timelineId"}
+      name={"timeline_id"}
+      model={"bookings"}
+      type={"text"}
+      value={timelineId}
+      isCreate={true}
+    />
+    <p class="ghost info">
+      Optional: You may create and connect a timeline later
+    </p>
+  </fieldset>
 
   <fieldset>
     <legend>Date & Time</legend>
@@ -57,6 +76,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
       name={"start"}
       model={"bookings"}
       type={"datetime-local"}
+      value={start ? `${start}T00:00` : null}
       isCreate={true}
     />
     <TextareaField name={"notes"} errorId={"notes-error"} />

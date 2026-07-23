@@ -1,0 +1,39 @@
+---
+// pages/partials/bookings/article-list.astro
+import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
+import MiniPaginationControls from "@components/navigation/MiniPaginationControls.astro";
+import { getBookingsPage } from "@lib/getBookingsPage";
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401 });
+
+const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
+const { bookings, totalCount, totalPages } = await getBookingsPage({
+  author_user_id: user.id,
+  page,
+  perPage: 3,
+});
+---
+
+{
+  bookings?.length ? (
+    bookings.map((bk) => (
+      <li>
+        <BookingArticleQuickView booking={bk} />
+      </li>
+    ))
+  ) : (
+    <li class="callout ghost">no bookings found</li>
+  )
+}
+
+<MiniPaginationControls
+  id="bookings-pagination"
+  paramKey="bookings_page"
+  page={page}
+  totalPages={totalPages || 1}
+  partialUrl="/partials/bookings/article-list"
+  pageUrl="/dashboard"
+  target="#bookings-list"
+  hx-swap-oob="true"
+/>

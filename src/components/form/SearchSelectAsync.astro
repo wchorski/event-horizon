@@ -310,17 +310,18 @@ const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
 <style is:global>
   /* identical to SearchSelect.astro's stylesheet — copy as-is */
   .ss-root {
-    --surface: #141418;
+    --surface: var(--c-txt-bg);
     --surface2: #1c1c22;
     --surface3: #24242c;
     --border: #2a2a36;
-    --border-hi: #5b54f0;
-    --text: #ededf2;
-    --text-2: #8888a0;
-    --text-3: #74747a;
-    --accent: #5b54f0;
+    --border-hi: var(--c-primary);
+    --text: var(--c-txt);
+    --text-2: var(--c-ghost);
+    --text-3: var(--c-info);
+    --accent: var(--c-accent);
     --accent-soft: rgba(91, 84, 240, 0.13);
     --accent-glow: rgba(91, 84, 240, 0.25);
+    --accent-soft: var(--c-primary)
     --warn: #e8a030;
     --mono: "DM Mono", "Fira Mono", ui-monospace, monospace;
     --sans: "DM Sans", system-ui, sans-serif;
@@ -402,7 +403,8 @@ const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
     font-size: 14px;
     color: var(--text);
     caret-color: var(--accent);
-    border-style: none;
+    border-style: none !important;
+    outline: none !important;
   }
   .ss-input::placeholder {
     color: var(--text-2);

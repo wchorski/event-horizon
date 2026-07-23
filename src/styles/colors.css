@@ -194,12 +194,20 @@ button,
     border-color: var(--c-error);
     color: white;
   }
+
+  &.clear {
+    background-color: transparent;
+    color: var(--c-ghost);
+    border-color: transparent;
+  }
 }
+
 
 button:not(:disabled):hover,
 .btn:hover {
   background-color: var(--c-primary);
   background-position: 20px 20px;
+  filter: brightness(2);
 
   &.delete {
     color: var(--c-txt);
@@ -216,6 +224,11 @@ button:disabled {
   background-color: var(--c-disabled);
   background-position: 0 0;
   background: var(--lg-disabled);
+
+  &.clear {
+    color: var(--c-seperator) !important;
+    background: transparent;
+  }
 }
 
 .field-error:not(:empty) {

@@ -1,6 +1,8 @@
 ---
+// pages/dashboard.astro
 import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import MiniPaginationControls from "@components/navigation/MiniPaginationControls.astro";
 import { getBookingsPage } from "@lib/getBookingsPage";
 import { SITE_TITLE } from "astro:env/client";
 
@@ -9,19 +11,33 @@ const user = Astro.locals.user;
 if (user === null) return Astro.redirect("/login");
 if (!user) throw new Error("Must be logged in to view page");
 
-const { bookings } = await getBookingsPage({
+const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
+
+const { bookings, totalPages } = await getBookingsPage({
   author_user_id: user.id,
-  page: 1,
+  page,
+  perPage: 3,
 });
 ---
 
 <CommonPageLayout title={`Dashboard | ${SITE_TITLE}`}>
   <header>
-    <h1>Dashboard</h1>
+    <h1 class="etched-line">Dashboard</h1>
   </header>
   <div data-layout="content">
-    <h2>Bookings</h2>
-    <ul id="bookings" class="unstyled grid auto-fit gap-s">
+    <div class="flex gap-m flex-align-center">
+      <h2>Upcoming Bookings</h2>
+      <MiniPaginationControls
+        id="bookings-pagination"
+        paramKey="bookings_page"
+        page={page}
+        totalPages={totalPages || 1}
+        partialUrl="/partials/bookings/article-list"
+        pageUrl="/dashboard"
+        target="#bookings-list"
+      />
+    </div>
+    <ul id="bookings-list" class="unstyled grid auto-fill gap-s">
       {
         bookings ? (
           bookings.map((bk) => (

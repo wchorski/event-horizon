@@ -13,6 +13,7 @@ input[type="email"] {
   width: 100%;
   /* max-width: 300px; */
   box-sizing: border-box;
+  padding: 0.3rem 0.5rem;
 }
 
 label:has(input[type="search"]) {
@@ -72,10 +73,15 @@ form {
     border-color: var(--c-seperator);
     display: grid;
     gap: 0.8rem;
+
+    & > legend {
+      margin-bottom: var(--size-m);
+    }
   }
 
   & .form-field {
     display: grid;
+    gap: var(--size-xs);
   }
 
   /* button[type="submit"] {
@@ -110,6 +116,14 @@ form {
     width: fit-content;
     padding: 0.3rem 0.5rem;
     cursor: pointer;
+  }
+
+  details {
+    display: grid;
+
+    &:open {
+      gap: var(--size-m);
+    }
   }
 }
 

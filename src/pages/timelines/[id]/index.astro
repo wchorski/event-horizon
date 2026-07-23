@@ -5,6 +5,7 @@ interface Params {
 
 import TimelineGraph from "@components/TimelineGraph.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
+import { SITE_TITLE } from "astro:env/client";
 export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
@@ -38,7 +39,7 @@ const formatTimeRange = (start: string, end: string) => {
 };
 ---
 
-<BaseLayout>
+<BaseLayout title={`Timeline | ${SITE_TITLE}`}>
   <main>
     <p id="banner-message"></p>
     <header id="page-header" class="flex gap-l space-between">
@@ -53,18 +54,17 @@ const formatTimeRange = (start: string, end: string) => {
           <input type="text" name="timezone" placeholder="timezone" />
         </div>
       </div>
-      <div>
-        <menu id="timeline-action-menu" data-timelineUUID={id} class="gap-s">
-          <button data-action="commit" hx-target={"#banner-message"}>
+      <div id="timeline-page-actions">
+        <menu
+          id="timeline-action-menu"
+          data-timelineUUID={id}
+          class="flex gap-s flex-align-center"
+        >
+          <button data-action="commit" hx-target={"#banner-message"} class="m">
             Commit Rev
           </button>
-          <button data-action="export">Export JSON</button>
           <a href={`./${id}/print`} target="_blank" data-action="print">Print</a
           >
-          <label>
-            <span>Import JSON</span>
-            <input type="file" data-action="import" />
-          </label>
         </menu>
         <details>
           <summary>{id}</summary>
@@ -75,8 +75,18 @@ const formatTimeRange = (start: string, end: string) => {
             <dt data-field="date_modified">***</dt>
             <dd>revision</dd>
             <dt data-field="rev">***</dt>
+            <dd>Export</dd>
+            <dt><button data-action="export">Export JSON</button></dt>
+            <dd>Import</dd>
+            <dt>
+              <label>
+                <span>Import JSON</span>
+                <input type="file" data-action="import" />
+              </label>
+            </dt>
           </dl>
         </details>
+        <p><a id="booking-link">BOOKING</a></p>
       </div>
     </header>
     <hr />
@@ -132,7 +142,7 @@ const formatTimeRange = (start: string, end: string) => {
 
 <script>
   import "@client/timelineSignals";
-  import "@client/textareaResize"
+  import "@client/textareaResize";
 </script>
 
 <style>

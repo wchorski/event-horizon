@@ -393,3 +393,7 @@ img.framed {
   width: 100%;
   object-fit: contain;
 }
+
+.m-0 {
+  margin: 0;
+}

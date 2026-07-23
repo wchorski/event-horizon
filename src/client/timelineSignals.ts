@@ -98,12 +98,16 @@ async function fetchData() {
           const template = buildInsertableTimelineGraph(
             {
               ...restOfServer,
+              booking_uuid: null,
               moments: data.moments,
               steps: data.steps,
               groups: data.groups,
               skills: data.skills,
+              date_modified: new Date(),
+              date_created: new Date(),
             },
             timeline_uuid,
+            booking_id,
           );
           console.log("inserting timeline from server into local idb");
           return await idbInsertTimelineState(template);
@@ -112,7 +116,7 @@ async function fetchData() {
           await idbUpdateTimeline(timeline_uuid, {
             ...restOfServer,
             rev: server.rev,
-            date_modified: new Date(server.date_modified),
+            date_modified: new Date(server.updatedAt),
           });
           return await idbGetSingleTimelineData(timeline_uuid);
         }
@@ -200,19 +204,19 @@ moments.onChange((change) => {
   }
 });
 // TODO setup steps signal. not exactly necessary because no other data type depends on step update
-steps.onChange(change => {
+steps.onChange((change) => {
   switch (change.type) {
-    case 'added':
+    case "added":
       break;
-    case 'removed':
+    case "removed":
       const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
-      li.remove()
+      li.remove();
       break;
 
     default:
       break;
   }
-})
+});
 
 skills.onChange((change) => {
   switch (change.type) {
@@ -618,6 +622,24 @@ function uiTimelineMeta(data: Timeline) {
     dateModifiedEl.textContent = prettyDateToLocale(data.date_modified);
   if (revEl) revEl.textContent = String(data.rev);
   timelineRevSpan.textContent = String(data.rev);
+
+  const bookingLink = document.getElementById(
+    "booking-link",
+  ) as HTMLAnchorElement;
+  if (!bookingLink) throw new Error("bookingLink not set");
+
+  // TODO rev gt zero means it's been commited to the server at least once. is this resilent or do i need a `server commit link` boolean flag?
+  if (data.rev > 0 && data.booking_uuid) {
+    bookingLink.innerText = "view booking";
+    bookingLink.href = `/bookings/${data.booking_uuid}`;
+  } else if (data.rev > 0) {
+    bookingLink.innerText = "create new booking";
+    bookingLink.href = `/bookings?timelineId=${data.id}`;
+  } else {
+    bookingLink.innerText =
+      "Must commit to server (rev > 0) to link to booking";
+    bookingLink.classList.add("callout");
+  }
 }
 
 function renderGraphUI(moments: TimelineMoment[], skills: TimelineSkill[]) {
@@ -831,7 +853,11 @@ timelineActionMenu.addEventListener("change", async (e) => {
         throw new Error("Invalid timeline format");
       }
 
-      const template = buildInsertableTimelineGraph(base, timeline.value.id);
+      const template = buildInsertableTimelineGraph(
+        base,
+        timeline.value.id,
+        timeline.value.booking_uuid,
+      );
 
       console.log(base);
       if (!template)

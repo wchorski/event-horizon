@@ -2,6 +2,7 @@
 import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { getBookingsPage } from "@lib/getBookingsPage";
+import { SITE_TITLE } from "astro:env/client";
 
 const user = Astro.locals.user;
 
@@ -14,13 +15,13 @@ const { bookings } = await getBookingsPage({
 });
 ---
 
-<CommonPageLayout>
+<CommonPageLayout title={`Dashboard | ${SITE_TITLE}`}>
   <header>
     <h1>Dashboard</h1>
   </header>
   <div data-layout="content">
     <h2>Bookings</h2>
-    <ul id="bookings" class="unstyled grid gap-s">
+    <ul id="bookings" class="unstyled grid auto-fit gap-s">
       {
         bookings ? (
           bookings.map((bk) => (

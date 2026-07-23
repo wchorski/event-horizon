@@ -15,6 +15,7 @@ import CourseCreditsEditableTable from "@components/CourseCreditsEditableTable.a
 import { bookingSummary } from "@lib/virtualFields";
 import AddressOfLocation from "@components/AddressOfLocation.astro";
 import ArticleOfUserInfo from "@components/ArticleOfUserInfo.astro";
+import SiteNav from "@components/navigation/SiteNav.astro";
 export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 
@@ -47,7 +48,7 @@ const summary = bookingSummary(booking, client);
 ---
 
 <BaseLayout>
-  <AdminNav />
+  <SiteNav />
   <main>
     <header>
       <h1>
@@ -55,7 +56,7 @@ const summary = bookingSummary(booking, client);
       </h1>
       <dl class="kv">
         <dd>Status</dd>
-        <dt>{status}</dt>
+        <dt><span class="status" data-status={status}>{status}</span></dt>
         <dd>start</dd>
         <dt>
           <time datetime={start.toString()}>
@@ -97,7 +98,14 @@ const summary = bookingSummary(booking, client);
     <hr />
     <div data-layout="content">
       <h2>Client</h2>
-      <ArticleOfUserInfo user={client} />
+      {
+        client ? (
+          <ArticleOfUserInfo user={client} />
+        ) : (
+          <p class="callout">No client set</p>
+        )
+      }
+
       <hr />
       <h2>Assignments</h2>
       {

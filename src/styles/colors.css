@@ -78,6 +78,24 @@
     var(--c-txt-bg)
   );
 }
+.status[data-status="REQUESTED"] {
+  --status-color: #6bafa0;
+}
+.status[data-status="CANCELED"] {
+  --status-color: #af6b6b;
+}
+.status[data-status="DECLINED"] {
+  --status-color: #c44b4b;
+}
+.status[data-status="HOLDING"] {
+  --status-color: #bac44b;
+}
+.status[data-status="ACCEPTED"] {
+  --status-color: #4bc344;
+}
+.status[data-status="POSTPONED"] {
+  --status-color: #ccba7b;
+}
 .status[data-status="success"] {
   --status-color: var(--c-success);
 }

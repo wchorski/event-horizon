@@ -102,6 +102,11 @@ docker compose up --remove-orphans
 
 </details>
 
+<details>
+  <summary>Credits</summary>
+  
+  - Icons from https://opensvg.dev/icons
+</details>
 
 
 #todo
@@ -110,6 +115,7 @@ docker compose up --remove-orphans
 - [ ] timeline: sepearte rows (TBD marker bleed together)
 - [ ] timeline: update step counter when adding new step
 - [ ] timeline: auto re-order moments when time change. bonus -- add drag and drop (keep time duration, shift all other rows when dropped)
+- [ ] timeline: pressing browser back button from 'booking/:id' page does not fire the client `timelineSignals.ts` script
 - [ ] `+ add moment` double adds moment....
 - [ ] use Better Auth Organizations https://better-auth.com/docs/plugins/organization
 - [ ] convert all env to use https://docs.astro.build/en/guides/environment-variables/

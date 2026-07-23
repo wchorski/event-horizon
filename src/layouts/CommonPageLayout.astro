@@ -1,10 +1,16 @@
 ---
+interface Props {
+  title?: string;
+  excerpt?: string;
+  classNames?: string;
+}
 import SiteNav from "@components/navigation/SiteNav.astro";
 import BaseLayout from "./BaseLayout.astro";
 import Footer from "@components/navigation/Footer.astro";
+const { title, excerpt } = Astro.props;
 ---
 
-<BaseLayout>
+<BaseLayout title={title} excerpt={excerpt}>
   <SiteNav slot={"header"} />
   <slot />
   <Footer slot={"footer"} />

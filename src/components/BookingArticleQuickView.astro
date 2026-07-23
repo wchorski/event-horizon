@@ -1,4 +1,5 @@
 ---
+// components/BookingArticleQuickView.astro
 import { prettyDateToLocale } from "@lib/formatters";
 import type {
   BookingSelect,
@@ -7,6 +8,8 @@ import type {
   UserSelect,
 } from "@ty/Schema";
 import Address from "@components/Address.astro";
+import SvgBookIcon from "@public/icons/book.svg";
+import SvgTimelineIcon from "@public/icons/timeline-clock-outline.svg";
 
 interface Props {
   booking: BookingSelect & {
@@ -18,6 +21,10 @@ interface Props {
 }
 const { booking } = Astro.props;
 const { id, start, status, location, author, client, timeline } = booking;
+function addressProps(location: LocationSelect){
+  const { excerpt, ...loc } = location;
+  return loc;
+};
 ---
 
 <article class="card">
@@ -25,12 +32,7 @@ const { id, start, status, location, author, client, timeline } = booking;
     <div>
       {
         client ? (
-          <h3>
-            {" "}
-            <a
-              href={`/users/${client.id}`}
-            >{`${client.name} <${client.email}>`}</a>
-          </h3>
+          <h3>{`${client.name} <${client.email}>`}</h3>
         ) : (
           <h3>No Client Set</h3>
         )
@@ -38,29 +40,31 @@ const { id, start, status, location, author, client, timeline } = booking;
     </div>
     <time datetime={start.toISOString()}>{prettyDateToLocale(start)}</time>
     <p>
-      {location ? <Address {...location} /> : "address not set"}
+      {location ? <Address {...addressProps(location)} />: "address not set"}
     </p>
     <span class="status" data-status={status}>{status}</span>
   </header>
 
   <div class="flex space-between">
-    <div>
-      <span>author: </span>
-      {`${author.name} <${author.email}>`}
-    </div>
     <div class="actions flex gap-s">
-      <a class="btn" href={`/bookings/${id}`}>booking</a>
+      <a class="btn" href={`/bookings/${id}`}>
+        <SvgBookIcon class:list={["inline-icon"]} /> booking</a
+      >
       {
         timeline ? (
           <a class="btn" href={`/timelines/${timeline.id}`}>
-            VIEW TIMELINE
+            <SvgTimelineIcon class:list={["inline-icon"]} /> timeline
           </a>
         ) : (
-          <a href={`/timelines?bookingId=${id}`}>add timeline</a>
+          <a href={`/timelines?bookingId=${id}`}>+ add timeline</a>
         )
       }
     </div>
   </div>
+  <p class="sub-text author">
+    <span>author: </span>
+    {`${author.name} <${author.email}>`}
+  </p>
 </article>
 
 <style>
@@ -71,5 +75,16 @@ const { id, start, status, location, author, client, timeline } = booking;
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
+  }
+
+  .inline-icon {
+    font-size: 1rem;
+    height: 0.8rem;
+    width: 0.8rem;
+    fill: var(--c-txt);
+  }
+
+  p.author {
+    margin-bottom: 0;
   }
 </style>

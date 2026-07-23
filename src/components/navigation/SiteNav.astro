@@ -1,6 +1,8 @@
 ---
 // src/components/navigation/SiteNave.astro
 import SvgSiteLogo from "@public/favicon.svg";
+import SvgBookIcon from "@public/icons/book.svg";
+import SvgTimelineIcon from "@public/icons/timeline-clock-outline.svg";
 import homeStyles from "@styles/home.module.css";
 import gridStyles from "@styles/grid.module.css";
 
@@ -13,12 +15,22 @@ const displayName = user
 ---
 
 <header class:list={[gridStyles.col_3, "grid", homeStyles.hero]}>
-  <h1>
-    <a href="/">Event Horizon</a>
-  </h1>
-  <a href="/">
-    <SvgSiteLogo class={homeStyles.logo} />
-  </a>
+  <div class="flex gap-s flex-align-center">
+    <a href="/">
+      <SvgSiteLogo class={homeStyles.logo} />
+    </a>
+    <h1 class="m-0"><a href="/">Event Horizon</a></h1>
+  </div>
+  <nav class="flex gap-m">
+    <a href="/bookings" class="grid">
+      <SvgBookIcon />
+      <span class="text"> Bookings </span>
+    </a>
+    <a href="/timelines" class="grid">
+      <SvgTimelineIcon />
+      <span class="text"> Timelines </span>
+    </a>
+  </nav>
   <span class="pill">
     <a href={`/dashboard`}>{displayName}</a>
   </span>

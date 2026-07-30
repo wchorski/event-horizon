@@ -19,16 +19,9 @@ let error: string | null = null;
 
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
-
-  const payload = Object.fromEntries(formData.entries()) as SignUpFields;
-
-  const { email, password, image, username } = payload;
-
-  console.log({ payload });
-
+  const payload = Object.fromEntries(formData.entries()) as SignupCredentials;
+  // const { email, password, image, first_name, last_name } = payload;
   const result = await signup(payload);
-
-  // const result = await signup(payload)
 
   if (result.success) {
     const redirectResponse = new Response(null, {

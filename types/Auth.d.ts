@@ -12,7 +12,9 @@ export type SignupCredentials = {
   image?: string;
 };
 
-export type LoginSignupResult = { success: true; setCookies: string[] };
+export type LoginSignupResult =
+  | { success: true; setCookies: string[] }
+  | { success: false; error: string };
 export type CreateUserResult =
   | { success: true; user: CreatedUser }
   | { success: false; error: string };
@@ -31,7 +33,7 @@ export type CreatedUser = {
   username: string;
   displayUsername: string;
   id: string;
-  phone: string|null;
-  first_name: string,
-  last_name: string,
+  phone: string | null;
+  first_name: string;
+  last_name: string;
 };

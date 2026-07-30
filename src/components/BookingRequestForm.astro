@@ -97,7 +97,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
     />
   </fieldset>
   <fieldset>
-    <details open>
+    <details>
       <summary>Or add a new location</summary>
       <div class="grid gap-s" id="new-location-fields">
         <InputField
@@ -160,7 +160,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
     />
   </fieldset>
   <fieldset>
-    <details open>
+    <details>
       <summary>Or register a new User</summary>
       <div class="grid gap-s" id="new-user-fields">
         <InputField
@@ -169,7 +169,6 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
           name={"user.first_name"}
           model={"bookings"}
           type={"text"}
-          required={true}
           isCreate={true}
         />
         <InputField
@@ -178,7 +177,6 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
           name={"user.last_name"}
           model={"bookings"}
           type={"text"}
-          required={true}
           isCreate={true}
         />
         <InputField
@@ -187,7 +185,6 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
           name={"user.email"}
           model={"bookings"}
           type={"text"}
-          required={true}
           isCreate={true}
         />
         <InputField

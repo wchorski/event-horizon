@@ -1,0 +1,10 @@
+---
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+const msg = Astro.url.searchParams.get("msg");
+---
+
+<CommonPageLayout>
+  <h1>BYE-BYE-BYE</h1>
+  <p>You have successfully signed out.</p>
+  {msg ? <p class="callout">{msg}</p> : null}
+</CommonPageLayout>

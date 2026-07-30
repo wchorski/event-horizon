@@ -1,78 +1,90 @@
 Event hosting platform (tickets, planning, upcoming/past promotion)
 
 <details>
-<summary>⚙️ DEV Environment</summary>
+  <summary>⚙️ DEV Environment</summary>
 
-```shell
-## spin up development postgres container
-cp .env.example .env.development
-cp .env.development .env
-pnpm db:create
-## If any schema changes have been made
-pnpm db:generate
+  ```shell
+  ## spin up development postgres container
+  cp .env.example .env.development
+  cp .env.development .env
+  pnpm db:create
+  ## If any schema changes have been made
+  pnpm db:generate
 
-pnpm db:push
-pnpm db:seed:truncate
-```
+  pnpm db:push
+  pnpm db:seed:truncate
+  ```
 
-any changes made to `schema.ts` or `seed-data.ts` need to rerun
+  any changes made to `schema.ts` or `seed-data.ts` need to rerun
 
-```shell
-pnpm db:push
-pnpm db:seed:truncate
-```
+  ```shell
+  pnpm db:push
+  pnpm db:seed:truncate
+  ```
 
-Drizzle will warn you of any changes with an interactive cli. For example if a column name is new or a rename
+  Drizzle will warn you of any changes with an interactive cli. For example if a column name is new or a rename
 
-```shell
-pnpm db:push
+  ```shell
+  pnpm db:push
 
-> my-app@0.0.1 db:push
-> npx drizzle-kit push
+  > my-app@0.0.1 db:push
+  > npx drizzle-kit push
 
-No config path provided, using default 'drizzle.config.ts'
-Reading config file '/Volumes/edata/vscode/moeits_staff-astro-htmx/drizzle.config.ts'
-Using 'pg' driver for database querying
-[✓] Pulling schema from database...
+  No config path provided, using default 'drizzle.config.ts'
+  Reading config file '/Volumes/edata/vscode/moeits_staff-astro-htmx/drizzle.config.ts'
+  Using 'pg' driver for database querying
+  [✓] Pulling schema from database...
 
-~ date › timestamp column will be renamed
---- all columns conflicts in events table resolved ---
+  ~ date › timestamp column will be renamed
+  --- all columns conflicts in events table resolved ---
 
 
-~ date › timestamp column will be renamed
---- all columns conflicts in tickets table resolved ---
+  ~ date › timestamp column will be renamed
+  --- all columns conflicts in tickets table resolved ---
 
-[✓] Changes applied
-```
+  [✓] Changes applied
+  ```
 
-### Drizzle Studio
+  ### Drizzle Studio
 
-```shell
-mkdir -p "$HOME/Library/Application Support/drizzle-studio"
-touch "$HOME/Library/Application Support/drizzle-studio/localhost.pem"
-touch "$HOME/Library/Application Support/drizzle-studio/localhost-key.pem"
+  ```shell
+  mkdir -p "$HOME/Library/Application Support/drizzle-studio"
+  touch "$HOME/Library/Application Support/drizzle-studio/localhost.pem"
+  touch "$HOME/Library/Application Support/drizzle-studio/localhost-key.pem"
 
-npm run db:studio
-```
+  npm run db:studio
+  ```
 
-https://local.drizzle.studio/
+  https://local.drizzle.studio/
 
----
+  ---
 
-HOW to generate sql files and migrations with
+  HOW to generate sql files and migrations with
 
-```shell
-npx drizzle-kit generate   # generates SQL migration files
-npx drizzle-kit migrate    # runs them against your DB
-```
+  ```shell
+  npx drizzle-kit generate   # generates SQL migration files
+  npx drizzle-kit migrate    # runs them against your DB
+  ```
 
-### Better Auth config
-https://better-auth.com/docs/installation (with some help from https://www.giorgiosaud.io/notebook/better-auth-drizzle-neon-astro)
-```shell
-# generate auth-schema.ts
-pnpm dlx auth@latest generate
-# for this project, I've heavily modified and combined it with db/schema.ts
-```
+  ### Better Auth config
+  https://better-auth.com/docs/installation (with some help from https://www.giorgiosaud.io/notebook/better-auth-drizzle-neon-astro)
+  ```shell
+  # generate auth-schema.ts
+  pnpm dlx auth@latest generate
+  # for this project, I've heavily modified and combined it with db/schema.ts
+  ```
+
+  ### Nuke the DB
+  sidestep migration missmatches in dev
+  ```shell
+  docker exec -it postgres_container psql -U admin -d postgres
+  DROP DATABASE "event-horizon-app-9";
+  CREATE DATABASE "event-horizon-app-9";
+
+  rm -rf drizzle
+  pnpm db:generate
+  pnpm db:migrate
+  ```
 
 </details>
 

@@ -7,7 +7,9 @@ export type SignupCredentials = {
   first_name: string;
   last_name: string;
   email: string;
+  password: string;
   phone?: string;
+  image?: string;
 };
 
 export type LoginSignupResult = { success: true; setCookies: string[] };

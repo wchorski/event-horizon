@@ -381,24 +381,24 @@ export const Ticket = pgTable(
     // ),
   ],
 );
-
-export const Organization = pgTable("organizations", {
-  id: uuid()
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  name: text().notNull(),
-  slug: text().notNull().unique(), // for subdomains/URLs: acme.yourapp.com
-  // for isolated DB (needed for some enterprise buisness)
-  dedicated_db_url: text(),
-  color: text(),
-  color_2: text(),
-  logo: text(),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp()
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+//? self made org (before better-auth)
+// export const Organization = pgTable("organizations", {
+//   id: uuid()
+//     .primaryKey()
+//     .default(sql`uuidv7()`),
+//   name: text().notNull(),
+//   slug: text().notNull().unique(), // for subdomains/URLs: acme.yourapp.com
+//   // for isolated DB (needed for some enterprise buisness)
+//   dedicated_db_url: text(),
+//   color: text(),
+//   color_2: text(),
+//   logo: text(),
+//   createdAt: timestamp().notNull().defaultNow(),
+//   updatedAt: timestamp()
+//     .defaultNow()
+//     .$onUpdate(() => /* @__PURE__ */ new Date())
+//     .notNull(),
+// });
 
 export const orgMemberRoleEnum = pgEnum("org_member_role", [
   "OWNER",
@@ -407,23 +407,23 @@ export const orgMemberRoleEnum = pgEnum("org_member_role", [
   "CLIENT",
 ]);
 
-export const OrganizationMembership = pgTable(
-  "organization_memberships",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    organization_id: uuid()
-      .notNull()
-      .references(() => Organization.id, { onDelete: "cascade" }),
-    user_id: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    role: orgMemberRoleEnum("role").notNull().default("STAFF"),
-    date_joined: timestamp().notNull().defaultNow(),
-  },
-  (table) => [unique().on(table.organization_id, table.user_id)],
-);
+// export const OrganizationMembership = pgTable(
+//   "organization_memberships",
+//   {
+//     id: uuid()
+//       .primaryKey()
+//       .default(sql`uuidv7()`),
+//     organization_id: uuid()
+//       .notNull()
+//       .references(() => Organization.id, { onDelete: "cascade" }),
+//     user_id: uuid()
+//       .notNull()
+//       .references(() => User.id, { onDelete: "cascade" }),
+//     role: orgMemberRoleEnum("role").notNull().default("STAFF"),
+//     date_joined: timestamp().notNull().defaultNow(),
+//   },
+//   (table) => [unique().on(table.organization_id, table.user_id)],
+// );
 
 export const Session = pgTable(
   "sessions",
@@ -443,6 +443,7 @@ export const Session = pgTable(
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     impersonatedBy: text(),
+    activeOrganizationId: uuid(),
   },
   (table) => [index("session_user_id_idx").on(table.userId)],
 );
@@ -453,7 +454,7 @@ export const Account = pgTable(
     id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    accountId: text("account_id").notNull(),
+    accountId: text().notNull(),
     providerId: text().notNull(),
     userId: uuid()
       .notNull()
@@ -521,10 +522,74 @@ export const Passkey = pgTable(
   ],
 );
 
+export const Organization = pgTable("organizations", {
+  id: uuid()
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  name: text().notNull(),
+  slug: text().notNull().unique(),
+  logo: text(),
+  createdAt: timestamp().notNull(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  metadata: text(),
+  dedicated_db_url: text(),
+  color: text(),
+  color_2: text(),
+});
+export const Member = pgTable(
+  "members",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => Organization.id, { onDelete: "cascade" }),
+    userId: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    role: text().default("default").notNull(),
+    createdAt: timestamp().notNull(),
+  },
+  (table) => [
+    index("member_organizationId_idx").on(table.organizationId),
+    index("member_userId_idx").on(table.userId),
+  ],
+);
+
+export const Invitation = pgTable(
+  "invitations",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => Organization.id, { onDelete: "cascade" }),
+    email: text().notNull(),
+    role: text(),
+    status: text().default("pending").notNull(),
+    expiresAt: timestamp().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    inviterId: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    index("invitation_organizationId_idx").on(table.organizationId),
+    index("invitation_email_idx").on(table.email),
+  ],
+);
+
 export const userRelations = relations(User, ({ many }) => ({
   sessions: many(Session),
   accounts: many(Account),
   passkeys: many(Passkey),
+  members: many(Member),
+  invitations: many(Invitation),
 }));
 
 export const sessionRelations = relations(Session, ({ one }) => ({
@@ -537,6 +602,40 @@ export const sessionRelations = relations(Session, ({ one }) => ({
 export const accountRelations = relations(Account, ({ one }) => ({
   User: one(User, {
     fields: [Account.userId],
+    references: [User.id],
+  }),
+}));
+
+export const passkeyRelations = relations(Passkey, ({ one }) => ({
+  user: one(User, {
+    fields: [Passkey.userId],
+    references: [User.id],
+  }),
+}));
+
+export const organizationRelations = relations(Organization, ({ many }) => ({
+  members: many(Member),
+  invitations: many(Invitation),
+}));
+
+export const memberRelations = relations(Member, ({ one }) => ({
+  organization: one(Organization, {
+    fields: [Member.organizationId],
+    references: [Organization.id],
+  }),
+  user: one(User, {
+    fields: [Member.userId],
+    references: [User.id],
+  }),
+}));
+
+export const invitationRelations = relations(Invitation, ({ one }) => ({
+  organization: one(Organization, {
+    fields: [Invitation.organizationId],
+    references: [Organization.id],
+  }),
+  user: one(User, {
+    fields: [Invitation.inviterId],
     references: [User.id],
   }),
 }));

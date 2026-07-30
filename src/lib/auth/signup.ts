@@ -5,16 +5,21 @@ import type { LoginSignupResult, SignupCredentials } from "@ty/Auth";
 export async function signup(
   credentials: SignupCredentials,
 ): Promise<LoginSignupResult> {
-  const { first_name, last_name, email, phone } = credentials;
+  const { first_name, last_name, email, password, image, phone } = credentials;
   try {
     const response = await auth.api.signUpEmail({
       body: {
         email,
-        password: "",
-        //   image: image || undefined,
-        //   username:
-        //     slugify(first_name + "-" + Array.from(last_name)[0]) || undefined,
+        password,
+        image,
+        username:
+          slugify(first_name + "_" + Array.from(last_name)[0]).replaceAll(
+            "-",
+            "_",
+          ) || undefined,
         name: `${first_name} ${last_name}`,
+        first_name,
+        last_name,
         //   displayUsername: username || undefined,
       },
       asResponse: true, // returns a real Response so you can forward its Set-Cookie header

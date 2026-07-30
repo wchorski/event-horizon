@@ -1,4 +1,4 @@
-// src/db/seed.ts
+// db/seed.ts
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 //? only use if wanting random generated data
@@ -9,6 +9,7 @@ import { createAssignmentsForBooking } from "@db/seed/bookingAssignments.js";
 import { auth } from "@lib/auth.js";
 import { uuidv7 } from "@client/uuidv7.js";
 import { hashPassword } from "better-auth/crypto";
+import members from "./seed/members";
 
 // ---- guards -------------------------------------------------
 const SECRET = process.env.BETTER_AUTH_SECRET;
@@ -131,6 +132,14 @@ const usersCoreced = users.map((item) => ({
   updatedAt: new Date(item.updatedAt),
 }));
 await db.insert(schema.User).values(usersCoreced);
+
+console.log(`=== Members (+${members.length}) ===`);
+const membersCoreced = members.map((item) => ({
+  ...item,
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
+}));
+await db.insert(schema.Member).values(membersCoreced);
 
 console.log(`=== Accounts (+${accounts.length})===`);
 const accountsCoreced = await Promise.all(

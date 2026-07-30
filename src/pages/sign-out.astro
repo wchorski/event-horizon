@@ -1,28 +1,29 @@
 ---
-// src/pages/login.astro
+// src/pages/sign-out.astro
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
-import { login } from "@lib/auth/login";
-import type { LoginCredentials } from "@ty/Auth";
+import { signout } from "@lib/auth/signout";
 
 const session = Astro.locals.session;
 let error: string | null = null;
 
 if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
-
-  const result = await login(payload);
+  const result = await signout(Astro.request.headers);
 
   if (result.success) {
     const redirectResponse = new Response(null, {
       status: 302,
-      headers: { Location: "/dashboard?msg='Login Successful. Welcome'" },
+      headers: {
+        Location:
+          "/bye-bye-bye?msg='Might sound crazy, but it ain't no lie Baby, bye, bye, bye (Oh, oh)'",
+      },
     });
+
     for (const cookie of result.setCookies) {
       redirectResponse.headers.append("set-cookie", cookie);
     }
+
     return redirectResponse;
   }
 
@@ -32,7 +33,7 @@ if (Astro.request.method === "POST") {
 
 <CommonPageLayout>
   <header>
-    <h1>Login</h1>
+    <h1>Sign Out</h1>
   </header>
   <div data-layout="content">
     {
@@ -43,23 +44,8 @@ if (Astro.request.method === "POST") {
         </p>
       ) : null
     }
-    <form id="sign-up-form" method="POST">
-      <InputField
-        name="email"
-        type={"email"}
-        id="email"
-        model={"accounts"}
-        required={true}
-      />
-      <InputField
-        name="password"
-        type={"password"}
-        id="password"
-        model={"accounts"}
-        required={true}
-      />
-
-      <SubmitButton text="Login"/>
+    <form id="sign-out-form" method="POST">
+      <SubmitButton text="Sign Out" />
     </form>
     {
       error && (

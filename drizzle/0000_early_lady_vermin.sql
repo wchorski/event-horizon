@@ -68,6 +68,17 @@ CREATE TABLE "event_hosts" (
 	CONSTRAINT "event_hosts_event_id_user_id_unique" UNIQUE("event_id","user_id")
 );
 --> statement-breakpoint
+CREATE TABLE "invitations" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"email" text NOT NULL,
+	"role" text,
+	"status" text DEFAULT 'pending' NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"inviter_id" uuid NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "locations" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"name" text NOT NULL,
@@ -82,26 +93,25 @@ CREATE TABLE "locations" (
 	CONSTRAINT "locations_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
+CREATE TABLE "members" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"role" text DEFAULT 'default' NOT NULL,
+	"created_at" timestamp NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "organizations" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
+	"logo" text,
+	"created_at" timestamp NOT NULL,
+	"metadata" text,
 	"dedicated_db_url" text,
 	"color" text,
 	"color_2" text,
-	"logo" text,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "organizations_slug_unique" UNIQUE("slug")
-);
---> statement-breakpoint
-CREATE TABLE "organization_memberships" (
-	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
-	"organization_id" uuid NOT NULL,
-	"user_id" uuid NOT NULL,
-	"role" "org_member_role" DEFAULT 'STAFF' NOT NULL,
-	"date_joined" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "organization_memberships_organization_id_user_id_unique" UNIQUE("organization_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "passkey" (
@@ -138,6 +148,7 @@ CREATE TABLE "sessions" (
 	"user_agent" text,
 	"user_id" uuid NOT NULL,
 	"impersonated_by" text,
+	"active_organization_id" uuid,
 	CONSTRAINT "sessions_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -225,10 +236,12 @@ ALTER TABLE "events" ADD CONSTRAINT "events_organization_id_organizations_id_fk"
 ALTER TABLE "events" ADD CONSTRAINT "events_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "event_hosts" ADD CONSTRAINT "event_hosts_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "event_hosts" ADD CONSTRAINT "event_hosts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invitations" ADD CONSTRAINT "invitations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invitations" ADD CONSTRAINT "invitations_inviter_id_users_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_author_user_id_users_id_fk" FOREIGN KEY ("author_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "locations" ADD CONSTRAINT "locations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "organization_memberships" ADD CONSTRAINT "organization_memberships_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "members" ADD CONSTRAINT "members_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roles" ADD CONSTRAINT "roles_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -240,8 +253,12 @@ ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_id_fk" FOREIGN KEY ("rol
 CREATE INDEX "account_user_id_idx" ON "accounts" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "events_location_id_idx" ON "events" USING btree ("location_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "events_subject_date_location_unique" ON "events" USING btree ("subject","date_civil","location_id");--> statement-breakpoint
+CREATE INDEX "invitation_organizationId_idx" ON "invitations" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "invitation_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "locations_city_idx" ON "locations" USING btree ("city");--> statement-breakpoint
 CREATE INDEX "locations_state_idx" ON "locations" USING btree ("state");--> statement-breakpoint
+CREATE INDEX "member_organizationId_idx" ON "members" USING btree ("organization_id");--> statement-breakpoint
+CREATE INDEX "member_userId_idx" ON "members" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "passkey_userId_idx" ON "passkey" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "passkey_credentialID_idx" ON "passkey" USING btree ("credential_id");--> statement-breakpoint
 CREATE INDEX "session_user_id_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint

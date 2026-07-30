@@ -83,7 +83,7 @@ export const auth = betterAuth({
       origin: BETTER_AUTH_URL,
     }),
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
-    // organization(),
+    organization(),
   ],
   advanced: {
     cookiePrefix: "eh",

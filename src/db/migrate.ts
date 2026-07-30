@@ -1,9 +1,14 @@
-// migrate.ts
+// db/migrate.ts
+import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const { PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE } = process.env;
+const DATABASE_URL = `postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
+console.log("===> DATABASE_URL, ", DATABASE_URL);
+
+const pool = new Pool({ connectionString: DATABASE_URL });
 const db = drizzle(pool);
 
 migrate(db, { migrationsFolder: "./drizzle" })

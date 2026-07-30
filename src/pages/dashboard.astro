@@ -12,6 +12,7 @@ if (user === null) return Astro.redirect("/login");
 if (!user) throw new Error("Must be logged in to view page");
 
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
+const msg = Astro.url.searchParams.get("msg");
 
 const { bookings, totalPages } = await getBookingsPage({
   author_user_id: user.id,
@@ -23,6 +24,7 @@ const { bookings, totalPages } = await getBookingsPage({
 <CommonPageLayout title={`Dashboard | ${SITE_TITLE}`}>
   <header>
     <h1 class="etched-line">Dashboard</h1>
+    {msg ? <p class="callout">{msg}</p> : null}
   </header>
   <div data-layout="content">
     <div class="flex gap-m flex-align-center">

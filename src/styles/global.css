@@ -407,10 +407,39 @@ img.framed {
   align-items: center;
   text-align: center;
   gap: var(--size-m);
-  &::before, &::after {
+  &::before,
+  &::after {
     border-bottom: solid 1px var(--c-ghost);
     flex: 1;
     content: "";
     color: var(--c-ghost);
   }
+}
+
+.drag-handle {
+  cursor: grab;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #9ca3af;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.time-moment-row.dragging {
+  opacity: 0.4;
+}
+.time-moment-steps.dragging-steps {
+  opacity: 0.4;
+}
+
+.time-moment-row.drag-over-top {
+  box-shadow: inset 0 2px 0 0 #4f46e5;
+}
+.time-moment-row.drag-over-bottom {
+  box-shadow: inset 0 -2px 0 0 #4f46e5;
+}
+.time-moment-steps.drag-over-bottom {
+  box-shadow: inset 0 -2px 0 0 #4f46e5;
 }

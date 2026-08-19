@@ -173,9 +173,13 @@ table.timeline-schedule {
     & button.insert {
       grid-column: 1;
     }
-    & button.delete {
+    & button[data-action="drag"] {
       grid-column: 2;
       grid-row: 1;
+    }
+    & button.delete {
+      grid-column: 2;
+      grid-row: 3;
     }
     & label.tbd {
       display: flex;

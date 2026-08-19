@@ -89,17 +89,17 @@ Event hosting platform (tickets, planning, upcoming/past promotion)
 </details>
 
 <details>
-<summary>🤖 RAG Chat AI Assistant</summary>
-> [!note] This assumes you're already setup with Open-Webui and Ollama LLMs
+  <summary>🤖 RAG Chat AI Assistant</summary>
+  > [!note] This assumes you're already setup with Open-Webui and Ollama LLMs
 
-- https://github.com/open-webui/oikb
-- https://docs.openwebui.com/features/knowledge-base-sync/
+  - https://github.com/open-webui/oikb
+  - https://docs.openwebui.com/features/knowledge-base-sync/
 
-```shell
-pip install oikb
-oikb init
+  ```shell
+  pip install oikb
+  oikb init
 
-```
+  ```
 </details>
 
 <details>

@@ -177,7 +177,7 @@ import {
   SKILLS_STORE,
   STEPS_STORE,
 } from "@client/indexedDB";
-export type BtnAction = "delete" | "insert" | "create";
+export type BtnAction = "delete" | "insert" | "create" | "drag";
 export type BtnDirection = "above" | "below";
 export type BtnType = "blocks" | "groups" | "skills" | "todos";
 export type TimelineBtnAction = "commit" | "import" | "export" | "print";

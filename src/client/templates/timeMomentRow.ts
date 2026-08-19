@@ -127,6 +127,7 @@ function createSubRowSteps(
 function createActionButtons(id: string): HTMLElement[] {
   const insertAboveBtn = document.createElement("button");
   const insertBelowBtn = document.createElement("button");
+  const dragRowBtn = document.createElement("button");
   const deleteRowBtn = document.createElement("button");
   const tbdLabel = createElement("label", {
     textContent: "tbd",
@@ -152,6 +153,13 @@ function createActionButtons(id: string): HTMLElement[] {
   deleteRowBtn.classList.add("delete");
   deleteRowBtn.title = "delete this row";
 
+  dragRowBtn.dataset.momentId = id;
+  dragRowBtn.classList.add('drag-handle')
+  dragRowBtn.draggable = true
+  dragRowBtn.title = 'drag to reorder'
+  dragRowBtn.dataset.action = "drag";
+  dragRowBtn.textContent = "⠿"
+
   insertAboveBtn.textContent = "+↑";
   insertAboveBtn.dataset.action = "insert";
   insertAboveBtn.dataset.direction = "above";
@@ -166,7 +174,7 @@ function createActionButtons(id: string): HTMLElement[] {
   insertBelowBtn.dataset.type = MOMENTS_STORE;
   insertBelowBtn.title = "insert row below";
 
-  return [insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel];
+  return [insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn];
 }
 
 function createSelectEl(
@@ -300,13 +308,13 @@ export function timeMomentRowEl(
   const tdActions = document.createElement("td");
   tdActions.dataset.fieldName = "actions";
   tdActions.classList.add("actions", "grid", "gap-s");
-  const [insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel] =
+  const [insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn] =
     createActionButtons(String(id));
   const tbdCheckbox = tbdLabel.querySelector(
     'input[name="tbd"]',
   ) as HTMLInputElement;
   tbdCheckbox.checked = moment.tbd ? true : false;
-  tdActions.append(insertAboveBtn, insertBelowBtn, deleteRowBtn, tbdLabel);
+  tdActions.append(insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn);
 
   tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 

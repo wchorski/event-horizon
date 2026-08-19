@@ -441,6 +441,10 @@ async function init() {
     const momentId = Number(rowEl?.dataset.momentId);
 
     switch (btnAction) {
+      case "drag": {
+        console.log('dragg meeee');
+        break;
+      }
       case "delete": {
         switch (btnType) {
           case MOMENTS_STORE: {

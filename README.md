@@ -74,6 +74,46 @@ Event hosting platform (tickets, planning, upcoming/past promotion)
   # for this project, I've heavily modified and combined it with db/schema.ts
   ```
 
+  ### DB Migration checking
+  as of now `drizzle-kit migrate` does a pretty p-poor job of printing out errors. Here is a way to manually run the migrations and see what's wrong
+
+  ```sh
+  ❯ docker compose exec -T db \
+  psql \
+  -U event_horizon_db_user \
+  -d event_horizon_db_1 \
+  < drizzle/0000_early_lady_vermin.sql
+
+  ## output
+  ERROR:  type "booking_status" already exists
+  ERROR:  type "org_member_role" already exists
+  ERROR:  relation "users" already exists
+  ERROR:  relation "verifications" already exists
+  ERROR:  constraint "roles_organization_id_organizations_id_fk" for relation "roles" already exists
+  ERROR:  constraint "sessions_user_id_users_id_fk" for relation "sessions" already exists
+  ...
+
+  docker compose exec -T db \
+    psql \
+    -U event_horizon_db_user \
+    -d event_horizon_db_1 \
+    < drizzle/0001_harsh_aaron_stack.sql
+  
+  ## output
+  ERROR:  column "updated_at" of relation "organizations" already exists
+  ```
+
+  ### export DB to json 
+  ```sh
+  docker compose exec db \
+    psql \
+    -U event_horizon_db_user \
+    -d event_horizon_db_1 \
+    -t -A \
+    -c 'SELECT json_agg(t) FROM timelines t;' \
+    > timelines.json
+  ```
+
   ### Nuke the DB
   sidestep migration missmatches in dev
   ```shell
@@ -122,6 +162,7 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] timeline: drag timerange swap is a little goofy if targeting below row (but that dragged row is already the next one in line)
 - [ ] timeline: when moment is deleted, delete all steps from idb
 - [ ] timeline: when `+ add item` auto focus the generated input field
 - [ ] timeline: sepearte rows (TBD marker bleed together)

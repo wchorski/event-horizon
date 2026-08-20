@@ -17,8 +17,6 @@ const DB_LOGGER =
 export const db = drizzle(pool, {
   schema,
   casing: "snake_case",
-  // TODO
-  // ssl: process.env.NODE_ENV === "production" ? "require" : undefined,
   logger: DB_LOGGER,
   // logger: true
 });

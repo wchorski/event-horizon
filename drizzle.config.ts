@@ -1,7 +1,7 @@
 // drizzle.config.ts
 import { defineConfig } from "drizzle-kit";
 
-const required = ["PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE"];
+const required = ["PGHOST", "PGPORT", "PGUSER", "PGPASSWORD", "PGDATABASE", "DATABASE_SSL"];
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -9,7 +9,7 @@ for (const key of required) {
   }
 }
 
-const { NODE_ENV, PGPORT, PGUSER, PGPASSWORD, PGHOST, PGDATABASE } =
+const { NODE_ENV, PGPORT, PGUSER, PGPASSWORD, PGHOST, PGDATABASE, DATABASE_SSL } =
   process.env;
 
 console.log({ NODE_ENV });
@@ -24,7 +24,7 @@ const DATABASE_URL =
 console.log(
   "drizzle.config.ts DATABASE_URL: ",
   `postgres://${PGUSER}:` +
-    `PGPASSWORD` +
+    `<PGPASSWORD>` +
     `@${PGHOST}:${DATABASE_PORT}/${PGDATABASE}`,
 );
 
@@ -36,6 +36,6 @@ export default defineConfig({
   verbose: NODE_ENV === "development" ? true : false,
   dbCredentials: {
     url: DATABASE_URL,
-    ssl: NODE_ENV === "production" ? "require" : undefined,
+    ssl: DATABASE_SSL === "true" ? "require" : undefined,
   },
 });

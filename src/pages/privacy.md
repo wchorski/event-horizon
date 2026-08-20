@@ -3,7 +3,7 @@ layout: "../layouts/CommonPageLayout.astro"
 ---
 
 # Privacy Policy
-Welcome to [App Name] ("the Service"). We respect your privacy and are committed to protecting the information you share with us.
+Thank you for using Event Horizion's online service. We respect your privacy and are committed to protecting the information you share with us.
 This Privacy Policy describes how we collect, use, store, and protect information when you use our website and services.
 Information We Collect
 We may collect information that you provide directly, including:

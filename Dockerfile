@@ -1,3 +1,4 @@
+## Dockerfile
 ## https://docs.astro.build/en/recipes/docker/#multi-stage-build-using-ssr
 FROM node:lts-slim AS base
 WORKDIR /app

@@ -156,6 +156,18 @@ data[value="null"]::before {
 }
 
 table.timeline-schedule {
+
+  table-layout: fixed;
+  width: 100%;
+
+  
+  & col {
+    width: 100%;
+  }
+  & col.order {
+    width: 20px;
+  }
+
   & tr.time-moment-row {
     border-top: solid 1px var(--c-seperator);
   }
@@ -173,20 +185,16 @@ table.timeline-schedule {
     & button.insert {
       grid-column: 1;
     }
-    & button[data-action="drag"] {
-      grid-column: 2;
-      grid-row: 1;
-    }
     & button.delete {
       grid-column: 2;
-      grid-row: 3;
+      grid-row: 2;
     }
     & label.tbd {
       display: flex;
       align-items: center;
       font-size: 12px;
       grid-column: 2;
-      grid-row: 2;
+      grid-row: 1;
     }
 
     & label:has(input:checked) {
@@ -212,9 +220,15 @@ table.timeline-schedule {
     border: none;
   }
 
-  & td[data-field-name="start-end"] {
-    max-width: 5rem;
+  & td[data-field-name="order"] {
+    & > button.drag-handle {
+      padding: 0;
+    }
+    
   }
+  /* & td[data-field-name="start-end"] {
+    max-width: 5rem;
+  } */
 
   & textarea {
     max-width: 30ch;

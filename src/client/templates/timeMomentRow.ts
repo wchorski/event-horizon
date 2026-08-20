@@ -63,7 +63,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
-  const tdbCheckbox = checkboxCornerEl('tbd', step.tbd, 'To be determined');
+  const tdbCheckbox = checkboxCornerEl("tbd", step.tbd, "To be determined");
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
     type: "text",
@@ -116,7 +116,7 @@ function createSubRowSteps(
     { className: "ghost", textContent: "+ add item" },
     { momentId: String(parentId), action: "create", type: STEPS_STORE },
   );
-  
+
   details.append(summary, ul, addBtn);
   tdSub.append(details);
   trSub.appendChild(tdSub);
@@ -124,10 +124,20 @@ function createSubRowSteps(
   return trSub;
 }
 
+function btnDraggableHandle(momentId: string) {
+  const dragRowBtn = document.createElement("button");
+  dragRowBtn.dataset.momentId = momentId;
+  dragRowBtn.classList.add("drag-handle");
+  dragRowBtn.draggable = true;
+  dragRowBtn.title = "drag to reorder";
+  dragRowBtn.dataset.action = "drag";
+  dragRowBtn.textContent = "⠿";
+  return dragRowBtn;
+}
+
 function createActionButtons(id: string): HTMLElement[] {
   const insertAboveBtn = document.createElement("button");
   const insertBelowBtn = document.createElement("button");
-  const dragRowBtn = document.createElement("button");
   const deleteRowBtn = document.createElement("button");
   const tbdLabel = createElement("label", {
     textContent: "tbd",
@@ -153,13 +163,6 @@ function createActionButtons(id: string): HTMLElement[] {
   deleteRowBtn.classList.add("delete");
   deleteRowBtn.title = "delete this row";
 
-  dragRowBtn.dataset.momentId = id;
-  dragRowBtn.classList.add('drag-handle')
-  dragRowBtn.draggable = true
-  dragRowBtn.title = 'drag to reorder'
-  dragRowBtn.dataset.action = "drag";
-  dragRowBtn.textContent = "⠿"
-
   insertAboveBtn.textContent = "+↑";
   insertAboveBtn.dataset.action = "insert";
   insertAboveBtn.dataset.direction = "above";
@@ -174,7 +177,7 @@ function createActionButtons(id: string): HTMLElement[] {
   insertBelowBtn.dataset.type = MOMENTS_STORE;
   insertBelowBtn.title = "insert row below";
 
-  return [insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn];
+  return [insertAboveBtn, insertBelowBtn, tbdLabel, deleteRowBtn];
 }
 
 function createSelectEl(
@@ -251,6 +254,11 @@ export function timeMomentRowEl(
   tr.classList.add("time-moment-row", "anim--slide-in-left-right");
   tr.dataset.tbd = tbd ? "true" : "false";
 
+  // -- Order (draggable)
+  const tdOrderDrag = document.createElement("td");
+  tdOrderDrag.dataset.fieldName = "order";
+  tdOrderDrag.appendChild(btnDraggableHandle(String(id)));
+
   // -- Time cell (start + end inputs)
   const tdTime = document.createElement("td");
   tdTime.dataset.fieldName = "start-end";
@@ -308,15 +316,20 @@ export function timeMomentRowEl(
   const tdActions = document.createElement("td");
   tdActions.dataset.fieldName = "actions";
   tdActions.classList.add("actions", "grid", "gap-s");
-  const [insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn] =
+  const [insertAboveBtn, insertBelowBtn, tbdLabel, deleteRowBtn] =
     createActionButtons(String(id));
   const tbdCheckbox = tbdLabel.querySelector(
     'input[name="tbd"]',
   ) as HTMLInputElement;
   tbdCheckbox.checked = moment.tbd ? true : false;
-  tdActions.append(insertAboveBtn, insertBelowBtn, dragRowBtn, tbdLabel, deleteRowBtn);
+  tdActions.append(
+    insertAboveBtn,
+    insertBelowBtn,
+    tbdLabel,
+    deleteRowBtn,
+  );
 
-  tr.append(tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
+  tr.append(tdOrderDrag, tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 
   const trSub = createSubRowSteps(steps || [], moment.id);
   // fragment.append(tr, trSub);

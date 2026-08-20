@@ -37,7 +37,7 @@ import type {
   TimelineSelect,
 } from "@ty/Schema";
 
-import { debounce } from "@lib/wait";
+import { debounce, debouncePerField } from "@lib/wait";
 import { MOMENTS_STORE, STEPS_STORE } from "@client/indexedDB";
 import { downloadAsJSON } from "@client/downloadOnClient";
 import {
@@ -378,10 +378,13 @@ async function init() {
     const field = target.name;
     if (!momentId || !field) return;
 
+    console.log('INPUT updated hanpened on input living in table');
+    console.log(momentId, field, target.value);
+
     // TODO quick bandaid to not allow checkbox 'on' value to be passed. this is handled in "change" event listener but needs to be ignored here
     //@ts-ignore
     if (!target.checked) {
-      debouncedSaveMoment(momentId, field, target.value);
+      debouncedSaveMoment(`${momentId}:${field}`, momentId, field, target.value);
     }
   });
   // selects will have instant save, no debounce
@@ -395,6 +398,7 @@ async function init() {
     ) {
       return;
     }
+    
     if (!target.matches("select, input[type='checkbox']")) return;
 
     const value =
@@ -737,7 +741,7 @@ async function init() {
     bannerMsgP.textContent = "";
   }
 
-  const debouncedSaveMoment = debounce(
+  const debouncedSaveMoment = debouncePerField(
     async (momentId: number, field: string, value: string) => {
       const updated = await idbUpdateMoment(momentId, { [field]: value });
       moments.update(updated);

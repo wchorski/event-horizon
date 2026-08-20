@@ -97,8 +97,18 @@ const formatTimeRange = (start: string, end: string) => {
 
     <div class="timeline-grid gap-m" data-layout="content">
       <table id="timeline-moment-table" class="timeline-schedule">
+        <colgroup>
+          <col class="order" />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
+        </colgroup>
         <thead>
           <tr>
+            <th title="order"></th>
             <th>time</th>
             <th>desc</th>
             <th>skill</th>
@@ -140,7 +150,7 @@ const formatTimeRange = (start: string, end: string) => {
   </main>
 </BaseLayout>
 
-<script >
+<script>
   import "@client/timelineSignals";
   import "@client/textareaResize";
   import "@client/draggableMomentRow";

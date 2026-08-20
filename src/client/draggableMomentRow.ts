@@ -122,6 +122,8 @@ tbody.addEventListener('drop', (e: DragEvent) => {
   const { row: targetMomentRow, isBelow } = dropTarget;
   const targetStepsRow = getStepsRow(targetMomentRow);
 
+  swapMomentTimes(draggedMomentRow, targetMomentRow);
+
   if (isBelow) {
     // insert after target's pair (past its steps row, if any)
     (targetStepsRow ?? targetMomentRow).after(draggedMomentRow);
@@ -136,3 +138,36 @@ tbody.addEventListener('drop', (e: DragEvent) => {
 });
 
 tbody.addEventListener('dragend', cleanup);
+
+function getTimeInputs(
+  momentRow: HTMLTableRowElement
+): { start: HTMLInputElement; end: HTMLInputElement } | null {
+  const start = momentRow.querySelector<HTMLInputElement>('input[name="start"]');
+  const end = momentRow.querySelector<HTMLInputElement>('input[name="end"]');
+  if (!start || !end) return null;
+  return { start, end };
+}
+
+function swapMomentTimes(
+  rowA: HTMLTableRowElement,
+  rowB: HTMLTableRowElement
+): void {
+  const inputsA = getTimeInputs(rowA);
+  const inputsB = getTimeInputs(rowB);
+  if (!inputsA || !inputsB) return;
+
+  const aStart = inputsA.start.value;
+  const aEnd = inputsA.end.value;
+  const bStart = inputsB.start.value;
+  const bEnd = inputsB.end.value;
+
+  inputsA.start.value = bStart;
+  inputsA.end.value = bEnd;
+  inputsB.start.value = aStart;
+  inputsB.end.value = aEnd;
+
+  // initiates local save to idb
+  [inputsA.start, inputsA.end, inputsB.start, inputsB.end].forEach((input) => {
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}

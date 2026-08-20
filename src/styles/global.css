@@ -416,14 +416,13 @@ img.framed {
   }
 }
 
-.drag-handle {
+button.drag-handle {
   cursor: grab;
   background: none;
   border: none;
   font-size: 16px;
-  color: #9ca3af;
 }
-.drag-handle:active {
+button.drag-handle:active {
   cursor: grabbing;
 }
 
@@ -435,11 +434,19 @@ img.framed {
 }
 
 .time-moment-row.drag-over-top {
-  box-shadow: inset 0 2px 0 0 #4f46e5;
+  box-shadow: inset 0 2px 0 0 var(--c-primary);
+
+  & > td {
+    margin-bottom: 2rem;
+  }
 }
 .time-moment-row.drag-over-bottom {
-  box-shadow: inset 0 -2px 0 0 #4f46e5;
+  box-shadow: inset 0 -2px 0 0 var(--c-primary);
+  height: 10px;
+  & > td {
+    margin-top: 2rem;
+  }
 }
 .time-moment-steps.drag-over-bottom {
-  box-shadow: inset 0 -2px 0 0 #4f46e5;
+  box-shadow: inset 0 -2px 0 0 var(--c-primary);
 }

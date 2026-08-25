@@ -340,7 +340,7 @@ ul.steps {
 
   .corner-checkbox,
   input[name="text"] {
-    grid-area: 1/1;
+    grid-area: 1/2;
   }
 
   input[name="text"] {
@@ -349,7 +349,7 @@ ul.steps {
 
   & > li {
     display: grid;
-    grid-template-columns: 4fr 2fr 0.5fr;
+    grid-template-columns: 8px 4fr 2fr 0.5fr;
     gap: var(--size-s);
     min-height: var(--size-s);
     overflow: hidden;
@@ -400,6 +400,9 @@ img.framed {
 .m-0 {
   margin: 0;
 }
+.p-0 {
+  padding: 0;
+}
 
 .etched-line {
   color: var(--c-ghost);
@@ -421,9 +424,11 @@ button.drag-handle {
   background: none;
   border: none;
   font-size: 16px;
+  opacity: 0.4;
 }
 button.drag-handle:active {
   cursor: grabbing;
+  opacity: 1;
 }
 
 .time-moment-row.dragging {

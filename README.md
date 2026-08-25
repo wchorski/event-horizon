@@ -162,6 +162,7 @@ docker compose up --remove-orphans
 
 
 #todo
+- [ ] steps. update number in real time (upon create and delete)
 - [ ] timeline: drag timerange swap is a little goofy if targeting below row (but that dragged row is already the next one in line)
 - [ ] timeline: when moment is deleted, delete all steps from idb
 - [ ] timeline: when `+ add item` auto focus the generated input field

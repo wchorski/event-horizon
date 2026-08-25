@@ -59,10 +59,19 @@ function createTextArea(
 
 export function createStepEl(step: MomentStep): HTMLLIElement {
   const li = document.createElement("li");
+  li.draggable = true;
+  li.dataset.position = step.position;
   li.dataset.stepId = String(step.id);
   li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
+  // const dragHandle = btnDraggableHandle(String(step.moment_id));
+  const dragHandle = createElement(
+    "button",
+
+    { innerText: "⠿", type: "button", className: "drag-handle" },
+    { action: "drag-step" },
+  );
   const tdbCheckbox = checkboxCornerEl("tbd", step.tbd, "To be determined");
   const textInput = Object.assign(document.createElement("input"), {
     name: "text",
@@ -80,7 +89,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
     { action: "delete", type: STEPS_STORE },
   );
 
-  li.append(tdbCheckbox, textInput, noteTextarea, deleteBtn);
+  li.append(dragHandle, tdbCheckbox, textInput, noteTextarea, deleteBtn);
   return li;
 }
 
@@ -126,6 +135,7 @@ function createSubRowSteps(
 
 function btnDraggableHandle(momentId: string) {
   const dragRowBtn = document.createElement("button");
+  dragRowBtn.type = "button";
   dragRowBtn.dataset.momentId = momentId;
   dragRowBtn.classList.add("drag-handle");
   dragRowBtn.draggable = true;
@@ -322,12 +332,7 @@ export function timeMomentRowEl(
     'input[name="tbd"]',
   ) as HTMLInputElement;
   tbdCheckbox.checked = moment.tbd ? true : false;
-  tdActions.append(
-    insertAboveBtn,
-    insertBelowBtn,
-    tbdLabel,
-    deleteRowBtn,
-  );
+  tdActions.append(insertAboveBtn, insertBelowBtn, tbdLabel, deleteRowBtn);
 
   tr.append(tdOrderDrag, tdTime, tdDesc, tdSkill, tdGroup, tdNote, tdActions);
 

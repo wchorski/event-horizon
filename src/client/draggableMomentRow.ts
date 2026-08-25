@@ -1,3 +1,4 @@
+// @client/draggableMomentRow.ts
 const tbody = document.getElementById('time-moment-list') as HTMLTableSectionElement | null;
 
 if (!tbody) {

@@ -1,5 +1,6 @@
 import { isIdField, isTimeField } from "@lib/regex";
 import { formatTimeToMinutes } from "@lib/timeFormatters";
+import { generateKeyBetween } from "@client/fractional-keys";
 import type {
   TimelineMoment,
   TimelineMomentInput,
@@ -16,7 +17,7 @@ import type { buildFromTemplate } from "./templates/timelineTemplates";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 
 export const TIMELINES_STORE = "timelines";
 export const MOMENTS_STORE = "moments";
@@ -113,6 +114,7 @@ export function openDB(): Promise<IDBDatabase> {
 
         store.createIndex("moment_id", "moment_id", { unique: false });
         store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+        store.createIndex("by_list_position", ["moment_id", "position"]); // compound index
       } else {
         const store = request.transaction!.objectStore(STEPS_STORE);
 
@@ -120,6 +122,10 @@ export function openDB(): Promise<IDBDatabase> {
           store.createIndex("timeline_uuid", "timeline_uuid", {
             unique: false,
           });
+        }
+
+        if (!store.indexNames.contains("by_list_position")) {
+          store.createIndex("by_list_position", ["moment_id", "position"]);
         }
       }
     };
@@ -616,34 +622,54 @@ export async function idbDeleteMoment(id: number) {
 }
 
 //* STEP
-export async function idbGetAllSteps(): Promise<MomentStep[]> {
+export async function idbGetAllSteps(moment_id: number): Promise<MomentStep[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readonly");
-    const store = tx.objectStore(STEPS_STORE);
-
-    const request = store.getAll();
-
+    const index = tx.objectStore(STEPS_STORE).index("by_list_position");
+    const range = IDBKeyRange.bound([moment_id, ""], [moment_id, "\uffff"]);
+    const request = index.getAll(range);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 export async function idbCreateStep(
-  skill: Omit<MomentStep, "id">,
+  moment_id: number,
+  baseStep: Omit<MomentStep, "id" | "position">,
 ): Promise<MomentStep> {
   const db = await openDB();
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readwrite");
     const store = tx.objectStore(STEPS_STORE);
-    const req = store.add(skill);
+    const index = store.index("by_list_position");
+    const range = IDBKeyRange.bound([moment_id, ""], [moment_id, "\uffff"]);
 
-    req.onsuccess = () => {
-      resolve({ ...skill, id: req.result as number });
+    const getReq = index.getAll(range);
+
+    getReq.onsuccess = () => {
+      const existingSteps: MomentStep[] = getReq.result;
+      const lastStep = existingSteps[existingSteps.length - 1];
+
+      // new step goes at the end of this moment's list
+      const position = generateKeyBetween(lastStep?.position ?? null, null);
+
+      const stepToInsert = { ...baseStep, moment_id, position };
+      const addReq = store.add(stepToInsert);
+
+      addReq.onsuccess = () => {
+        resolve({ ...stepToInsert, id: addReq.result as number });
+      };
+      addReq.onerror = () => {
+        console.error("IDB error:", addReq.error?.name, addReq.error?.message);
+        reject(addReq.error);
+      };
     };
-    req.onerror = () => {
-      console.error("IDB error:", req.error?.name, req.error?.message);
-      reject(req.error);
+
+    getReq.onerror = () => {
+      console.error("IDB error:", getReq.error?.name, getReq.error?.message);
+      reject(getReq.error);
     };
   });
 }
@@ -659,6 +685,7 @@ export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
     ]),
   ) as Partial<MomentStep>;
   const db = await openDB();
+  console.log(id, updates);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readwrite");
     const store = tx.objectStore(STEPS_STORE);

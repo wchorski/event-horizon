@@ -100,7 +100,7 @@ export type MomentStep = {
   tbd: boolean;
   text: string;
   note: string;
-  order: number;
+  position: string;
 };
 
 export type Timeline = {
@@ -239,7 +239,7 @@ export type MomentStepDB = {
   timeline_uuid: string;
   text: string;
   note: string;
-  order: number;
+  position: string;
   tbd: boolean;
 };
 

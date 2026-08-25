@@ -134,7 +134,21 @@ async function init() {
           }
         }
       } else {
-        uiBanner("Not synced to server. Commit to sync", "info");
+        switch (response.status) {
+          case 500:
+            uiBanner(
+              "Cloud sync unavailable. Reconnect to Internet for sync",
+              "error",
+            );
+            break;
+
+          case 404:
+            uiBanner("Not synced to server. Commit to sync", "info");
+            console.log("404 error is ok if Commit Rev is === 0");
+
+          default:
+            break;
+        }
       }
       // if nothing else found then return local data
       return local;
@@ -146,7 +160,7 @@ async function init() {
 
   const tmlnState = await fetchData();
   if (!tmlnState) throw new Error(`no timeline data found`);
-
+  console.log(tmlnState);
   // const { skills, groups, moments } = tmlnData;
 
   const {
@@ -167,8 +181,20 @@ async function init() {
     [...moments.value].sort((a, b) => a.start - b.start),
   );
 
+  const sortedSteps = computed(() =>
+    [...steps.value].sort((a, b) => {
+      if (a.moment_id !== b.moment_id) return a.moment_id - b.moment_id;
+      return a.position < b.position ? -1 : a.position > b.position ? 1 : 0;
+    }),
+  );
+
   initTimelineUI(timeline.value);
-  renderMomentsUI(sortedMoments.value, skills.value, groups.value, steps.value);
+  renderMomentsUI(
+    sortedMoments.value,
+    skills.value,
+    groups.value,
+    sortedSteps.value,
+  );
   renderGraphUI(moments.value, skills.value);
   renderSkillsUI(skills.value);
   renderGroupsUI(groups.value, sortedMoments.value);
@@ -222,7 +248,14 @@ async function init() {
         const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
         li.remove();
         break;
-
+      case "updated":
+        console.log(
+          "another tab or client has updated a step. TODO update this client too",
+        );
+      case "reordered":
+        console.log(
+          "another tab or client has reordered a step. TODO update this client too",
+        );
       default:
         break;
     }
@@ -378,13 +411,18 @@ async function init() {
     const field = target.name;
     if (!momentId || !field) return;
 
-    console.log('INPUT updated hanpened on input living in table');
-    console.log(momentId, field, target.value);
+    // console.log("INPUT updated hanpened on input living in table");
+    // console.log(momentId, field, target.value);
 
     // TODO quick bandaid to not allow checkbox 'on' value to be passed. this is handled in "change" event listener but needs to be ignored here
     //@ts-ignore
     if (!target.checked) {
-      debouncedSaveMoment(`${momentId}:${field}`, momentId, field, target.value);
+      debouncedSaveMoment(
+        `${momentId}:${field}`,
+        momentId,
+        field,
+        target.value,
+      );
     }
   });
   // selects will have instant save, no debounce
@@ -398,7 +436,7 @@ async function init() {
     ) {
       return;
     }
-    
+
     if (!target.matches("select, input[type='checkbox']")) return;
 
     const value =
@@ -446,7 +484,7 @@ async function init() {
 
     switch (btnAction) {
       case "drag": {
-        console.log('dragg meeee');
+        console.log("dragg meeee");
         break;
       }
       case "delete": {
@@ -479,12 +517,11 @@ async function init() {
 
       case "create": {
         if (isNaN(momentId)) throw new Error(`moment id invalid: ${momentId}`);
-        const newStep = await idbCreateStep({
+        const newStep = await idbCreateStep(momentId, {
           text: "",
           tbd: false,
           moment_id: momentId,
           note: "",
-          order: 1,
           timeline_uuid: timeline.value.id,
         });
         steps.add(newStep);

@@ -35,6 +35,13 @@ if (!id) return Astro.redirect("/404");
     </header>
 
     <table id="timeline-moment-table" class="timeline-schedule">
+      <colgroup>
+        <col />
+        <col />
+        <col />
+        <col />
+        <col />
+      </colgroup>
       <thead>
         <tr>
           <th>time</th>
@@ -47,7 +54,8 @@ if (!id) return Astro.redirect("/404");
       <tbody id="time-moment-list"></tbody>
     </table>
     <aside class="grid gap-m">
-      <h2 class="display none">blocks</h2>
+      <hr />
+      <h2>Groups</h2>
       <ul id="time-groups-list" class="unstyled grid gap-s"></ul>
     </aside>
   </main>
@@ -246,7 +254,7 @@ if (!id) return Astro.redirect("/404");
           id: `timeline-moment-step-${id}`,
           className: `time-moment-steps`,
         },
-        { "moment-id": String(id) },
+        { momentId: String(id) },
       );
       const stepsCell = createElement("td", { colSpan: 999 });
       const stepsDetails = createElement("details", { open: true });

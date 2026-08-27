@@ -1,0 +1,13 @@
+.layout_timeline_editor {
+    max-width: 2500px;
+    
+    :global(& #page-header) {
+        & > div:first-child {
+            flex: 1;
+
+            & input[type="date"]{
+                max-width: 18ch;
+            }
+        }
+    }
+}

@@ -62,7 +62,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   li.draggable = true;
   li.dataset.position = step.position;
   li.dataset.stepId = String(step.id);
-  li.classList.add("step", "anim--slide-in-left-right");
+  // li.classList.add("step", "anim--slide-in-left-right");
 
   // TODO replace witht
   // const dragHandle = btnDraggableHandle(String(step.moment_id));
@@ -85,7 +85,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   });
   const deleteBtn = createElement(
     "button",
-    { className: `delete`, textContent: "␡", title: `delete (id:${step.id})` },
+    { className: `delete`, textContent: `␡ ${step.id}`, title: `delete (id:${step.id})` },
     { action: "delete", type: STEPS_STORE },
   );
 

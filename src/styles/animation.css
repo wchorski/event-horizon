@@ -200,7 +200,7 @@ details[open] {
     animation-delay: 0;
     animation-iteration-count: 1;
     animation-direction: normal;
-    animation-delay: calc(100ms * sibling-index());
+    /* animation-delay: calc(100ms * sibling-index()); */
   }
 }
 

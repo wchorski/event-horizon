@@ -6,6 +6,7 @@ interface Params {
 import TimelineGraph from "@components/TimelineGraph.astro";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { SITE_TITLE } from "astro:env/client";
+import styles from "@styles/layout_timeline_editor.module.css";
 export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
@@ -39,15 +40,16 @@ const formatTimeRange = (start: string, end: string) => {
 };
 ---
 
-<BaseLayout title={`Timeline | ${SITE_TITLE}`}>
+<BaseLayout
+  classNames={styles.layout_timeline_editor}
+  title={`Timeline | ${SITE_TITLE}`}
+>
   <main>
     <p id="banner-message"></p>
     <header id="page-header" class="flex gap-l space-between">
       <div>
         <h1 id="page-title" class="flex gap-m">
           <input type="text" name="summary" value="temporary" />
-          <span class="sub-text">rev</span>
-          <span id="timeline-revision">#</span>
         </h1>
         <div class="grid gap-s">
           <input type="date" name="date_civil" />
@@ -61,7 +63,9 @@ const formatTimeRange = (start: string, end: string) => {
           class="flex gap-s flex-align-center"
         >
           <button data-action="commit" hx-target={"#banner-message"} class="m">
-            Commit Rev
+            <span>
+              Commit Rev v<span id="timeline-revision">#</span>
+            </span>
           </button>
           <a href={`./${id}/print`} target="_blank" data-action="print">Print</a
           >

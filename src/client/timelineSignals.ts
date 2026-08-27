@@ -243,10 +243,16 @@ async function init() {
   steps.onChange((change) => {
     switch (change.type) {
       case "added":
+        updateStepsCountSummary(change.item);
         break;
       case "removed":
-        const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
-        li.remove();
+        //? something bad happenes here with signal.ts
+        // const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
+        // console.log("steps.onChange - change ", change);
+        // li.remove();
+        // if (change.item) {
+        //   updateStepsCountSummary(change.item);
+        // }
         break;
       case "updated":
         console.log(
@@ -507,8 +513,19 @@ async function init() {
             const stepLi = btn.closest("li[data-step-id]")! as HTMLElement;
             const stepId = Number(stepLi?.dataset.stepId);
             if (isNaN(stepId)) throw new Error(`step id invalid: ${stepId}`);
+            console.log("event click - delete, ", { stepId });
+            const deletedStep = steps.value.find((s) => s.id === stepId);
+            // console.log(steps.value);
             await idbDeleteStep(stepId);
-            steps.remove(stepId);
+            // steps.remove(stepId);
+            if (deletedStep) {
+              const li = tbody.querySelector(
+                `li[data-step-id="${deletedStep.id}"]`,
+              )!;
+              li.remove();
+              updateStepsCountSummary(deletedStep);
+            }
+
             break;
           }
         }
@@ -960,6 +977,17 @@ async function init() {
       }
     }
   });
+
+  function updateStepsCountSummary(item: MomentStep) {
+    const summary = document.querySelector(
+      `tr[data-moment-id="${item.moment_id}"] > td > details > summary`,
+    );
+    if (!summary) throw new Error("summary not in dom");
+    const count = steps.value.filter(
+      (step) => step.moment_id === item.moment_id,
+    ).length;
+    summary.textContent = `${count} steps`;
+  }
 }
 
 document.addEventListener("astro:page-load", init);

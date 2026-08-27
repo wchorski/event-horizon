@@ -74,7 +74,7 @@ export function untracked<T>(fn: () => T): T {
 type CollectionChange<T> =
   | { type: "added"; item: T }
   | { type: "inserted"; item: T; index?: number }
-  | { type: "removed"; id: number }
+  | { type: "removed"; id: number; item?: T }
   | { type: "updated"; item: T; previous: T | undefined; fromSelf: boolean }
   | { type: "reordered" }
   | { type: "replaced"; items: T[]; previous: T[] }
@@ -104,8 +104,10 @@ export function collection<T extends { id: number }>(initial: T[]) {
       change.value = { type: "inserted", item, index };
     },
     remove(id: number) {
+      const toBeRemoved = items.value.find((i) => i.id === id);
+      console.log({toBeRemoved});
       items.value = items.value.filter((i) => i.id !== id);
-      change.value = { type: "removed", id };
+      change.value = { type: "removed", id, item: toBeRemoved };
     },
     update(item: T, fromSelf = false) {
       const previous = items.value.find((i) => i.id === item.id);
@@ -122,6 +124,19 @@ export function collection<T extends { id: number }>(initial: T[]) {
         items: nextItems,
         previous,
       };
+    },
+    count: computed(() => items.value.length),
+
+    // grouped count, reactive — e.g. counts per momentId
+    groupedCount(keyFn: (item: T) => string | number) {
+      return computed(() => {
+        const counts = new Map<string | number, number>();
+        for (const item of items.value) {
+          const key = keyFn(item);
+          counts.set(key, (counts.get(key) ?? 0) + 1);
+        }
+        return counts;
+      });
     },
 
     clear() {

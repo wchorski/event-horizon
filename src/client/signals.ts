@@ -105,7 +105,6 @@ export function collection<T extends { id: number }>(initial: T[]) {
     },
     remove(id: number) {
       const toBeRemoved = items.value.find((i) => i.id === id);
-      console.log({toBeRemoved});
       items.value = items.value.filter((i) => i.id !== id);
       change.value = { type: "removed", id, item: toBeRemoved };
     },
@@ -156,7 +155,7 @@ export function collection<T extends { id: number }>(initial: T[]) {
       effect(() => {
         const c = change.value;
         if (!c) return;
-        fn(c);
+        untracked(() => fn(c)); 
       });
     },
   };

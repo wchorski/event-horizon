@@ -673,7 +673,7 @@ export async function idbCreateStep(
     };
   });
 }
-export async function idbUpdateStep(id: number, updates: Partial<MomentStep>) {
+export async function idbUpdateStep(id: number, updates: Partial<MomentStep>): Promise<MomentStep>  {
   const coerced = Object.fromEntries(
     Object.entries(updates).map(([key, value]) => [
       key,

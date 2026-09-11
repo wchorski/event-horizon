@@ -160,7 +160,14 @@ docker compose up --remove-orphans
   - Icons from https://opensvg.dev/icons
 </details>
 
+## Document manager
+#todo 
+- [ ] Entra ID SSO (Microsoft)
+- [ ] Sharepoint Browser
+- [ ] department folder structure
+- [ ] Meeting generator (ties with Packet + Event + Zoom link)
 
+## booking app
 #todo
 - [ ] steps. update number in real time (upon create and delete)
 - [ ] timeline: drag timerange swap is a little goofy if targeting below row (but that dragged row is already the next one in line)

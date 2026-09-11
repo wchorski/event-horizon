@@ -11,51 +11,53 @@ type Store<T extends object> = {
   select: <S>(selector: Selector<T, S>, listener: Listener<S>) => () => void;
 };
 
-export function createStore<T extends object>(initialData: T): Store<T> {
-  let state = initialData;
-  const listeners = new Set<Listener<T>>();
+// TODO remove if not using
+// moved to 'colleciton' wrapper instead
+// export function createStore<T extends object>(initialData: T): Store<T> {
+//   let state = initialData;
+//   const listeners = new Set<Listener<T>>();
 
-  const notify = () => listeners.forEach((fn) => fn(state));
+//   const notify = () => listeners.forEach((fn) => fn(state));
 
-  return {
-    get() {
-      return state;
-    },
-    set(newState) {
-      state = newState;
-      notify();
-    },
-    patch(partial) {
-      state = { ...state, ...partial };
-      notify();
-    },
-    update(fn) {
-      state = fn(state);
-      notify();
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-      listener(state);
-      return () => listeners.delete(listener);
-    },
+//   return {
+//     get() {
+//       return state;
+//     },
+//     set(newState) {
+//       state = newState;
+//       notify();
+//     },
+//     patch(partial) {
+//       state = { ...state, ...partial };
+//       notify();
+//     },
+//     update(fn) {
+//       state = fn(state);
+//       notify();
+//     },
+//     subscribe(listener) {
+//       listeners.add(listener);
+//       listener(state);
+//       return () => listeners.delete(listener);
+//     },
 
-    // Only calls listener when the selected slice actually changes
-    select<S>(selector: Selector<T, S>, listener: Listener<S>) {
-      let prev = selector(state);
-      listener(prev);
+//     // Only calls listener when the selected slice actually changes
+//     select<S>(selector: Selector<T, S>, listener: Listener<S>) {
+//       let prev = selector(state);
+//       listener(prev);
 
-      const unsubscribe = this.subscribe((newState) => {
-        const next = selector(newState);
-        if (!Object.is(prev, next)) {
-          prev = next;
-          listener(next);
-        }
-      });
+//       const unsubscribe = this.subscribe((newState) => {
+//         const next = selector(newState);
+//         if (!Object.is(prev, next)) {
+//           prev = next;
+//           listener(next);
+//         }
+//       });
 
-      return unsubscribe;
-    },
-  };
-}
+//       return unsubscribe;
+//     },
+//   };
+// }
 
 /** USAGE
  * // Only rerenders when groups array reference changes

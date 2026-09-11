@@ -1,5 +1,14 @@
-import type { UserSelect } from "@ty/Schema";
-const users: UserSelect[] = [
+import type { UserInsert } from "@ty/Schema";
+
+export type UserSeedInsert = Omit<
+  UserInsert,
+  "createdAt" | "updatedAt"
+> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+const users: UserSeedInsert[] = [
   {
     role_id: "019f392b-fad6-70e2-8287-a05da261d652",
     first_name: "Admin",

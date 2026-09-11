@@ -13,6 +13,7 @@ import {
   Timeline,
   Account,
   Organization,
+  Department,
 } from "@db/schema";
 
 export const models = {
@@ -45,6 +46,8 @@ export type TimelineInsert = typeof Timeline.$inferSelect;
 export type TimelineSelect = typeof Timeline.$inferSelect;
 export type OrganizationInsert = typeof Organization.$inferSelect;
 export type OrganizationSelect = typeof Organization.$inferSelect;
+export type DepartmentInsert = typeof Department.$inferSelect;
+export type DepartmentSelect = typeof Department.$inferSelect;
 export type MemberInsert = typeof Member.$inferSelect;
 export type MemberSelect = typeof Member.$inferSelect;
 export type AccountInsert = typeof Account.$inferSelect;

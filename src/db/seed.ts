@@ -6,8 +6,6 @@ import * as schema from "@db/schema.js";
 import { seedData } from "@db/seed-data.js";
 import { createPgClient, getPGDatabaseUrl } from "@db/client.js";
 import { createAssignmentsForBooking } from "@db/seed/bookingAssignments.js";
-import { auth } from "@lib/auth.js";
-import { uuidv7 } from "@client/uuidv7.js";
 import { hashPassword } from "better-auth/crypto";
 import members from "./seed/members";
 
@@ -111,6 +109,7 @@ const {
   events,
   tickets,
   bookings,
+  departments,
 } = seedData;
 
 console.log("🌱 Seeding Database 🌱");
@@ -121,6 +120,14 @@ const orgCoreced = organizations.map((item) => ({
   updatedAt: new Date(item.updatedAt),
 }));
 await db.insert(schema.Organization).values(orgCoreced);
+
+console.log(`=== Departments (+${departments.length}) ===`);
+const departmentsCoreced = departments.map((item) => ({
+  ...item,
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
+}));
+await db.insert(schema.Department).values(departmentsCoreced);
 
 console.log(`=== Roles (+${roles.length})===`);
 await db.insert(schema.Role).values(roles);

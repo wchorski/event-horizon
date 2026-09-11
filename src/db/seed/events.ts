@@ -1,21 +1,36 @@
 import type { EventInsert } from "@ty/Schema";
 import users from "./users";
 
-const events: EventInsert[] = [
+export type EventSeedInsert = Omit<
+  EventInsert,
+  "createdAt" | "updatedAt" | "timestamp"
+> & {
+  createdAt: string;
+  updatedAt: string;
+  timestamp: string;
+};
+
+if (!users[0].id)
+  throw new Error(
+    "first user in seed-data should be the admin and should exist",
+  );
+const author_user_id = users[0].id;
+
+const events: EventSeedInsert[] = [
   {
     id: "019f3932-5abf-7d09-ab2e-bd1b64fa3a67",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 5001,
     subject: "Turntable at Home: Live DJ Stream",
     excerpt:
-      "Drop in from anywhere for a high‑energy live DJ set streamed straight to your screen. Dance, vibe, or just let it play in the background—no dress code required.",
+      "Drop in from anywhere for a high-energy live DJ set streamed straight to your screen. Dance, vibe, or just let it play in the background—no dress code required.",
     date_civil: "2026-06-01T20:00",
     where: "Online Live Stream",
-    host: null,
+    
     timestamp: "2026-06-01T01:00:00.000Z",
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7871-84b7-65989cdd2c7a",
@@ -27,10 +42,10 @@ const events: EventInsert[] = [
     timestamp: "2026-06-02T01:00:00.000Z",
     date_civil: "2026-06-02T20:00",
     where: "Online Live Stream",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-791c-af03-95b2162c7dd7",
@@ -42,25 +57,25 @@ const events: EventInsert[] = [
     timestamp: "2026-06-03T01:00:00.000Z",
     date_civil: "2026-06-03T20:00",
     where: "Online Live Stream",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7ec4-bc9e-2c250f6e6234",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 5004,
-    subject: "Late‑Night Stream Roulette",
+    subject: "Late-Night Stream Roulette",
     excerpt:
-      "You never know what’s coming next—music, mini‑games, surprise guests, or spontaneous challenges. A fun, unpredictable late‑night live stream.",
+      "You never know what's coming next—music, mini-games, surprise guests, or spontaneous challenges. A fun, unpredictable late-night live stream.",
     timestamp: "2026-06-04T02:00:00.000Z",
     date_civil: "2026-06-03T21:00",
     where: "Online Live Stream",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-725d-8d3e-81864487708f",
@@ -68,14 +83,14 @@ const events: EventInsert[] = [
     wp_post_id: 5005,
     subject: "Stream Together Finale",
     excerpt:
-      "Close out the series with a shared live‑stream celebration—highlights, audience polls, chat shout‑outs, and one last reason to stay logged in.",
+      "Close out the series with a shared live-stream celebration—highlights, audience polls, chat shout-outs, and one last reason to stay logged in.",
     timestamp: "2026-06-05T01:00:00.000Z",
     date_civil: "2026-06-05T20:00",
     where: "Online Live Stream",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-703c-b043-850a9bd401a9",
@@ -87,10 +102,10 @@ const events: EventInsert[] = [
     timestamp: "2026-02-07T14:00:00.000Z",
     date_civil: "2026-02-07T08:00",
     where: "Birthplace of Rock 'n' Roll (Sun Studio, Memphis, TN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7d36-a478-2ebcfa48b205",
@@ -102,10 +117,10 @@ const events: EventInsert[] = [
     timestamp: "2026-02-08T14:00:00.000Z",
     date_civil: "2026-02-08T08:00",
     where: "Birthplace of Rock 'n' Roll (Sun Studio, Memphis, TN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7cf6-8889-b8206e1c6369",
@@ -117,10 +132,10 @@ const events: EventInsert[] = [
     timestamp: "2026-02-09T14:00:00.000Z",
     date_civil: "2026-02-09T08:00",
     where: "Birthplace of Rock 'n' Roll (Sun Studio, Memphis, TN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-786a-9cc9-2bd3b98aa7b1",
@@ -132,10 +147,10 @@ const events: EventInsert[] = [
     timestamp: "2026-02-10T14:00:00.000Z",
     date_civil: "2026-02-10T08:00",
     where: "Birthplace of Rock 'n' Roll (Sun Studio, Memphis, TN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-754c-99a4-1ae1de9a1416",
@@ -146,10 +161,10 @@ const events: EventInsert[] = [
     date_civil: "2026-02-10T08:00",
     excerpt: "",
     where: null,
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-724e-a717-95a21d29634b",
@@ -161,10 +176,10 @@ const events: EventInsert[] = [
     timestamp: "2026-03-03T15:00:00.000Z",
     date_civil: "2026-03-03T10:00",
     where: "Hitsville U.S.A. (Motown Museum, Detroit, MI)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-714e-be06-105db244d5d5",
@@ -176,10 +191,10 @@ const events: EventInsert[] = [
     timestamp: "2026-03-04T15:00:00.000Z",
     date_civil: "2026-03-04T10:00",
     where: "Hitsville U.S.A. (Motown Museum, Detroit, MI)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7daf-9858-0c8052ffe696",
@@ -191,25 +206,25 @@ const events: EventInsert[] = [
     timestamp: "2026-03-05T15:00:00.000Z",
     date_civil: "2026-03-05T10:00",
     where: "Hitsville U.S.A. (Motown Museum, Detroit, MI)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7c4a-aa04-3fd72577f802",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 2004,
-    subject: "Ain’t Too Proud After Dark",
+    subject: "Ain't Too Proud After Dark",
     excerpt:
       "Celebrate the confidence, charisma, and showmanship that defined the Motown era. Expect big voices, bold energy, and a little swagger after sunset.",
     timestamp: "2026-03-06T15:00:00.000Z",
     date_civil: "2026-03-06T10:00",
     where: "Hitsville U.S.A. (Motown Museum, Detroit, MI)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7934-9544-ae13cde14684",
@@ -221,10 +236,10 @@ const events: EventInsert[] = [
     timestamp: "2026-03-07T15:00:00.000Z",
     date_civil: "2026-03-07T10:00",
     where: "Hitsville U.S.A. (Motown Museum, Detroit, MI)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7a70-9e18-f74dd82d3274",
@@ -232,29 +247,29 @@ const events: EventInsert[] = [
     wp_post_id: 3001,
     subject: "Dearly Beloved: The Opening Act",
     excerpt:
-      "We gather tonight where legends were made. Kick off Purple Rain Night with a high‑energy tribute to the Minneapolis sound—bold lights, big beats, and undeniable charisma.",
+      "We gather tonight where legends were made. Kick off Purple Rain Night with a high-energy tribute to the Minneapolis sound—bold lights, big beats, and undeniable charisma.",
     timestamp: "2026-04-10T02:00:00.000Z",
     date_civil: "2026-04-09T21:00",
     where: "Purple Rain Night (First Avenue, Minneapolis, MN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7771-b316-3422b4f66dd5",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 3002,
-    subject: "Let’s Go Crazy After Dark",
+    subject: "Let's Go Crazy After Dark",
     excerpt:
-      "The amps go up and the lights go down. This late‑night dance party channels raw energy, fearless funk, and the kind of release only live music can bring.",
+      "The amps go up and the lights go down. This late-night dance party channels raw energy, fearless funk, and the kind of release only live music can bring.",
     timestamp: "2026-04-11T03:00:00.000Z",
     date_civil: "2026-04-10T22:00",
     where: "Purple Rain Night (First Avenue, Minneapolis, MN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-78c7-955c-fcb1fbbafd20",
@@ -262,29 +277,29 @@ const events: EventInsert[] = [
     wp_post_id: 3003,
     subject: "When Doves Cry: Neon Session",
     excerpt:
-      "A moodier, more intimate night bathed in purple light. Expect synth‑heavy grooves, emotional highs, and unforgettable atmosphere on the iconic First Avenue floor.",
+      "A moodier, more intimate night bathed in purple light. Expect synth-heavy grooves, emotional highs, and unforgettable atmosphere on the iconic First Avenue floor.",
     timestamp: "2026-04-12T02:00:00.000Z",
     date_civil: "2026-04-11T21:00",
     where: "Purple Rain Night (First Avenue, Minneapolis, MN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7ac6-9de7-11dfc6c9fde9",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 3004,
-    subject: "1999: Party Like It’s Legendary",
+    subject: "1999: Party Like It's Legendary",
     excerpt:
-      "This one’s pure celebration. Funk, pop, and dance collide in a high‑octane party that doesn’t slow down and doesn’t look back.",
+      "This one's pure celebration. Funk, pop, and dance collide in a high-octane party that doesn't slow down and doesn't look back.",
     timestamp: "2026-04-13T03:00:00.000Z",
     date_civil: "2026-04-12T22:00",
     where: "Purple Rain Night (First Avenue, Minneapolis, MN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7c76-891b-75d10fed86c4",
@@ -296,10 +311,10 @@ const events: EventInsert[] = [
     timestamp: "2026-04-14T02:00:00.000Z",
     date_civil: "2026-04-13T21:00",
     where: "Purple Rain Night (First Avenue, Minneapolis, MN)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-748e-92b1-aaecbc7a3e4a",
@@ -311,10 +326,10 @@ const events: EventInsert[] = [
     timestamp: "2026-05-10T03:00:00.000Z",
     date_civil: "2026-05-09T20:00",
     where: "Sunset Strip Rock Night (Whisky a Go Go, West Hollywood, CA)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7bc3-ad83-f59267a7955b",
@@ -322,14 +337,14 @@ const events: EventInsert[] = [
     wp_post_id: 4002,
     subject: "Turn It Up to Eleven",
     excerpt:
-      "No ballads, no brakes. This night is all about volume, attitude, and the kind of full‑throttle rock that made the Strip famous.",
+      "No ballads, no brakes. This night is all about volume, attitude, and the kind of full-throttle rock that made the Strip famous.",
     timestamp: "2026-05-11T04:00:00.000Z",
     date_civil: "2026-05-10T21:00",
     where: "Sunset Strip Rock Night (Whisky a Go Go, West Hollywood, CA)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-734b-823a-b2281d871011",
@@ -341,10 +356,10 @@ const events: EventInsert[] = [
     timestamp: "2026-05-12T03:00:00.000Z",
     date_civil: "2026-05-11T20:00",
     where: "Sunset Strip Rock Night (Whisky a Go Go, West Hollywood, CA)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-7cb8-9c01-fad5e7d53e96",
@@ -352,14 +367,14 @@ const events: EventInsert[] = [
     wp_post_id: 4004,
     subject: "Straight Outta the Back Alley",
     excerpt:
-      "Dirty, gritty, and unapologetic. This late‑night set channels the underground spirit that fueled decades of rock history.",
+      "Dirty, gritty, and unapologetic. This late-night set channels the underground spirit that fueled decades of rock history.",
     timestamp: "2026-05-13T04:00:00.000Z",
     date_civil: "2026-05-12T21:00",
     where: "Sunset Strip Rock Night (Whisky a Go Go, West Hollywood, CA)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
   {
     id: "019f3932-5ac0-71c4-be1c-5ecc9b5b47a5",
@@ -371,10 +386,10 @@ const events: EventInsert[] = [
     timestamp: "2026-05-14T03:00:00.000Z",
     date_civil: "2026-05-13T20:00",
     where: "Sunset Strip Rock Night (Whisky a Go Go, West Hollywood, CA)",
-    host: null,
+    
     createdAt: "2026-05-01T21:26:37.371Z",
     updatedAt: "2026-05-01T21:26:37.371Z",
-    author_user_id: users[0].id,
+    author_user_id,
   },
 ];
 export default events;

@@ -23,5 +23,16 @@ const organizations: OrganizationInsert[] = [
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
   },
+  {
+    id: "01a09194-09ff-7d63-9c55-d0096b02db89",
+    name: "Midwest Operating Engineers",
+    slug: "moe",
+    dedicated_db_url: null,
+    color: "#738793",
+    color_2: "#0873b1",
+    logo: "https://local150.org/wp-content/uploads/2020/06/moe-logo.png",
+    createdAt: "2026-05-01T21:06:36.444Z",
+    updatedAt: "2026-05-01T21:06:36.444Z",
+  },
 ];
 export default organizations;

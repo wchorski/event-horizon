@@ -1,4 +1,4 @@
-// src/client/timelineSignals.ts
+// @client/timelineSignals.ts
 import {
   idbCreateMoment,
   idbDeleteMoment,
@@ -160,7 +160,6 @@ async function init() {
 
   const tmlnState = await fetchData();
   if (!tmlnState) throw new Error(`no timeline data found`);
-  console.log(tmlnState);
   // const { skills, groups, moments } = tmlnData;
 
   const {
@@ -247,12 +246,11 @@ async function init() {
         break;
       case "removed":
         //? something bad happenes here with signal.ts
-        // const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
-        // console.log("steps.onChange - change ", change);
-        // li.remove();
-        // if (change.item) {
-        //   updateStepsCountSummary(change.item);
-        // }
+        const li = tbody.querySelector(`li[data-step-id="${change.id}"]`)!;
+        li.remove();
+        if (change.item) {
+          updateStepsCountSummary(change.item);
+        }
         break;
       case "updated":
         console.log(
@@ -513,18 +511,19 @@ async function init() {
             const stepLi = btn.closest("li[data-step-id]")! as HTMLElement;
             const stepId = Number(stepLi?.dataset.stepId);
             if (isNaN(stepId)) throw new Error(`step id invalid: ${stepId}`);
-            console.log("event click - delete, ", { stepId });
-            const deletedStep = steps.value.find((s) => s.id === stepId);
+
+            // const deletedStep = steps.value.find((s) => s.id === stepId);
             // console.log(steps.value);
             await idbDeleteStep(stepId);
-            // steps.remove(stepId);
-            if (deletedStep) {
-              const li = tbody.querySelector(
-                `li[data-step-id="${deletedStep.id}"]`,
-              )!;
-              li.remove();
-              updateStepsCountSummary(deletedStep);
-            }
+            // TODO why does this cause problems with ui syncing?
+            steps.remove(stepId);
+            // if (deletedStep) {
+            //   const li = tbody.querySelector(
+            //     `li[data-step-id="${deletedStep.id}"]`,
+            //   )!;
+            //   li.remove();
+            //   updateStepsCountSummary(deletedStep);
+            // }
 
             break;
           }
@@ -803,8 +802,9 @@ async function init() {
     500,
   );
   const debouncedSaveStep = debounce(
-    async (momentId: number, field: string, value: string | boolean) => {
-      await idbUpdateStep(momentId, { [field]: value });
+    async (stepId: number, field: string, value: string | boolean) => {
+      const updated = await idbUpdateStep(stepId, { [field]: value });
+      steps.update(updated, true);
     },
     500,
   );

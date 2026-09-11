@@ -85,7 +85,7 @@ export function createStepEl(step: MomentStep): HTMLLIElement {
   });
   const deleteBtn = createElement(
     "button",
-    { className: `delete`, textContent: `␡ ${step.id}`, title: `delete (id:${step.id})` },
+    { className: `delete`, textContent: `␡`, title: `delete (id:${step.id})` },
     { action: "delete", type: STEPS_STORE },
   );
 

@@ -1,6 +1,6 @@
 import { ConfidentialClientApplication } from "@azure/msal-node";
 
-export async function getMsToken(
+export async function msAuthentication(
   tenant_id?: string,
   client_id?: string,
   secret_value?: string,

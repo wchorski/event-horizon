@@ -113,7 +113,7 @@ export const bookingStatusEnum = pgEnum("booking_status", [
   "ACCEPTED",
   "POSTPONED",
 ]);
-export const meetingPackageStatusEnum = pgEnum("meeting_package_status", [
+export const meetingPacketStatusEnum = pgEnum("meeting_packet_status", [
   "DRAFT",
   "PUBLISHED",
 ]);
@@ -311,21 +311,19 @@ export const Event = pgTable(
   ],
 );
 
-export const MeetingPackage = pgTable(
-  "meeting_packages",
+export const MeetingPacket = pgTable(
+  "meeting_packets",
   {
     id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    event_id: uuid()
-      .notNull()
-      .references(() => Event.id, {
-        onDelete: "cascade",
-      }),
+    event_id: uuid().references(() => Event.id, {
+      onDelete: "cascade",
+    }),
     department_id: uuid()
       .notNull()
       .references(() => Department.id),
-    status: meetingPackageStatusEnum("status").notNull().default("DRAFT"),
+    status: meetingPacketStatusEnum("status").notNull().default("DRAFT"),
     published_file_id: text(),
     published_file_url: text(),
     publishedAt: timestamp(),
@@ -339,13 +337,13 @@ export const MeetingPackage = pgTable(
   (table) => [unique().on(table.event_id, table.department_id)],
 );
 
-export const MeetingPackageDirectory = pgTable("meeting_package_directories", {
+export const MeetingPacketDirectory = pgTable("meeting_packet_directories", {
   id: uuid()
     .primaryKey()
     .default(sql`uuidv7()`),
-  meeting_package_id: uuid()
+  meeting_packet_id: uuid()
     .notNull()
-    .references(() => MeetingPackage.id, {
+    .references(() => MeetingPacket.id, {
       onDelete: "cascade",
     }),
   sharepoint_site_id: text().notNull(),
@@ -355,6 +353,10 @@ export const MeetingPackageDirectory = pgTable("meeting_package_directories", {
   include_subfolders: boolean().default(true).notNull(),
   sort_order: integer().default(0).notNull(),
   createdAt: timestamp().defaultNow().notNull(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 // Junction table for many-to-many relationship between events and hosts
@@ -589,10 +591,15 @@ export const Organization = pgTable("organizations", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  // TODO this should be Key : Value pair. idk why metadata is text();
   metadata: text(),
   dedicated_db_url: text(),
   color: text(),
   color_2: text(),
+  sharepoint_site_url: text(),
+  sharepoint_site_id: text(),
+  sharepoint_drive_id: text(),
+  sharepoint_library_name: text(),
 });
 export const Department = pgTable(
   "departments",

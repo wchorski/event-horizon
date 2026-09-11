@@ -4,7 +4,6 @@ import { PERMISSIONS } from "@lib/auth/roles";
 import type {
   RoleSelect,
   BookingSelect,
-  OrganizationSelect,
   AccountInsert,
 } from "@ty/Schema";
 
@@ -14,7 +13,7 @@ import bookings from "./seed/bookings";
 import locations, { type LocationSeedInsert } from "./seed/locations";
 import roles from "./seed/roles";
 import tickets, { type TicketSeedInsert } from "./seed/tickets";
-import organizations from "./seed/organizations";
+import organizations, { type OrganizationSeedInsert } from "./seed/organizations";
 import accounts from "./seed/accounts";
 import departments from "./seed/departments";
 import type { DepartmentSeedInsert } from "./seed/departments";
@@ -26,7 +25,7 @@ type SeedData = {
   events: EventSeedInsert[];
   roles: RoleSelect[];
   bookings: BookingSelect[];
-  organizations: OrganizationSelect[];
+  organizations: OrganizationSeedInsert[];
   accounts: AccountInsert[];
   departments: DepartmentSeedInsert[];
 };

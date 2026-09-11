@@ -10,6 +10,8 @@ const {
   GOOGLE_CLIENT_SECRET,
   FACEBOOK_CLIENT_ID,
   FACEBOOK_CLIENT_SECRET,
+  MS_CLIENT_ID,
+  MS_SECRET_VALUE,
 } = process.env;
 
 import { passkey } from "@better-auth/passkey";
@@ -39,6 +41,15 @@ if (FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET)
   socialProviders.facebook = {
     clientId: FACEBOOK_CLIENT_ID,
     clientSecret: FACEBOOK_CLIENT_SECRET,
+  };
+if (MS_CLIENT_ID && MS_SECRET_VALUE)
+  socialProviders.microsoft = {
+    clientId: MS_CLIENT_ID,
+    clientSecret: MS_SECRET_VALUE,
+    // Optional
+    // tenantId: "common",
+    // authority: "https://login.microsoftonline.com", // Authentication authority URL
+    // prompt: "select_account", // Forces account selection
   };
 
 export const auth = betterAuth({

@@ -162,7 +162,8 @@ docker compose up --remove-orphans
 
 ## Document manager
 #todo 
-- [ ] Entra ID SSO (Microsoft)
+- [ ] Entra ID SSO (Microsoft) https://better-auth.com/docs/authentication/microsoft
+- [ ] how do i multi tenante the MS Client ID/Secret?
 - [ ] Sharepoint Browser
 - [ ] department folder structure
 - [ ] Meeting generator (ties with Packet + Event + Zoom link)

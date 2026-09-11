@@ -18,6 +18,18 @@ const author_user_id = users[0].id;
 
 const events: EventSeedInsert[] = [
   {
+    id: "01a091d4-9cac-7938-bb39-1b8eb4626a5e",
+    location_id: "01a091d6-d3f4-759a-825d-a31f9241fb55",
+    subject: 'MOEITS Test Meeting',
+    excerpt: 'this is just a test',
+    date_civil: '2026-09-20T09:09',
+    where: "MOEITS Conference Room",
+    timestamp: "2026-06-01T01:00:00.000Z",
+    createdAt: "2026-05-01T21:26:37.371Z",
+    updatedAt: "2026-05-01T21:26:37.371Z",
+    author_user_id,
+  },
+  {
     id: "019f3932-5abf-7d09-ab2e-bd1b64fa3a67",
     location_id: "019f3930-2608-77bb-952c-eed3c15fc515",
     wp_post_id: 5001,

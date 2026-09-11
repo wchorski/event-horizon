@@ -17,6 +17,19 @@ const author_user_id = users[0].id;
 
 const locations: LocationSeedInsert[] = [
   {
+    id: "01a091d6-d3f4-759a-825d-a31f9241fb55",
+    name: "MOEITS Conference Room",
+    address: "123 Information Ln",
+    city: "Countryside",
+    state: "Illinois",
+    zip: "60602",
+    timezone: "America/Chicago",
+    excerpt: 'Midwest Operating Engeneers Information Services',
+    author_user_id,
+    createdAt: "2026-05-01T21:06:36.444Z",
+    updatedAt: "2026-05-01T21:06:36.444Z",
+  },
+  {
     id: "019f3930-2608-77bb-952c-eed3c15fc515",
     name: "Birthplace of Rock 'n' Roll (Sun Studio)",
     address: "706 Union Ave",

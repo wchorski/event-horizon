@@ -1,0 +1,60 @@
+---
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const {
+  MS_SHAREPOINT_KYU_DRIVE_ID,
+  MS_SHAREPOINT_KYU_ATTENDENCE_FOLDER_ID,
+  MS_TOKEN_SITE_UPLOAD,
+  TENANT_ID,
+  MS_SITES_READWRITE_ALL_APP_ID,
+  MS_SITES_READWRITE_ALL_SECRET_VALUE,
+} = import.meta.env;
+
+let output = null;
+
+const site_id =
+  "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
+const drive_id =
+  "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4";
+
+const url = `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/root:/test-sample`;
+
+const accessToken = await msAuthentication(
+  TENANT_ID,
+  MS_SITES_READWRITE_ALL_APP_ID,
+  MS_SITES_READWRITE_ALL_SECRET_VALUE,
+);
+
+try {
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      // Authorization: `Bearer ${MS_TOKEN_SITE_UPLOAD}`,
+      //   "Content-Type": "application/octet-stream",
+      // "Content-Length": String(stat.size), // helps some proxies; optional but nice
+    },
+    // Node fetch requires this when sending a stream body (duplex)
+    // duplex: "half",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload failed: ${res.status} ${res.statusText}\n${text}`);
+  }
+
+  const driveItem = await res.json();
+
+  const data = await fetch(url);
+
+  output = data;
+} catch (err) {
+  console.log(err);
+}
+---
+
+<BaseLayout>
+  <h1>Documents</h1>
+  <pre>{output}</pre>
+</BaseLayout>

@@ -175,6 +175,46 @@ export default defineConfig({
         access: "public",
         optional: true,
       }),
+      GITHUB_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      GITHUB_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      GOOGLE_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      GOOGLE_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      FACEBOOK_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      FACEBOOK_CLIENT_SECRET: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
+      MS_CLIENT_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      MS_SECRET_VALUE: envField.string({
+        context: "server",
+        access: "secret",
+        optional: true,
+      }),
     },
   },
   // integrations: [db()]

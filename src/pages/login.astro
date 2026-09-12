@@ -1,5 +1,6 @@
 ---
 // src/pages/login.astro
+import SocialProviderLoginForm from "@components/auth/SocialProviderLoginForm.astro";
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
@@ -59,14 +60,18 @@ if (Astro.request.method === "POST") {
         required={true}
       />
 
-      <SubmitButton text="Login"/>
+      {
+        error && (
+          <p class="form-error error callout" role="alert">
+            {error}
+          </p>
+        )
+      }
+      <SubmitButton text="Login" />
     </form>
-    {
-      error && (
-        <p class="form-error error callout" role="alert">
-          {error}
-        </p>
-      )
-    }
+
+    <hr />
+
+    <SocialProviderLoginForm provider="github" />
   </div>
 </CommonPageLayout>

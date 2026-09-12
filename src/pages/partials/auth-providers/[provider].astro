@@ -1,0 +1,81 @@
+---
+// partials/auth-providers/[provider].astro
+import { auth } from "@lib/auth";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+
+const SUPPORTED_PROVIDERS = ["facebook", "github", "microsoft"] as const;
+type SocialProvider = (typeof SUPPORTED_PROVIDERS)[number];
+
+interface Params {
+  provider: string | undefined;
+}
+
+const { provider } = Astro.params as Params;
+
+if (!provider) throw new BadRequestError("provider missing in request");
+if (!SUPPORTED_PROVIDERS.includes(provider as SocialProvider)) {
+  throw new BadRequestError(`unsupported provider: ${provider}`);
+}
+
+if (Astro.request.method !== "POST") {
+  throw new BadRequestError(`unsupported method for this route: ${Astro.request.method}`);
+}
+
+const isHtmx = Astro.request.headers.get("HX-Request") === "true";
+
+type RenderResult =
+  | { kind: "redirect"; url: string; setCookies: string[] }
+  | { kind: "top-error"; message: string };
+
+let result: RenderResult;
+
+try {
+  const formData = await Astro.request.formData();
+  const callbackURL = (formData.get("callbackURL") as string | null) ?? "/dashboard";
+
+  // asResponse: true is required — this is where the state cookie gets set.
+  const response = await auth.api.signInSocial({
+    body: { provider: provider as SocialProvider, callbackURL },
+    asResponse: true,
+  });
+
+  if (response.status > 399) {
+    const errorBody = await response.json().catch(() => null);
+    throw new Error(errorBody?.message ?? `signInSocial failed (status ${response.status})`);
+  }
+
+  const { url } = await response.clone().json();
+  const setCookies = response.headers.getSetCookie?.() ?? [];
+
+  result = { kind: "redirect", url, setCookies };
+} catch (e) {
+  const { err, status } = errorHandlingOnSubmit(e);
+  Astro.response.status = status;
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+
+if (result.kind === "redirect") {
+  const headers = new Headers();
+  for (const cookie of result.setCookies) {
+    headers.append("set-cookie", cookie);
+  }
+
+  if (isHtmx) {
+    headers.set("HX-Redirect", result.url);
+    return new Response(null, { status: 200, headers });
+  }
+  headers.set("Location", result.url);
+  return new Response(null, { status: 302, headers });
+}
+---
+
+<TopLevelError
+  id={provider}
+  headers={["provider"]}
+  crud="auth-providers"
+  message={result.message}
+/>

@@ -1,0 +1,26 @@
+---
+// components/auth/SocialProviderLoginForm.astro
+import SubmitButton from "@components/form/SubmitButton.astro";
+
+interface Props {
+  provider: "facebook" | "github" | "microsoft";
+  callbackURL?: string;
+}
+
+const { provider, callbackURL = "/dashboard" } = Astro.props;
+const label = provider.charAt(0).toUpperCase() + provider.slice(1);
+---
+
+<form
+  id={`${provider}-login-form`}
+  method="POST"
+  action={`/partials/auth-providers/${provider}`}
+  hx-post={`/partials/auth-providers/${provider}`}
+  hx-target={`this`}
+  hx-target-error={`#oauth-${provider}-error`}
+  hx-swap="outerHTML"
+>
+  <input type="hidden" name="callbackURL" value={callbackURL} />
+  <SubmitButton text={`Continue with ${label}`} />
+  <div id={`oauth-${provider}-error`}></div>
+</form>

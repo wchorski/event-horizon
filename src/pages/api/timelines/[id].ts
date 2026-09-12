@@ -1,3 +1,4 @@
+// pages/api/timelines/:id
 import type { APIRoute } from "astro";
 import { db } from "@db/db";
 import { Timeline } from "@db/schema";

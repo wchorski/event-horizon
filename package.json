@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
+    "@microsoft/microsoft-graph-types": "^2.43.1",
     "@playwright/test": "^1.61.1",
     "@types/node": "^25.9.5",
     "@types/pg": "^8.20.0",
@@ -48,5 +49,5 @@
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@10.11.1+sha512.e519b9f7639869dc8d5c3c5dfef73b3f091094b0a006d7317353c72b124e80e1afd429732e28705ad6bfa1ee879c1fce46c128ccebd3192101f43dd67c667912"
+  "packageManager": "pnpm@12.4.1"
 }

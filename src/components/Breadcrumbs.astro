@@ -1,0 +1,67 @@
+---
+import { buildDriveHref, type DriveCrumb } from "@lib/driveNav";
+
+interface Props {
+  crumbs: DriveCrumb[];
+  basePath: string;
+}
+
+const { crumbs, basePath } = Astro.props;
+---
+
+<nav class="breadcrumbs" aria-label="Folder navigation">
+  <ol>
+    {crumbs.map((crumb, index) => {
+      const isLast = index === crumbs.length - 1;
+      const href = buildDriveHref(basePath, crumbs.slice(0, index + 1));
+
+      return (
+        <li>
+          {isLast ? (
+            <span class="current" aria-current="page">{crumb.name}</span>
+          ) : (
+            <a href={href}>{crumb.name}</a>
+          )}
+          {!isLast && <span class="sep" aria-hidden="true">/</span>}
+        </li>
+      );
+    })}
+  </ol>
+</nav>
+
+<style>
+  .breadcrumbs ol {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0 0 0.9rem 0;
+    padding: 0;
+    font-size: 0.9rem;
+  }
+
+  .breadcrumbs li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .breadcrumbs a {
+    color: #1a5cff;
+    text-decoration: none;
+  }
+
+  .breadcrumbs a:hover {
+    text-decoration: underline;
+  }
+
+  .breadcrumbs .current {
+    color: #333;
+    font-weight: 600;
+  }
+
+  .breadcrumbs .sep {
+    color: #aaa;
+  }
+</style>

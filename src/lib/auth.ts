@@ -88,10 +88,6 @@ if (MS_CLIENT_ID && MS_SECRET_VALUE)
         fullName: profile.name,
         fallback: profile.preferred_username ?? "Microsoft User",
       }),
-    // Optional
-    // tenantId: "common",
-    // authority: "https://login.microsoftonline.com", // Authentication authority URL
-    // prompt: "select_account", // Forces account selection
   };
 
 export const auth = betterAuth({

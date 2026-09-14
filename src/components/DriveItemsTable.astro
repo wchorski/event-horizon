@@ -1,0 +1,228 @@
+---
+import type { DriveItem } from "@microsoft/microsoft-graph-types";
+import { buildDriveHref, type DriveCrumb } from "@lib/driveNav";
+
+interface Props {
+  items: DriveItem[];
+  crumbs: DriveCrumb[];
+  basePath: string;
+}
+
+const { items, crumbs, basePath } = Astro.props;
+
+function formatBytes(bytes?: number | null): string {
+  if (bytes === undefined || bytes === null || bytes === 0) return "—";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function formatDate(dateString?: string | null): string {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function itemType(item: DriveItem): string {
+  if (item.folder) return "Folder";
+  if (item.file) return item.file.mimeType?.split("/").pop() ?? "File";
+  return "Item";
+}
+
+function itemIcon(item: DriveItem): string {
+  if (item.folder) return "📁";
+  const ext = item.file?.fileExtension?.toLowerCase() ?? item.name?.split(".").pop()?.toLowerCase();
+  if (ext === "docx" || ext === "doc") return "📄";
+  if (ext === "xlsx" || ext === "xls" || ext === "csv") return "📊";
+  if (ext === "pdf") return "📕";
+  return "📄";
+}
+
+// Sort folders first, then alphabetically by name
+const sortedItems = [...items].sort((a, b) => {
+  const aIsFolder = Boolean(a.folder);
+  const bIsFolder = Boolean(b.folder);
+  if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+  return (a.name ?? "").localeCompare(b.name ?? "");
+});
+---
+
+<div class="drive-table-wrapper">
+  <table class="drive-table">
+    <thead>
+      <tr>
+        <th scope="col" class="col-name">Name</th>
+        <th scope="col">Type</th>
+        <th scope="col">Size</th>
+        <th scope="col">Modified</th>
+        <th scope="col">Modified By</th>
+        <th scope="col">Shared</th>
+      </tr>
+    </thead>
+    <tbody>
+      {sortedItems.length === 0 && (
+        <tr>
+          <td colspan="6" class="empty-row">This folder is empty.</td>
+        </tr>
+      )}
+      {sortedItems.map((item) => {
+        const isFolder = Boolean(item.folder);
+        const modifiedByName = item.lastModifiedBy?.user?.displayName ?? "—";
+
+        // Internal drill-down link: same page, folder appended to the breadcrumb trail
+        const drillDownHref = isFolder
+          ? buildDriveHref(basePath, [...crumbs, { id: item.id ?? null, name: item.name ?? "Untitled", webUrl: item.webUrl }])
+          : null;
+
+        return (
+          <tr class={isFolder ? "row-folder" : "row-file"}>
+            <td class="col-name">
+              <span class="icon" aria-hidden="true">{itemIcon(item)}</span>
+
+              {isFolder ? (
+                <a href={drillDownHref!} class="drill-link">{item.name}</a>
+              ) : (
+                <a href={item.webUrl ?? "#"} target="_blank" rel="noopener noreferrer">{item.name}</a>
+              )}
+
+              {isFolder && item.folder?.childCount !== undefined && (
+                <span class="child-count">({item.folder.childCount} items)</span>
+              )}
+
+              <a
+                class="external-link"
+                href={item.webUrl ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open in SharePoint"
+                aria-label={`Open ${item.name} in SharePoint`}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+            </td>
+            <td>{itemType(item)}</td>
+            <td>{isFolder ? "—" : formatBytes(item.size)}</td>
+            <td>{formatDate(item.lastModifiedDateTime)}</td>
+            <td>{modifiedByName}</td>
+            <td>{item.shared?.scope ?? "Private"}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .drive-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e2e2e2;
+    border-radius: 8px;
+  }
+
+  .drive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .drive-table thead {
+    background: #f7f7f8;
+  }
+
+  .drive-table th {
+    text-align: left;
+    padding: 0.65rem 0.9rem;
+    font-weight: 600;
+    color: #444;
+    border-bottom: 1px solid #e2e2e2;
+    white-space: nowrap;
+  }
+
+  .drive-table td {
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+  }
+
+  .drive-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .drive-table tbody tr:hover {
+    background: #fafafa;
+  }
+
+  .col-name {
+    /* display: flex; */
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 220px;
+  }
+
+  .col-name a {
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .drill-link {
+    color: #b8860b;
+  }
+
+  .drill-link:hover {
+    text-decoration: underline;
+  }
+
+  .row-file .col-name a:not(.external-link) {
+    color: #1a5cff;
+  }
+
+  .row-file .col-name a:not(.external-link):hover {
+    text-decoration: underline;
+  }
+
+  .icon {
+    font-size: 1rem;
+  }
+
+  .child-count {
+    color: #888;
+    font-size: 0.8rem;
+    margin-left: 0.1rem;
+  }
+
+  .external-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    margin-left: auto;
+    padding: 0.15rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .external-link:hover {
+    color: #1a5cff;
+    background: #eef2ff;
+  }
+
+  .empty-row {
+    text-align: center;
+    color: #888;
+    padding: 1.5rem;
+  }
+</style>

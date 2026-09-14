@@ -1,0 +1,143 @@
+---
+// src/pages/partials/events/outlook-event.astro
+
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+
+const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+
+if (Astro.request.method !== "POST") {
+  throw new BadRequestError(
+    `Unsupported method for this route: ${Astro.request.method}`,
+  );
+}
+
+type RenderResult =
+  | { kind: "redirect"; url: string; setCookies: string[] }
+  | { kind: "success"; eventId: string; webLink?: string }
+  | { kind: "top-error"; message: string };
+
+let result: RenderResult;
+
+const organizerMailbox = "av@moeits.com";
+
+const calJson = {
+  subject: "Test Board Meeting",
+
+  body: {
+    contentType: "HTML",
+    content: "<p>Monthly board review</p>",
+  },
+
+  start: {
+    dateTime: "2026-09-20T09:00:00",
+    timeZone: "Central Standard Time",
+  },
+
+  end: {
+    dateTime: "2026-09-20T10:00:00",
+    timeZone: "Central Standard Time",
+  },
+
+  location: {
+    displayName: "Conference Room A",
+  },
+
+  attendees: [
+    {
+      emailAddress: {
+        address: "av@moeits.com",
+        name: "MOEITS AV",
+      },
+      type: "required",
+    },
+  ],
+
+  // Prevents accidental duplicates if this exact request is retried.
+  transactionId: crypto.randomUUID(),
+};
+
+try {
+  const accessToken = await msAuthentication(
+    TENANT_ID,
+    MS_CLIENT_ID,
+    MS_SECRET_VALUE,
+  );
+
+  const endpoint =
+    `https://graph.microsoft.com/v1.0/users/` +
+    `${encodeURIComponent(organizerMailbox)}/events`;
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+
+    body: JSON.stringify(calJson),
+  });
+
+  const responseBody = await res.text();
+
+  if (!res.ok) {
+    throw new Error(
+      `Microsoft Graph request failed: ${res.status} ${res.statusText}\n` +
+      responseBody,
+    );
+  }
+
+  const event = JSON.parse(responseBody) as {
+    id: string;
+    webLink?: string;
+  };
+
+  console.log("Created Outlook event:", {
+    eventId: event.id,
+    webLink: event.webLink,
+  });
+
+  result = {
+    kind: "success",
+    eventId: event.id,
+    webLink: event.webLink,
+  };
+} catch (error) {
+  console.error("Unable to create Outlook event:", error);
+
+  const { err, status } = errorHandlingOnSubmit(error);
+
+  Astro.response.status = status;
+
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <section>
+      <p>Event created.</p>
+      <p>Event ID: <code>{result.eventId}</code></p>
+
+      {result.webLink && (
+        <p>
+          <a href={result.webLink}>Open event in Outlook</a>
+        </p>
+      )}
+    </section>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to create event.</p>
+      <pre>{result.message}</pre>
+    </section>
+  )
+}

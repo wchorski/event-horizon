@@ -3,128 +3,134 @@ Event hosting platform (tickets, planning, upcoming/past promotion)
 <details>
   <summary>⚙️ DEV Environment</summary>
 
-  ```shell
-  ## spin up development postgres container
-  cp .env.example .env.development
-  cp .env.development .env
-  pnpm db:create
-  ## If any schema changes have been made
-  pnpm db:generate
+```shell
+## spin up development postgres container
+cp .env.example .env.development
+cp .env.development .env
+pnpm db:create
+## If any schema changes have been made
+pnpm db:generate
 
-  pnpm db:push
-  pnpm db:seed:truncate
-  ```
+pnpm db:push
+pnpm db:seed:truncate
+```
 
-  any changes made to `schema.ts` or `seed-data.ts` need to rerun
+any changes made to `schema.ts` or `seed-data.ts` need to rerun
 
-  ```shell
-  pnpm db:push
-  pnpm db:seed:truncate
-  ```
+```shell
+pnpm db:push
+pnpm db:seed:truncate
+```
 
-  Drizzle will warn you of any changes with an interactive cli. For example if a column name is new or a rename
+Drizzle will warn you of any changes with an interactive cli. For example if a column name is new or a rename
 
-  ```shell
-  pnpm db:push
+```shell
+pnpm db:push
 
-  > my-app@0.0.1 db:push
-  > npx drizzle-kit push
+> my-app@0.0.1 db:push
+> npx drizzle-kit push
 
-  No config path provided, using default 'drizzle.config.ts'
-  Reading config file '/Volumes/edata/vscode/moeits_staff-astro-htmx/drizzle.config.ts'
-  Using 'pg' driver for database querying
-  [✓] Pulling schema from database...
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/Volumes/edata/vscode/moeits_staff-astro-htmx/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
 
-  ~ date › timestamp column will be renamed
-  --- all columns conflicts in events table resolved ---
+~ date › timestamp column will be renamed
+--- all columns conflicts in events table resolved ---
 
 
-  ~ date › timestamp column will be renamed
-  --- all columns conflicts in tickets table resolved ---
+~ date › timestamp column will be renamed
+--- all columns conflicts in tickets table resolved ---
 
-  [✓] Changes applied
-  ```
+[✓] Changes applied
+```
 
-  ### Drizzle Studio
+### Drizzle Studio
 
-  ```shell
-  mkdir -p "$HOME/Library/Application Support/drizzle-studio"
-  touch "$HOME/Library/Application Support/drizzle-studio/localhost.pem"
-  touch "$HOME/Library/Application Support/drizzle-studio/localhost-key.pem"
+```shell
+mkdir -p "$HOME/Library/Application Support/drizzle-studio"
+touch "$HOME/Library/Application Support/drizzle-studio/localhost.pem"
+touch "$HOME/Library/Application Support/drizzle-studio/localhost-key.pem"
 
-  npm run db:studio
-  ```
+npm run db:studio
+```
 
-  https://local.drizzle.studio/
+https://local.drizzle.studio/
 
-  ---
+---
 
-  HOW to generate sql files and migrations with
+HOW to generate sql files and migrations with
 
-  ```shell
-  npx drizzle-kit generate   # generates SQL migration files
-  npx drizzle-kit migrate    # runs them against your DB
-  ```
+```shell
+npx drizzle-kit generate   # generates SQL migration files
+npx drizzle-kit migrate    # runs them against your DB
+```
 
-  ### Better Auth config
-  https://better-auth.com/docs/installation (with some help from https://www.giorgiosaud.io/notebook/better-auth-drizzle-neon-astro)
-  ```shell
-  # generate auth-schema.ts
-  pnpm dlx auth@latest generate
-  # for this project, I've heavily modified and combined it with db/schema.ts
-  ```
+### Better Auth config
 
-  ### DB Migration checking
-  as of now `drizzle-kit migrate` does a pretty p-poor job of printing out errors. Here is a way to manually run the migrations and see what's wrong
+https://better-auth.com/docs/installation (with some help from https://www.giorgiosaud.io/notebook/better-auth-drizzle-neon-astro)
 
-  ```sh
-  ❯ docker compose exec -T db \
+```shell
+# generate auth-schema.ts
+pnpm dlx auth@latest generate
+# for this project, I've heavily modified and combined it with db/schema.ts
+```
+
+### DB Migration checking
+
+as of now `drizzle-kit migrate` does a pretty p-poor job of printing out errors. Here is a way to manually run the migrations and see what's wrong
+
+```sh
+❯ docker compose exec -T db \
+psql \
+-U event_horizon_db_user \
+-d event_horizon_db_1 \
+< drizzle/0000_early_lady_vermin.sql
+
+## output
+ERROR:  type "booking_status" already exists
+ERROR:  type "org_member_role" already exists
+ERROR:  relation "users" already exists
+ERROR:  relation "verifications" already exists
+ERROR:  constraint "roles_organization_id_organizations_id_fk" for relation "roles" already exists
+ERROR:  constraint "sessions_user_id_users_id_fk" for relation "sessions" already exists
+...
+
+docker compose exec -T db \
   psql \
   -U event_horizon_db_user \
   -d event_horizon_db_1 \
-  < drizzle/0000_early_lady_vermin.sql
+  < drizzle/0001_harsh_aaron_stack.sql
 
-  ## output
-  ERROR:  type "booking_status" already exists
-  ERROR:  type "org_member_role" already exists
-  ERROR:  relation "users" already exists
-  ERROR:  relation "verifications" already exists
-  ERROR:  constraint "roles_organization_id_organizations_id_fk" for relation "roles" already exists
-  ERROR:  constraint "sessions_user_id_users_id_fk" for relation "sessions" already exists
-  ...
+## output
+ERROR:  column "updated_at" of relation "organizations" already exists
+```
 
-  docker compose exec -T db \
-    psql \
-    -U event_horizon_db_user \
-    -d event_horizon_db_1 \
-    < drizzle/0001_harsh_aaron_stack.sql
-  
-  ## output
-  ERROR:  column "updated_at" of relation "organizations" already exists
-  ```
+### export DB to json
 
-  ### export DB to json 
-  ```sh
-  docker compose exec db \
-    psql \
-    -U event_horizon_db_user \
-    -d event_horizon_db_1 \
-    -t -A \
-    -c 'SELECT json_agg(t) FROM timelines t;' \
-    > timelines.json
-  ```
+```sh
+docker compose exec db \
+  psql \
+  -U event_horizon_db_user \
+  -d event_horizon_db_1 \
+  -t -A \
+  -c 'SELECT json_agg(t) FROM timelines t;' \
+  > timelines.json
+```
 
-  ### Nuke the DB
-  sidestep migration missmatches in dev
-  ```shell
-  docker exec -it postgres_container psql -U admin -d postgres
-  DROP DATABASE "event-horizon-app-9";
-  CREATE DATABASE "event-horizon-app-9";
+### Nuke the DB
 
-  rm -rf drizzle
-  pnpm db:generate
-  pnpm db:migrate
-  ```
+sidestep migration missmatches in dev
+
+```shell
+docker exec -it postgres_container psql -U admin -d postgres
+DROP DATABASE "event-horizon-app-9";
+CREATE DATABASE "event-horizon-app-9";
+
+rm -rf drizzle
+pnpm db:generate
+pnpm db:migrate
+```
 
 </details>
 
@@ -132,14 +138,15 @@ Event hosting platform (tickets, planning, upcoming/past promotion)
   <summary>🤖 RAG Chat AI Assistant</summary>
   > [!note] This assumes you're already setup with Open-Webui and Ollama LLMs
 
-  - https://github.com/open-webui/oikb
-  - https://docs.openwebui.com/features/knowledge-base-sync/
+- https://github.com/open-webui/oikb
+- https://docs.openwebui.com/features/knowledge-base-sync/
 
-  ```shell
-  pip install oikb
-  oikb init
+```shell
+pip install oikb
+oikb init
 
-  ```
+```
+
 </details>
 
 <details>
@@ -161,7 +168,10 @@ docker compose up --remove-orphans
 </details>
 
 ## Document manager
-#todo 
+
+#todo
+
+- [ ] how to cover page and aggenda page for pdf-packet-builder?
 - [ ] Entra ID SSO (Microsoft) https://better-auth.com/docs/authentication/microsoft
 - [ ] how do i multi tenante the MS Client ID/Secret?
 - [ ] Sharepoint Browser
@@ -169,7 +179,9 @@ docker compose up --remove-orphans
 - [ ] Meeting generator (ties with Packet + Event + Zoom link)
 
 ## booking app
+
 #todo
+
 - [ ] steps. update number in real time (upon create and delete)
 - [ ] timeline: drag timerange swap is a little goofy if targeting below row (but that dragged row is already the next one in line)
 - [ ] timeline: when moment is deleted, delete all steps from idb
@@ -182,11 +194,11 @@ docker compose up --remove-orphans
 - [ ] use Better Auth Organizations https://better-auth.com/docs/plugins/organization
 - [ ] convert all env to use https://docs.astro.build/en/guides/environment-variables/
 - [ ] add "organization" in schema that allows SaaS multi tenant multi buisness to use this app, but seperate users, locations, bookings, etc to respective user base.
-- [ ] if user is not apart of org then only self created/owned Events, Bookings, Timelines, etc are viewable. 
+- [ ] if user is not apart of org then only self created/owned Events, Bookings, Timelines, etc are viewable.
 - [ ] print url removal https://stackoverflow.com/questions/2192806/can-i-remove-the-url-from-my-print-css-so-the-web-address-doesnt-print
 - [ ] footer linking to open source repo and tawtaw.site
 - [ ] REMOVE any microsoft, wordpress, api hooks and functions
-- [ ] remove any other testing or example pages from old repo 
+- [ ] remove any other testing or example pages from old repo
 - [ ] timeline template importer. think through how data comes in and ui refreshes
 - [ ] Move Skills editor to slide in out bar, or maybe popup modal directly on each line
 - [ ] umami script in baselayout

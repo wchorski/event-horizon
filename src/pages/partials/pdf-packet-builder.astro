@@ -40,7 +40,7 @@ try {
     [...formData.entries()].filter(([key]) => !key.startsWith("_")),
   );
   const { folderId } = submitFields;
-  console.log({ folderId });
+  // console.log({ folderId });
   if (!folderId) throw new Error("folder Id must be set");
 
   const accessToken = await msAuthentication(
@@ -65,7 +65,7 @@ try {
   }
 
   const item = await res.json();
-  console.log({ item });
+  // console.log({ item });
 
   // item.parentReference.path looks like ".../root:/DRAFTS/MOEITS/2026"
   const parentSegments = item.parentReference.path.split("/");
@@ -142,7 +142,9 @@ try {
 
       {result.webLink && (
         <p>
-          <a href={result.webLink}>Open PDF in Browser</a>
+          <a href={result.webLink} target="_blank">
+            Open PDF in Browser
+          </a>
         </p>
       )}
     </section>

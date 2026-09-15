@@ -272,6 +272,7 @@ export const timelineRelations = relations(Timeline, ({ one }) => ({
   }),
 }));
 
+// TODO where is 'start' and 'end' times? i know i derive timezone from location. but maybe i should still make start/end timestamps as well? but based on what, the user's location?
 export const Event = pgTable(
   "events",
   {
@@ -290,15 +291,18 @@ export const Event = pgTable(
     organization_id: uuid().references(() => Organization.id, {
       onDelete: "cascade",
     }),
-    //? one to many relation `hosts`
-    // host: uuid().references(() => User.id),
     author_user_id: uuid()
       .notNull()
       .references(() => User.id),
+
+    // new — ties this row to the Outlook event created from a folder
+    outlook_event_id: text().unique(),
+    outlook_web_link: text(),
+
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp()
       .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
@@ -317,13 +321,17 @@ export const MeetingPacket = pgTable(
     id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    event_id: uuid().references(() => Event.id, {
-      onDelete: "cascade",
-    }),
+    event_id: uuid().references(() => Event.id, { onDelete: "cascade" }),
     department_id: uuid()
       .notNull()
       .references(() => Department.id),
     status: meetingPacketStatusEnum("status").notNull().default("DRAFT"),
+
+    // new — the PREPERATIONS day-folder this packet draws from
+    sharepoint_site_id: text().notNull(),
+    sharepoint_drive_id: text().notNull(),
+    sharepoint_folder_id: text().notNull(),
+
     published_file_id: text(),
     published_file_url: text(),
     publishedAt: timestamp(),
@@ -334,9 +342,27 @@ export const MeetingPacket = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [unique().on(table.event_id, table.department_id)],
+  (table) => [
+    unique().on(table.event_id, table.department_id),
+    uniqueIndex("meeting_packets_folder_unique").on(
+      table.sharepoint_drive_id,
+      table.sharepoint_folder_id,
+    ),
+  ],
 );
 
+export const meetingPacketRelations = relations(MeetingPacket, ({ one }) => ({
+  event: one(Event, {
+    fields: [MeetingPacket.event_id],
+    references: [Event.id],
+  }),
+  department: one(Department, {
+    fields: [MeetingPacket.department_id],
+    references: [Department.id],
+  }),
+}));
+
+// TODO can i remove this?
 export const MeetingPacketDirectory = pgTable("meeting_packet_directories", {
   id: uuid()
     .primaryKey()

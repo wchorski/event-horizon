@@ -32,6 +32,7 @@
     "fast-xml-parser": "^5.10.1",
     "htmx-ext-response-targets": "^2.0.4",
     "htmx.org": "^2.0.10",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
     "postgres": "^3.4.9"
   },

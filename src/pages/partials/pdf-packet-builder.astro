@@ -1,0 +1,159 @@
+---
+// pages/partials/pdf-packet-builder
+
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { isDayFolder } from "@lib/dayFolderCheck";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { buildMergedPacket } from "@lib/pdfPacketBuilder";
+import {
+  ensureFolderPath,
+  getFullPath,
+  mirrorToPublished,
+  nextVersionedFilename,
+  uploadPacketResumable,
+} from "@lib/publishPacket";
+
+const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+
+if (Astro.request.method !== "POST") {
+  throw new BadRequestError(
+    `Unsupported method for this route: ${Astro.request.method}`,
+  );
+}
+
+type RenderResult =
+  | { kind: "redirect"; url: string; setCookies: string[] }
+  | { kind: "success"; pdfId: string; webLink?: string }
+  | { kind: "top-error"; message: string };
+
+let result: RenderResult;
+
+const organizerMailbox = "av@moeits.com";
+const site_id =
+  "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
+const drive_id =
+  "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4";
+
+try {
+  const formData = await Astro.request.formData();
+  const submitFields = Object.fromEntries(
+    [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+  );
+  const { folderId } = submitFields;
+  console.log({ folderId });
+  if (!folderId) throw new Error("folder Id must be set");
+
+  const accessToken = await msAuthentication(
+    TENANT_ID,
+    MS_CLIENT_ID,
+    MS_SECRET_VALUE,
+  );
+
+  const endpoint = `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${folderId}?$select=name,parentReference`;
+
+  const res = await fetch(endpoint, {
+    method: "GET",
+
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new BadRequestError(`Could not load folder: ${res.status} ${text}`);
+  }
+
+  const item = await res.json();
+  console.log({ item });
+
+  // item.parentReference.path looks like ".../root:/DRAFTS/MOEITS/2026"
+  const parentSegments = item.parentReference.path.split("/");
+  const parentName = parentSegments[parentSegments.length - 1];
+
+  if (!isDayFolder([{ name: parentName }, { name: item.name }])) {
+    throw new BadRequestError("Events can only be linked to day folders.");
+  }
+
+  // TODO create and merge PDFs
+
+  const pdfBytes = await buildMergedPacket(
+    site_id,
+    drive_id,
+    folderId as string,
+    accessToken,
+  );
+  const sourcePath = getFullPath(item); // uses the `item` you already fetched
+  const publishedSegments = mirrorToPublished(sourcePath);
+
+  const publishedFolderId = await ensureFolderPath(
+    drive_id,
+    publishedSegments,
+    accessToken,
+  );
+  const filename = await nextVersionedFilename(
+    drive_id,
+    publishedFolderId,
+    "MeetingPacket",
+    accessToken,
+  );
+  const uploaded = await uploadPacketResumable(
+    drive_id,
+    publishedFolderId,
+    filename,
+    pdfBytes,
+    accessToken,
+  );
+
+  result = {
+    kind: "success",
+    pdfId: uploaded.id,
+    webLink: uploaded.webUrl,
+  };
+
+  //? if sending pdf directly back to client
+  //   return new Response(pdfBytes, {
+  //      headers: {
+  //        "Content-Type": "application/pdf",
+  //        "Content-Disposition": `attachment; filename="packet-${folderId}.pdf"`,
+  //      },
+  //    });
+} catch (error) {
+  console.error("Unable to create Outlook event:", error);
+
+  const { err, status } = errorHandlingOnSubmit(error);
+
+  Astro.response.status = status;
+
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <section>
+      <p>Packet Created.</p>
+      <p>
+        File ID: <code>{result.pdfId}</code>
+      </p>
+
+      {result.webLink && (
+        <p>
+          <a href={result.webLink}>Open PDF in Browser</a>
+        </p>
+      )}
+    </section>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to create packet.</p>
+      <pre>{result.message}</pre>
+    </section>
+  )
+}

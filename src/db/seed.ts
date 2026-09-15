@@ -182,7 +182,12 @@ const accountsCoreced = await Promise.all(
 await db.insert(schema.Account).values(accountsCoreced);
 
 console.log(`=== Locations (+${locations.length})===`);
-await db.insert(schema.Location).values(locations);
+const locationsCoreced = locations.map((item) => ({
+  ...item,
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
+}));
+await db.insert(schema.Location).values(locationsCoreced);
 
 console.log(`=== Events (+${events.length})===`);
 const eventsCoreced = events.map((e) => ({

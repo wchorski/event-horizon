@@ -7,6 +7,11 @@ import BaseLayout from "@layouts/BaseLayout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import DriveItemsTable from "@components/DriveItemsTable.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import InputField from "@components/form/InputField.astro";
+import { isDayFolder } from "@lib/dayFolderCheck";
+import { db } from "@db/db";
+import { and, eq } from "drizzle-orm";
+import { Event, MeetingPacket } from "@db/schema";
 
 const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
 
@@ -17,6 +22,8 @@ const drive_id =
 
 // This page's own path — used to build "back to this folder" links
 const basePath = "/documents";
+let parentFolderId = null;
+let packet = null;
 
 // Current folder comes from the URL; no itemId means "at the root"
 const itemId = Astro.url.searchParams.get("itemId");
@@ -31,9 +38,58 @@ interface DriveChildrenResponse {
   "@odata.nextLink"?: string;
   value: DriveItem[];
 }
+let calendar = {
+  subject: "Test Board Meeting",
 
+  body: {
+    contentType: "HTML",
+    content: "<p>Monthly board review</p>",
+  },
+
+  start: {
+    dateTime: "2026-09-27T09:00:00",
+    timeZone: "Central Standard Time",
+  },
+
+  end: {
+    dateTime: "2026-09-27T11:00:00",
+    timeZone: "Central Standard Time",
+  },
+
+  location: {
+    displayName: "TEST TEST TEST Conference Room TEST",
+  },
+
+  attendees: [
+    {
+      emailAddress: {
+        address: "av@moeits.com",
+        name: "MOEITS AV",
+      },
+      type: "required",
+    },
+  ],
+
+  // Prevents accidental duplicates if this exact request is retried.
+  transactionId: crypto.randomUUID(),
+};
 let items: DriveItem[] = [];
 let error: string | null = null;
+
+try {
+  packet = itemId
+    ? await db.query.MeetingPacket.findFirst({
+        where: and(
+          eq(MeetingPacket.sharepoint_drive_id, drive_id),
+          eq(MeetingPacket.sharepoint_folder_id, itemId),
+        ),
+        with: { event: true },
+      })
+    : null;
+  // console.log({ packet });
+} catch (err) {
+  console.log("XXXXX packet error; ", err);
+}
 
 try {
   const accessToken = await msAuthentication(
@@ -54,6 +110,31 @@ try {
 
   const data: DriveChildrenResponse = await res.json();
   items = data.value ?? [];
+  parentFolderId = data.value[0].parentReference?.id;
+  const firstItem = items[0];
+
+  if (firstItem) {
+    const path = firstItem.parentReference?.path;
+    if (!path) throw new Error("path does not exist");
+    const rootPath = path.split("root:/")[1];
+    const parts = rootPath.split("/");
+
+    const department = parts.at(-3); // MOEITS Board
+    const year = parts.at(-2); // 2026
+    const monthDay = parts.at(-1); // 09-15
+
+    if (!department || !year || !monthDay)
+      throw new Error("missing department, year and/or monthDay");
+
+    const isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
+    if (!isDayFldr)
+      throw new Error("folder structure must match DEPARTMENT/YEAR/MM-DD");
+
+    // TODO add a `Q1` `Q2` etc etc
+    calendar.subject = `${department} | BOT Meeting`;
+    calendar.start.dateTime = `${year}-${monthDay}T07:00`;
+    calendar.end.dateTime = `${year}-${monthDay}T09:00`;
+  }
 } catch (err) {
   console.error(err);
   error = err instanceof Error ? err.message : String(err);
@@ -73,9 +154,122 @@ try {
     )
   }
 
-  <form hx-post="/partials/events/outlook-event" hx-swap="outerHTML" hx-target="this", hx-target-error="#outlook-calendar-error">
-    <h2>Calendar submit test</h2>
-    <div id="outlook-calendar-error"></div>
-    <SubmitButton />
-  </form>
+  <hr />
+  <div class="flex gap-m">
+    {
+      packet ? (
+        <div class="card">
+          <h2>Event:</h2>
+          <h3>{packet.event?.subject}</h3>
+          <p>{packet.event?.date_civil}</p>
+          <a href={packet.event?.outlook_web_link} target="_blank">outlook link</a>
+        </div>
+      ) : (
+        <form
+      class="card"
+      hx-post="/partials/events/outlook-event"
+      hx-swap="outerHTML"
+      hx-target="this"
+      hx-target-error="#outlook-calendar-error"
+    >
+      <h2>Calendar Event</h2>
+      <fieldset>
+        <InputField
+          name="subject"
+          id="calendar.subject"
+          type="text"
+          model="event"
+          value={calendar.subject}
+        />
+        <InputField
+          name="start.dateTime"
+          id="calendar.start.dateTime"
+          type="datetime-local"
+          model="event"
+          value={calendar.start.dateTime}
+        />
+        <InputField
+          name="end.dateTime"
+          id="calendar.end.dateTime"
+          type="datetime-local"
+          model="event"
+          value={calendar.end.dateTime}
+        />
+
+        <!-- fixed values the user doesn't edit, but still need to reach the server -->
+        <input
+          type="hidden"
+          name="start.timeZone"
+          value={calendar.start.timeZone}
+        />
+        <input
+          type="hidden"
+          name="end.timeZone"
+          value={calendar.end.timeZone}
+        />
+        <input
+          type="hidden"
+          name="body.contentType"
+          value={calendar.body.contentType}
+        />
+        <input
+          type="hidden"
+          name="body.content"
+          value={calendar.body.content}
+        />
+        <input
+          type="hidden"
+          name="location.displayName"
+          value={calendar.location.displayName}
+        />
+        <input
+          type="hidden"
+          name="transactionId"
+          value={calendar.transactionId}
+        />
+
+        <input type="hidden" name="folderId" value={parentFolderId} />
+
+        {
+          calendar.attendees.map((a, i) => (
+            <>
+              <input
+                type="hidden"
+                name={`attendees[${i}].emailAddress.address`}
+                value={a.emailAddress.address}
+              />
+              <input
+                type="hidden"
+                name={`attendees[${i}].emailAddress.name`}
+                value={a.emailAddress.name}
+              />
+              <input
+                type="hidden"
+                name={`attendees[${i}].type`}
+                value={a.type}
+              />
+            </>
+          ))
+        }
+      </fieldset>
+      <div id="outlook-calendar-error"></div>
+      <SubmitButton />
+    </form>
+      )
+    }
+    
+
+    <form
+      class="card"
+      hx-post="/partials/pdf-packet-builder"
+      hx-swap="outerHTML"
+      hx-target="this"
+      hx-target-error="#pdf-packet-builder-error"
+    >
+      <h2>PDF Packet Builder</h2>
+      <input type="hidden" name="folderId" value={parentFolderId} />
+      <div id="pdf-packet-builder-error"></div>
+      <SubmitButton />
+    </form>
+  </div>
 </BaseLayout>

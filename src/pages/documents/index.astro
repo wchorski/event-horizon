@@ -11,7 +11,8 @@ import InputField from "@components/form/InputField.astro";
 import { isDayFolder } from "@lib/dayFolderCheck";
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
-import { Event, MeetingPacket } from "@db/schema";
+import { MeetingPacket } from "@db/schema";
+import Footer from "@components/navigation/Footer.astro";
 
 const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
 
@@ -24,6 +25,7 @@ const drive_id =
 const basePath = "/documents";
 let parentFolderId = null;
 let packet = null;
+let isDayFldr = false;
 
 // Current folder comes from the URL; no itemId means "at the root"
 const itemId = Astro.url.searchParams.get("itemId");
@@ -110,30 +112,29 @@ try {
 
   const data: DriveChildrenResponse = await res.json();
   items = data.value ?? [];
-  parentFolderId = data.value[0].parentReference?.id;
+  parentFolderId = itemId;
   const firstItem = items[0];
 
   if (firstItem) {
     const path = firstItem.parentReference?.path;
     if (!path) throw new Error("path does not exist");
-    const rootPath = path.split("root:/")[1];
-    const parts = rootPath.split("/");
+
+    const afterRoot = path.split("root:")[1] ?? "";
+    const rootPath = afterRoot.replace(/^\/+/, ""); // strip a leading slash if present, no-op if absent
+    const parts = rootPath ? rootPath.split("/") : [];
 
     const department = parts.at(-3); // MOEITS Board
-    const year = parts.at(-2); // 2026
-    const monthDay = parts.at(-1); // 09-15
+    const year = parts.at(-2);       // 2026
+    const monthDay = parts.at(-1);   // 09-15
 
-    if (!department || !year || !monthDay)
-      throw new Error("missing department, year and/or monthDay");
-
-    const isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
-    if (!isDayFldr)
-      throw new Error("folder structure must match DEPARTMENT/YEAR/MM-DD");
-
-    // TODO add a `Q1` `Q2` etc etc
-    calendar.subject = `${department} | BOT Meeting`;
-    calendar.start.dateTime = `${year}-${monthDay}T07:00`;
-    calendar.end.dateTime = `${year}-${monthDay}T09:00`;
+    if (department && year && monthDay) {
+      isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
+      if (isDayFldr) {
+        calendar.subject = `${department} | BOT Meeting`;
+        calendar.start.dateTime = `${year}-${monthDay}T07:00`;
+        calendar.end.dateTime = `${year}-${monthDay}T09:00`;
+      }
+    }
   }
 } catch (err) {
   console.error(err);
@@ -142,134 +143,152 @@ try {
 ---
 
 <BaseLayout>
-  <h1>Documents</h1>
+  <main>
+    <header>
+      <h1>Documents</h1>
+      <Breadcrumbs crumbs={crumbs} basePath={basePath} />
+    </header>
 
-  <Breadcrumbs crumbs={crumbs} basePath={basePath} />
+    <div data-layout="content">
+      {isDayFldr ? <>
+    
+    <hr />
+    <section class="flex gap-m">
+      {
+        packet ? (
+          <div class="card">
+            <h2>Event:</h2>
+            <h3>{packet.event?.subject}</h3>
+            <p>{packet.event?.date_civil}</p>
+            <a href={packet.event?.outlook_web_link} target="_blank">
+              outlook link
+            </a>
+          </div>
+        ) : null
+      }
 
-  {error && <p style="color: red;">Error: {error}</p>}
+      <form
+        class="card"
+        hx-post="/partials/events/outlook-event"
+        hx-swap="outerHTML"
+        hx-target="this"
+        hx-target-error="#outlook-calendar-error"
+      >
+        <h2>Create Calendar Event</h2>
+        <fieldset>
+          <InputField
+            name="subject"
+            id="calendar.subject"
+            type="text"
+            model="event"
+            value={calendar.subject}
+          />
+          <InputField
+            name="start.dateTime"
+            id="calendar.start.dateTime"
+            type="datetime-local"
+            model="event"
+            value={calendar.start.dateTime}
+          />
+          <InputField
+            name="end.dateTime"
+            id="calendar.end.dateTime"
+            type="datetime-local"
+            model="event"
+            value={calendar.end.dateTime}
+          />
 
-  {
-    !error && (
-      <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
-    )
-  }
+          <!-- fixed values the user doesn't edit, but still need to reach the server -->
+          <input
+            type="hidden"
+            name="start.timeZone"
+            value={calendar.start.timeZone}
+          />
+          <input
+            type="hidden"
+            name="end.timeZone"
+            value={calendar.end.timeZone}
+          />
+          <input
+            type="hidden"
+            name="body.contentType"
+            value={calendar.body.contentType}
+          />
+          <input
+            type="hidden"
+            name="body.content"
+            value={calendar.body.content}
+          />
+          <input
+            type="hidden"
+            name="location.displayName"
+            value={calendar.location.displayName}
+          />
+          <input
+            type="hidden"
+            name="transactionId"
+            value={calendar.transactionId}
+          />
 
-  <hr />
-  <div class="flex gap-m">
-    {
-      packet ? (
-        <div class="card">
-          <h2>Event:</h2>
-          <h3>{packet.event?.subject}</h3>
-          <p>{packet.event?.date_civil}</p>
-          <a href={packet.event?.outlook_web_link} target="_blank">outlook link</a>
-        </div>
-      ) : (
-        <form
-      class="card"
-      hx-post="/partials/events/outlook-event"
-      hx-swap="outerHTML"
-      hx-target="this"
-      hx-target-error="#outlook-calendar-error"
-    >
-      <h2>Calendar Event</h2>
-      <fieldset>
-        <InputField
-          name="subject"
-          id="calendar.subject"
-          type="text"
-          model="event"
-          value={calendar.subject}
-        />
-        <InputField
-          name="start.dateTime"
-          id="calendar.start.dateTime"
-          type="datetime-local"
-          model="event"
-          value={calendar.start.dateTime}
-        />
-        <InputField
-          name="end.dateTime"
-          id="calendar.end.dateTime"
-          type="datetime-local"
-          model="event"
-          value={calendar.end.dateTime}
-        />
+          <input type="hidden" name="folderId" value={parentFolderId} />
 
-        <!-- fixed values the user doesn't edit, but still need to reach the server -->
-        <input
-          type="hidden"
-          name="start.timeZone"
-          value={calendar.start.timeZone}
-        />
-        <input
-          type="hidden"
-          name="end.timeZone"
-          value={calendar.end.timeZone}
-        />
-        <input
-          type="hidden"
-          name="body.contentType"
-          value={calendar.body.contentType}
-        />
-        <input
-          type="hidden"
-          name="body.content"
-          value={calendar.body.content}
-        />
-        <input
-          type="hidden"
-          name="location.displayName"
-          value={calendar.location.displayName}
-        />
-        <input
-          type="hidden"
-          name="transactionId"
-          value={calendar.transactionId}
-        />
+          {
+            calendar.attendees.map((a, i) => (
+              <>
+                <input
+                  type="hidden"
+                  name={`attendees[${i}].emailAddress.address`}
+                  value={a.emailAddress.address}
+                />
+                <input
+                  type="hidden"
+                  name={`attendees[${i}].emailAddress.name`}
+                  value={a.emailAddress.name}
+                />
+                <input
+                  type="hidden"
+                  name={`attendees[${i}].type`}
+                  value={a.type}
+                />
+              </>
+            ))
+          }
+        </fieldset>
+        <div id="outlook-calendar-error"></div>
+        <SubmitButton />
+      </form>
 
+      <form
+        class="card"
+        hx-post="/partials/pdf-packet-builder"
+        hx-swap="outerHTML"
+        hx-target="this"
+        hx-target-error="#pdf-packet-builder-error"
+      >
+        <h2>PDF Packet Builder</h2>
         <input type="hidden" name="folderId" value={parentFolderId} />
 
+        <div id="pdf-packet-builder-error"></div>
         {
-          calendar.attendees.map((a, i) => (
-            <>
-              <input
-                type="hidden"
-                name={`attendees[${i}].emailAddress.address`}
-                value={a.emailAddress.address}
-              />
-              <input
-                type="hidden"
-                name={`attendees[${i}].emailAddress.name`}
-                value={a.emailAddress.name}
-              />
-              <input
-                type="hidden"
-                name={`attendees[${i}].type`}
-                value={a.type}
-              />
-            </>
-          ))
+          packet?.published_file_url ? (
+            <a href={packet.published_file_url} target="_blank">
+              view published packet
+            </a>
+          ) : null
         }
-      </fieldset>
-      <div id="outlook-calendar-error"></div>
-      <SubmitButton />
-    </form>
-      )
-    }
-    
+        <SubmitButton text="Generate New Packet" />
+      </form>
+    </section>
+    </> : null}
+    <hr />
+      {error && <p style="color: red;">Error: {error}</p>}
 
-    <form
-      class="card"
-      hx-post="/partials/pdf-packet-builder"
-      hx-swap="outerHTML"
-      hx-target="this"
-      hx-target-error="#pdf-packet-builder-error"
-    >
-      <h2>PDF Packet Builder</h2>
-      <input type="hidden" name="folderId" value={parentFolderId} />
-      <div id="pdf-packet-builder-error"></div>
-      <SubmitButton />
-    </form>
-  </div>
+      {
+        !error && (
+          <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
+        )
+      }
+    </div>
+  </main>
+  <Footer />
 </BaseLayout>

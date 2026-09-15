@@ -1,6 +1,7 @@
 ---
 // pages/partials/pdf-packet-builder
-
+import { MeetingPacket } from "@db/schema";
+import { db } from "@db/db";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { isDayFolder } from "@lib/dayFolderCheck";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
@@ -12,6 +13,7 @@ import {
   nextVersionedFilename,
   uploadPacketResumable,
 } from "@lib/publishPacket";
+import { and, eq } from "drizzle-orm";
 
 const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
 
@@ -39,7 +41,7 @@ try {
   const submitFields = Object.fromEntries(
     [...formData.entries()].filter(([key]) => !key.startsWith("_")),
   );
-  const { folderId } = submitFields;
+  const { folderId, packetId } = submitFields;
   // console.log({ folderId });
   if (!folderId) throw new Error("folder Id must be set");
 
@@ -75,8 +77,20 @@ try {
     throw new BadRequestError("Events can only be linked to day folders.");
   }
 
-  // TODO create and merge PDFs
+  const existingPacket = await db.query.MeetingPacket.findFirst({
+    where: and(
+      eq(MeetingPacket.sharepoint_drive_id, drive_id),
+      eq(MeetingPacket.sharepoint_folder_id, folderId as string),
+    ),
+  });
 
+  if (!existingPacket) {
+    throw new BadRequestError(
+      "This folder isn't linked to a calendar event yet. Link an event before building a packet.",
+    );
+  }
+
+  // ...buildMergedPacket, ensureFolderPath, nextVersionedFilename, uploadPacketResumable...
   const pdfBytes = await buildMergedPacket(
     site_id,
     drive_id,
@@ -104,6 +118,19 @@ try {
     pdfBytes,
     accessToken,
   );
+
+  const [updatedPacket] = await db
+    .update(MeetingPacket)
+    .set({
+      published_file_id: uploaded.id,
+      published_file_url: uploaded.webUrl,
+      publishedAt: new Date(),
+      status: "PUBLISHED",
+    })
+    .where(eq(MeetingPacket.id, existingPacket.id))
+    .returning();
+
+  console.log({ updatedPacket });
 
   result = {
     kind: "success",

@@ -129,7 +129,7 @@ const sortedItems = [...items].sort((a, b) => {
 <style>
   .drive-table-wrapper {
     overflow-x: auto;
-    border: 1px solid #e2e2e2;
+    border: 1px solid var(--c-seperate, gray);
     border-radius: 8px;
   }
 
@@ -140,21 +140,21 @@ const sortedItems = [...items].sort((a, b) => {
   }
 
   .drive-table thead {
-    background: #f7f7f8;
+    background: var(--c-seperate, gray);
   }
 
   .drive-table th {
     text-align: left;
     padding: 0.65rem 0.9rem;
     font-weight: 600;
-    color: #444;
-    border-bottom: 1px solid #e2e2e2;
+    color: var(--c-txt-rev);
+    border-bottom: 1px solid var(--c-seperate, gray);
     white-space: nowrap;
   }
 
   .drive-table td {
     padding: 0.6rem 0.9rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--c-seperate, gray);
     vertical-align: middle;
   }
 

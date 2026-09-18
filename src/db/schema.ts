@@ -336,6 +336,8 @@ export const MeetingPacket = pgTable(
     published_file_url: text(),
     publishedAt: timestamp(),
     notes: text(),
+    outlook_event_id: text(),
+    outlook_web_link: text(),
     createdAt: timestamp().defaultNow().notNull(),
     updatedAt: timestamp()
       .defaultNow()

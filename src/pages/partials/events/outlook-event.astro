@@ -1,19 +1,38 @@
 ---
 // src/pages/partials/events/outlook-event.astro
-
+import type {
+  Event,
+  Attendee,
+  ItemBody,
+  Location,
+  DateTimeTimeZone,
+} from "@microsoft/microsoft-graph-types";
+interface EventFormData {
+  folderId: string;
+  subject: string;
+  body: ItemBody;
+  start: DateTimeTimeZone;
+  end: DateTimeTimeZone;
+  location: Location;
+  attendees: Attendee[];
+  transactionId?: string;
+}
+type OutlookEventSummary = Pick<Event, "id" | "webLink">;
 import { db } from "@db/db";
-import { Event, MeetingPacket } from "@db/schema";
-import { msAuthentication } from "@lib/auth/msAuthentication";
+import { MeetingPacket } from "@db/schema";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
 import { unflatten } from "@lib/formParsing";
-import locations, { type LocationSeedInsert } from "@db/seed/locations";
-import organizations, {
-  type OrganizationSeedInsert,
-} from "@db/seed/organizations";
-import users, { type UserSeedInsert } from "@db/seed/users";
+import { and, eq } from "drizzle-orm";
 import departments from "@db/seed/departments";
+import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
 
-const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+const TEST_DEPARTMENT_ID = departments[0].id;
+
+const {
+  MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
+  MS_SHAREPOINT_MOEDOCS_SITE_ID,
+  MS_MAILBOX_USER_EMAIL,
+} = import.meta.env;
 
 if (Astro.request.method !== "POST") {
   throw new BadRequestError(
@@ -28,29 +47,15 @@ type RenderResult =
 
 let result: RenderResult;
 
-const organizerMailbox = "wchorski@moeits.com";
-const site_id =
-  "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
-const drive_id =
-  "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4";
+const site_id = MS_SHAREPOINT_MOEDOCS_SITE_ID;
+const drive_id = MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
+const mailboxUserEmail = MS_MAILBOX_USER_EMAIL;
 
 try {
   const formData = await Astro.request.formData();
-  const parsed = unflatten(formData);
+  const parsed = unflatten(formData) as EventFormData;
 
-  const { folderId, ...calendar } = parsed as {
-    folderId: string;
-    subject: string;
-    body: { contentType: string; content: string };
-    start: { dateTime: string; timeZone: string };
-    end: { dateTime: string; timeZone: string };
-    location: { displayName: string };
-    attendees: Array<{
-      emailAddress: { address: string; name: string };
-      type: string;
-    }>;
-    transactionId: string;
-  };
+  const { folderId, ...calendar } = parsed;
 
   if (!folderId) {
     throw new BadRequestError(
@@ -58,81 +63,81 @@ try {
     );
   }
 
-  console.log(JSON.stringify({ calendar }, null, 2));
-
-  const accessToken = await msAuthentication(
-    TENANT_ID,
-    MS_CLIENT_ID,
-    MS_SECRET_VALUE,
-  );
-
-  const endpoint =
-    `https://graph.microsoft.com/v1.0/users/` +
-    `${encodeURIComponent(organizerMailbox)}/events`;
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-
-    body: JSON.stringify(calendar),
+  const existingPacket = await db.query.MeetingPacket.findFirst({
+    where: and(
+      eq(MeetingPacket.sharepoint_drive_id, drive_id),
+      eq(MeetingPacket.sharepoint_folder_id, folderId),
+    ),
   });
 
-  const responseBody = await res.text();
+  let outlookEvent: Event;
 
-  if (!res.ok) {
-    throw new Error(
-      `Microsoft Graph request failed: ${res.status} ${res.statusText}\n` +
-        responseBody,
-    );
+  if (existingPacket?.outlookEvent_id) {
+    // may want to update one thing like the body's link to the new packet pdf?
+    console.log("=== OUTLOOK EVENT EXISTS, may need to update ===");
+    // Overwrite: PATCH the existing Outlook event instead of creating a new one
+    // or
+    // create a new event and delete the old one?
+    const url = `/users/${mailboxUserEmail}/events/${existingPacket.outlookEvent_id}`;
+    const patch: Partial<Event> = calendar;
+    await msGraphFetch<void>(url, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+
+    outlookEvent = await msGraphFetch<Event>(url, {
+      method: "GET",
+    });
+  } else {
+    // No existing link — create fresh, exactly as before
+    console.log("======== CREATE NEW OUTLOOK EVENT ========");
+
+    const url = `/users/${mailboxUserEmail}/events`;
+    // TODO sharepoint groups DO NOT support app-api keys (must be multi-tenant app)
+    // const url = `/groups/${group_id}/calendar`;
+    console.log(`=== https://graph.microsoft.com/v1.0${url} ===`);
+
+    outlookEvent = await msGraphFetch<OutlookEventSummary>(url, {
+      method: "POST",
+      body: JSON.stringify(calendar),
+    });
+
+    const exisitingPacket = folderId
+      ? await db.query.MeetingPacket.findFirst({
+          where: and(
+            eq(MeetingPacket.sharepoint_drive_id, drive_id),
+            eq(MeetingPacket.sharepoint_folder_id, folderId),
+          ),
+        })
+      : null;
+
+    if (exisitingPacket) {
+      await db.update(MeetingPacket).set({
+        outlook_event_id: outlookEvent.id,
+        outlook_web_link: outlookEvent.webLink,
+      }).where(eq(MeetingPacket.id, existingPacket.id));;
+    } else {
+      await db.insert(MeetingPacket).values({
+        // event_id: savedEvent.id,
+        outlook_event_id: outlookEvent.id,
+        outlook_web_link: outlookEvent.webLink,
+        department_id: TEST_DEPARTMENT_ID,
+        sharepoint_site_id: site_id,
+        sharepoint_drive_id: drive_id,
+        sharepoint_folder_id: folderId,
+      });
+    }
   }
-
-  const event = JSON.parse(responseBody) as {
-    id: string;
-    webLink?: string;
-  };
-
-  // console.log("Created Outlook event:", {
-  //   eventId: event.id,
-  //   webLink: event.webLink,
-  // });
-  const [savedEvent] = await db
-    .insert(Event)
-    .values({
-      subject: calendar.subject,
-      timestamp: new Date(calendar.start.dateTime),
-      date_civil: calendar.start.dateTime.split("T")[0],
-      // TODO don't hard code
-      // MOEITS Conf room
-      location_id: locations[0].id, // resolved from calendar.location.displayName, or passed in
-      organization_id: organizations[0].id, // resolved from department/org lookup
-      author_user_id: users[0].id,
-      outlook_event_id: event.id,
-      outlook_web_link: event.webLink ?? "",
-    })
-    .returning();
-
-  await db.insert(MeetingPacket).values({
-    event_id: savedEvent.id,
-    department_id: "01a091b4-b532-7b9b-9fee-95b4ad19ca0b", // resolved from the "MOEITS Board" folder segment
-    sharepoint_site_id: site_id,
-    sharepoint_drive_id: drive_id,
-    sharepoint_folder_id: folderId,
-  });
 
   result = {
     kind: "success",
-    eventId: event.id,
-    webLink: event.webLink,
+    eventId: outlookEvent.id,
+    webLink: outlookEvent.webLink,
   };
 } catch (error) {
-  console.error("Unable to create Event/Packet/Outlook:", error);
-
+  // console.error("Unable to create Event/Packet/Outlook:", error);
   const { err, status } = errorHandlingOnSubmit(error);
+  console.error(JSON.stringify(err));
 
   Astro.response.status = status;
 

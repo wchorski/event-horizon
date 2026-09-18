@@ -1,0 +1,1 @@
+ALTER TABLE "meeting_packets" ADD COLUMN "outlook_event_id" text;

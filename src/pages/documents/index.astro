@@ -1,5 +1,6 @@
 ---
 // pages/documents/index
+import type { Event } from "@microsoft/microsoft-graph-types";
 import type { DriveItem } from "@microsoft/microsoft-graph-types";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { parseDriveCrumbs } from "@lib/driveNav";
@@ -13,26 +14,32 @@ import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
 import { MeetingPacket } from "@db/schema";
 import Footer from "@components/navigation/Footer.astro";
+import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
+import { prettyDateToLocale } from "@lib/formatters";
 
-const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
+  MS_SHAREPOINT_MOEDOCS_SITE_ID,
+  MS_MAILBOX_USER_EMAIL, } = import.meta.env;
 
 const site_id =
-  "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
+  MS_SHAREPOINT_MOEDOCS_SITE_ID;
 const drive_id =
-  "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4";
+  MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
+const mailbox_user_email = MS_MAILBOX_USER_EMAIL
 
 // This page's own path — used to build "back to this folder" links
 const basePath = "/documents";
 let parentFolderId = null;
 let packet = null;
+let outlookEvent = null;
 let isDayFldr = false;
 
 // Current folder comes from the URL; no itemId means "at the root"
-const itemId = Astro.url.searchParams.get("itemId");
+const folderId = Astro.url.searchParams.get("itemId");
 const crumbs = parseDriveCrumbs(Astro.url.searchParams.get("crumbs"));
 
-const url = itemId
-  ? `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${itemId}/children`
+const url = folderId
+  ? `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${folderId}/children`
   : `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/root/children`;
 
 interface DriveChildrenResponse {
@@ -40,12 +47,13 @@ interface DriveChildrenResponse {
   "@odata.nextLink"?: string;
   value: DriveItem[];
 }
+// TODO make this null
 let calendar = {
   subject: "Test Board Meeting",
 
   body: {
     contentType: "HTML",
-    content: "<p>Monthly board review</p>",
+    content: "<p>TEST TEST TEST Monthly board review</p>",
   },
 
   start: {
@@ -79,16 +87,28 @@ let items: DriveItem[] = [];
 let error: string | null = null;
 
 try {
-  packet = itemId
+  packet = folderId
     ? await db.query.MeetingPacket.findFirst({
         where: and(
           eq(MeetingPacket.sharepoint_drive_id, drive_id),
-          eq(MeetingPacket.sharepoint_folder_id, itemId),
+          eq(MeetingPacket.sharepoint_folder_id, folderId),
         ),
-        with: { event: true },
+        // with: { event: true },
       })
     : null;
   // console.log({ packet });
+
+  
+if(packet?.outlook_event_id){
+
+  outlookEvent = await msGraphFetch<Event>(
+    `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
+    {
+      method: "GET",
+    }
+  );
+
+}
 } catch (err) {
   console.log("XXXXX packet error; ", err);
 }
@@ -112,7 +132,7 @@ try {
 
   const data: DriveChildrenResponse = await res.json();
   items = data.value ?? [];
-  parentFolderId = itemId;
+  parentFolderId = folderId;
   const firstItem = items[0];
 
   if (firstItem) {
@@ -155,12 +175,28 @@ try {
     <hr />
     <section class="flex gap-m">
       {
-        packet ? (
+        packet?.outlook_event_id && outlookEvent ? (
           <div class="card">
             <h2>Event:</h2>
-            <h3>{packet.event?.subject}</h3>
-            <p>{packet.event?.date_civil}</p>
-            <a href={packet.event?.outlook_web_link} target="_blank">
+            <dl class="kv">
+              <dd>Subject</dd>
+              <dt>{outlookEvent.subject}</dt>
+              <dd>Start</dd>
+              <dt>{prettyDateToLocale(new Date(outlookEvent.start.dateTime))}</dt>
+              <dd>End</dd>
+              <dt>{prettyDateToLocale(new Date(outlookEvent.end.dateTime))}</dt>
+              <dd>location</dd>
+              <dt>{outlookEvent.location.displayName}</dt>
+              <dd>onlineMeeting</dd>
+              <dt>{String(outlookEvent.onlineMeeting)}</dt>
+              <dd>isOnlineMeeting</dd>
+              <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
+              <dd>onlineMeetingProvider</dd>
+              <dt>{outlookEvent.onlineMeetingProvider}</dt>
+              <dd>onlineMeetingUrl</dd>
+              <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
+            </dl>
+            <a href={outlookEvent.webLink} target="_blank">
               outlook link
             </a>
           </div>
@@ -174,7 +210,7 @@ try {
         hx-target="this"
         hx-target-error="#outlook-calendar-error"
       >
-        <h2>Create Calendar Event</h2>
+        <h2>{packet ? "Update" : "Create"} Calendar Event</h2>
         <fieldset>
           <InputField
             name="subject"

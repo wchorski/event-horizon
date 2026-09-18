@@ -215,6 +215,21 @@ export default defineConfig({
         access: "secret",
         optional: true,
       }),
+      MS_MAILBOX_USER_EMAIL: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      MS_SHAREPOINT_MOEDOCS_SITE_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
+      MS_SHAREPOINT_MOEDOCS_DRIVE_ID: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+      }),
     },
   },
   // integrations: [db()]

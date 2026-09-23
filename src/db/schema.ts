@@ -624,6 +624,7 @@ export const Organization = pgTable("organizations", {
   dedicated_db_url: text(),
   color: text(),
   color_2: text(),
+  mailbox_user_email: text(),
   sharepoint_site_url: text(),
   sharepoint_site_id: text(),
   sharepoint_drive_id: text(),

@@ -1,0 +1,15 @@
+---
+// pages/org-not-found.astro
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+const params = Astro.url.searchParams;
+const slug = params.get('slug')
+---
+
+<BaseLayout>
+  <p>
+    The Organization <strong>"{slug}"</strong> is not registered to this site. Please contact <a
+      href="mailto:Will@TawTaw.site">Will@TawTaw.site</a
+    > to get an account setup
+  </p>
+</BaseLayout>

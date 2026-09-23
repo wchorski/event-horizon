@@ -7,6 +7,9 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { login } from "@lib/auth/login";
 import type { LoginCredentials } from "@ty/Auth";
 
+const params = Astro.url.searchParams;
+const returnToUrl = params.get("returnTo");
+const msg = params.get("msg");
 const session = Astro.locals.session;
 let error: string | null = null;
 
@@ -19,7 +22,11 @@ if (Astro.request.method === "POST") {
   if (result.success) {
     const redirectResponse = new Response(null, {
       status: 302,
-      headers: { Location: "/dashboard?msg='Login Successful. Welcome'" },
+      headers: {
+        Location: returnToUrl
+          ? returnToUrl
+          : "/dashboard?msg='Login Successful. Welcome'",
+      },
     });
     for (const cookie of result.setCookies) {
       redirectResponse.headers.append("set-cookie", cookie);
@@ -34,6 +41,7 @@ if (Astro.request.method === "POST") {
 <CommonPageLayout>
   <header>
     <h1>Login</h1>
+    <p class="callout warning">{msg}</p>
   </header>
   <div data-layout="content">
     {

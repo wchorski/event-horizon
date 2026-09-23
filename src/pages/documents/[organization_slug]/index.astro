@@ -18,56 +18,46 @@ import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
 import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
 import type { OrganizationSelect } from "@ty/Schema";
+import { requireOrganizationAccess } from "@lib/auth/guards";
+
+const user = Astro.locals.user;
+const displayName = user
+  ? user.name + ` <${user.email}>` || user.username || user.email
+  : "anonymous";
+
+// do i need this if it's handled in middleware?
+if (!user) {
+  return Astro.redirect("/login");
+}
 
 const { organization_slug } = Astro.params;
 if (!organization_slug) throw new Error("no id found. throw 404");
 
-console.log({organization_slug});
+const { organization, membership } =
+  await requireOrganizationAccess(
+    user.id,
+    organization_slug
+  );
 
-let organization: OrganizationSelect|undefined
-
-try {
-  organization = await db.query.Organization.findFirst({
-    where: eq(Organization.slug, organization_slug)
-  })
-
-
-  // console.log({org});
-
-  // TODO set the org vars 
-//   {
-//   org: {
-//     id: '01a09194-09ff-7d63-9c55-d0096b02db89',
-//     name: 'Midwest Operating Engineers',
-//     slug: 'moe',
-//     logo: 'https://local150.org/wp-content/uploads/2020/06/moe-logo.png',
-//     createdAt: 2026-05-01T21:06:36.444Z,
-//     updatedAt: 2026-05-01T21:06:36.444Z,
-//     metadata: null,
-//     dedicated_db_url: null,
-//     color: '#738793',
-//     color_2: '#0873b1',
-//     sharepoint_site_url: 'https://moeits.sharepoint.com/sites/MOEDocs',
-//     sharepoint_site_id: 'moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708',
-//     sharepoint_drive_id: 'b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4',
-//     sharepoint_library_name: null
-//   }
-// }
-
-// TODO figure out auth, access, and permissions
-} catch (err) {
-  console.log('❌ Org: ', err);
-}
+if(!membership) return Astro.redirect(
+  `/not-authorized?msg=${
+    encodeURIComponent('You are not authorized to view this page. Ask to become a member of: ' + organization?.name)
+  }`)
 
 const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
   MS_SHAREPOINT_MOEDOCS_SITE_ID,
   MS_MAILBOX_USER_EMAIL, } = import.meta.env;
 
-const site_id =
-  MS_SHAREPOINT_MOEDOCS_SITE_ID;
-const drive_id =
-  MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
-const mailbox_user_email = MS_MAILBOX_USER_EMAIL
+if(organization === undefined) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
+
+const {sharepoint_site_url, sharepoint_drive_id, sharepoint_site_id, mailbox_user_email} = organization
+
+if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) throw new Error('organization sharepoint env is not setup correctly')
+// const sharepoint_site_id =
+//   MS_SHAREPOINT_MOEDOCS_SITE_ID;
+// const sharepoint_drive_id =
+//   MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
+// const mailbox_user_email = MS_MAILBOX_USER_EMAIL
 
 // This page's own path — used to build "back to this folder" links
 const basePath = `/documents/${organization_slug}`;
@@ -81,8 +71,8 @@ const folderId = Astro.url.searchParams.get("itemId");
 const crumbs = parseDriveCrumbs(Astro.url.searchParams.get("crumbs"));
 
 const url = folderId
-  ? `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${folderId}/children`
-  : `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/root/children`;
+  ? `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}/children`
+  : `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/root/children`;
 
 interface DriveChildrenResponse {
   "@odata.context": string;
@@ -101,7 +91,7 @@ try {
   packet = folderId
     ? await db.query.MeetingPacket.findFirst({
         where: and(
-          eq(MeetingPacket.sharepoint_drive_id, drive_id),
+          eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
           eq(MeetingPacket.sharepoint_folder_id, folderId),
         ),
       })
@@ -223,18 +213,21 @@ const formMethodEndpoint = outlookEvent
   : { "hx-post": "/partials/events/outlook-event" };
 ---
 
-{!organization ? (
-  <BaseLayout>
-    <p>This Organization is not registered to this site. Please contact <a href="mailto:Will@TawTaw.site">Will@TawTaw.site</a> to get an account setup</p>
-  </BaseLayout>
-) : (
 
-  <BaseLayout>
+
+  <BaseLayout title={organization.name + " | Documents"}>
     <main>
       <header>
         <div class="flex gap-m space-between">
         <h1>{organization.name} | Documents</h1>
-        <img class="org-logo" src={organization.logo} alt={`${organization.name} logo`} width="100" height="auto"/>
+        <div>
+          <img class="org-logo" src={organization.logo} alt={`${organization.name} logo`} width="100" height="auto"/>
+          <br />
+          <br />
+          <span class="pill">
+            <a href={`/dashboard`}>{displayName}</a>
+          </span>
+        </div>
 
         </div>
         <Breadcrumbs crumbs={crumbs} basePath={basePath} />
@@ -407,5 +400,5 @@ const formMethodEndpoint = outlookEvent
     </main>
     <Footer />
   </BaseLayout>
-)}
+
 

@@ -1,0 +1,14 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+const params = Astro.url.searchParams;
+const msg = params.get('msg')
+const callback = params.get('callback')
+
+const loginUrl = callback ? `/login?callback=${callback}` : "/login"
+---
+<CommonPageLayout>
+    <h1>Not Authorized to view this page</h1>
+    {msg ? <p class="callout warning">{msg}</p> : null}
+    <p><a href={loginUrl}>Login</a></p>
+</CommonPageLayout>

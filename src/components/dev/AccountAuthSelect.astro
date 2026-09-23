@@ -4,12 +4,16 @@ import users from "@db/seed/users";
 import type { SelectOption } from "@ty/Form";
 const options: SelectOption[] = [
   {
-    value: users[0].email,
-    label: `${users[0].username} <${users[0].email}>`,
-  },
-  {
     value: users[1].email,
     label: `${users[1].username} <${users[1].email}>`,
+  },
+  {
+    value: "",
+    label: "anonymous",
+  },
+  {
+    value: users[0].email,
+    label: `${users[0].username} <${users[0].email}>`,
   },
   {
     value: users[2].email,
@@ -18,10 +22,6 @@ const options: SelectOption[] = [
   {
     value: "failed_Login@m.lan",
     label: "Failed Login",
-  },
-  {
-    value: "",
-    label: "anonymous",
   },
 ];
 

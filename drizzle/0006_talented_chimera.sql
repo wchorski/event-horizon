@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN "mailbox_user_email" text;

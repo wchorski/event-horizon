@@ -24,6 +24,7 @@ const organizations: OrganizationSeedInsert[] = [
     sharepoint_drive_id: null,
     sharepoint_library_name: null,
     metadata: null,
+    mailbox_user_email: null,
   },
   {
     id: "019f5cbf-87b7-7d63-ac40-197b22468aa6",
@@ -40,6 +41,7 @@ const organizations: OrganizationSeedInsert[] = [
     sharepoint_drive_id: null,
     sharepoint_library_name: null,
     metadata: null,
+    mailbox_user_email: null,
   },
   {
     id: "01a09194-09ff-7d63-9c55-d0096b02db89",
@@ -56,6 +58,7 @@ const organizations: OrganizationSeedInsert[] = [
     sharepoint_drive_id: "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4",
     sharepoint_library_name: null,
     metadata: null,
+    mailbox_user_email: "av@moeits.com"
   },
 ];
 export default organizations;

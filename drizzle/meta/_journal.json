@@ -43,6 +43,13 @@
       "when": 1789748749752,
       "tag": "0005_fuzzy_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790182004849,
+      "tag": "0006_talented_chimera",
+      "breakpoints": true
     }
   ]
 }

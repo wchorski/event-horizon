@@ -57,7 +57,10 @@ const { crumbs, basePath } = Astro.props;
   }
 
   .breadcrumbs .current {
-    color: #333;
+    /* color: #333; */
+    border: #333 solid 1px;
+    padding-inline: var(--size-xs);
+    border-radius: var(--br-soft, 10px);
     font-weight: 600;
   }
 

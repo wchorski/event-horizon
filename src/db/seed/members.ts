@@ -10,10 +10,24 @@ const members: MemberSelect[] = [
     createdAt: new Date(),
   },
   {
-    id: "019fb43b-a057-7aaf-9356-2668760ede26",
+    id: "01a0cf5b-71f0-755b-9be9-46a8afccefd3",
     organizationId: organizations[0].id,
     userId: users[1].id,
     role: "staff",
+    createdAt: new Date(),
+  },
+  {
+    id: "01a0cf5b-71f0-755b-9be9-46a8afccefd3",
+    organizationId: organizations[1].id,
+    userId: users[0].id,
+    role: "owner",
+    createdAt: new Date(),
+  },
+  {
+    id: "01a0cf5c-5d2f-75aa-ba62-9740316677c8",
+    organizationId: organizations[2].id,
+    userId: users[0].id,
+    role: "owner",
     createdAt: new Date(),
   },
 ];

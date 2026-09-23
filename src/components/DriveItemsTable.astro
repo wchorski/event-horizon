@@ -87,7 +87,7 @@ const sortedItems = [...items].sort((a, b) => {
         return (
           <tr class={isFolder ? "row-folder" : "row-file"}>
             <td class="col-name">
-              <span class="icon" aria-hidden="true">{itemIcon(item)}</span>
+              <span class="icon" aria-hidden="true">{itemIcon(item)}</span>{" "}
 
               {isFolder ? (
                 <a href={drillDownHref!} class="drill-link">{item.name}</a>

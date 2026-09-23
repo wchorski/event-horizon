@@ -69,9 +69,10 @@ try {
   const item = await res.json();
   // console.log({ item });
 
-  // item.parentReference.path looks like ".../root:/DRAFTS/MOEITS/2026"
+  // item.parentReference.path looks like ".../root:/PREPERATIONS/MOEITS Board/2026"
   const parentSegments = item.parentReference.path.split("/");
   const parentName = parentSegments[parentSegments.length - 1];
+  const departmentName = parentSegments[parentSegments.length - 2];
 
   if (!isDayFolder([{ name: parentName }, { name: item.name }])) {
     throw new BadRequestError("Events can only be linked to day folders.");
@@ -91,11 +92,23 @@ try {
   }
 
   // ...buildMergedPacket, ensureFolderPath, nextVersionedFilename, uploadPacketResumable...
+  // const pdfBytes = await buildMergedPacket(
+  //   site_id,
+  //   drive_id,
+  //   folderId as string,
+  //   accessToken,
+  // );
   const pdfBytes = await buildMergedPacket(
     site_id,
     drive_id,
     folderId as string,
     accessToken,
+    {
+      departmentName: departmentName,
+      packetTitle: "MEETING PACKET",
+      // TODO make date look pretty?
+      packetSubtitle: `${item.name}-${parentName}`,
+    },
   );
   const sourcePath = getFullPath(item); // uses the `item` you already fetched
   const publishedSegments = mirrorToPublished(sourcePath);
@@ -169,9 +182,9 @@ try {
 
       {result.webLink && (
         <p>
-            Open PDF in Browser {" "}
+          Open PDF in Browser{" "}
           <a href={result.webLink} target="_blank">
-            {result.webLink.split('/')[result.webLink.split('/').length - 1]}
+            {result.webLink.split("/")[result.webLink.split("/").length - 1]}
           </a>
         </p>
       )}

@@ -17,18 +17,22 @@ import Footer from "@components/navigation/Footer.astro";
 import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
 import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
+import type { OrganizationSelect } from "@ty/Schema";
 
 const { organization_slug } = Astro.params;
 if (!organization_slug) throw new Error("no id found. throw 404");
 
 console.log({organization_slug});
 
+let organization: OrganizationSelect|undefined
+
 try {
-  const org = await db.query.Organization.findFirst({
+  organization = await db.query.Organization.findFirst({
     where: eq(Organization.slug, organization_slug)
   })
 
-  console.log({org});
+
+  // console.log({org});
 
   // TODO set the org vars 
 //   {
@@ -66,7 +70,7 @@ const drive_id =
 const mailbox_user_email = MS_MAILBOX_USER_EMAIL
 
 // This page's own path — used to build "back to this folder" links
-const basePath = "/documents";
+const basePath = `/documents/${organization_slug}`;
 let parentFolderId = null;
 let packet = null;
 let outlookEvent = null;
@@ -198,6 +202,10 @@ try {
           subject: `${department} | BOT Meeting`,
           start: { dateTime: `${year}-${monthDay}T07:00`, timeZone:meetingTimeZone },
           end: { dateTime: `${year}-${monthDay}T09:00`, timeZone:meetingTimeZone },
+          body: {
+            contentType: 'html',
+            content: `<p>View The published packet: ${packet?.published_file_url ?? "[Not Created Yet]"}<p>`
+          }
           
         }, meetingTimeZone);
       }
@@ -215,177 +223,189 @@ const formMethodEndpoint = outlookEvent
   : { "hx-post": "/partials/events/outlook-event" };
 ---
 
-<BaseLayout>
-  <main>
-    <header>
-      <h1>Documents</h1>
-      <Breadcrumbs crumbs={crumbs} basePath={basePath} />
-    </header>
+{!organization ? (
+  <BaseLayout>
+    <p>This Organization is not registered to this site. Please contact <a href="mailto:Will@TawTaw.site">Will@TawTaw.site</a> to get an account setup</p>
+  </BaseLayout>
+) : (
 
-    <div data-layout="content">
-      {isDayFldr ? <>
-    
-    <hr />
-    <section class="flex gap-m">
+  <BaseLayout>
+    <main>
+      <header>
+        <div class="flex gap-m space-between">
+        <h1>{organization.name} | Documents</h1>
+        <img class="org-logo" src={organization.logo} alt={`${organization.name} logo`} width="100" height="auto"/>
+
+        </div>
+        <Breadcrumbs crumbs={crumbs} basePath={basePath} />
+      </header>
+  
+      <div data-layout="content">
+        {isDayFldr ? <>
       
-        {
-          packet?.outlook_event_id && outlookEvent ? (
-            <div class="card">
-              <h2>Event:</h2>
-              <dl class="kv">
-                <dd>Subject</dd>
-                <dt>{outlookEvent.subject}</dt>
-                <dd>Start</dd>
-                <dt>{outlookEvent.start?.dateTime ? prettyDateToLocale(new Date(outlookEvent.start.dateTime)) : "—"}</dt>
-                <dd>End</dd>
-                <dt>{outlookEvent.end?.dateTime ? prettyDateToLocale(new Date(outlookEvent.end.dateTime)) : "—"}</dt>
-                <dd>location</dd>
-                <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
-                <dd>onlineMeeting</dd>
-                <dt>{String(outlookEvent.onlineMeeting)}</dt>
-                <dd>isOnlineMeeting</dd>
-                <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
-                <dd>onlineMeetingProvider</dd>
-                <dt>{outlookEvent.onlineMeetingProvider}</dt>
-                <dd>onlineMeetingUrl</dd>
-                <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
-              </dl>
-              <a href={outlookEvent.webLink} target="_blank">
-                outlook link
-              </a>
-            </div>
-          ) : null
-        }
-
+      <hr />
+      <section class="flex gap-m">
+        
+          {
+            packet?.outlook_event_id && outlookEvent ? (
+              <div class="card">
+                <h2>Event:</h2>
+                <dl class="kv">
+                  <dd>Subject</dd>
+                  <dt>{outlookEvent.subject}</dt>
+                  <dd>Start</dd>
+                  <dt>{outlookEvent.start?.dateTime ? prettyDateToLocale(new Date(outlookEvent.start.dateTime)) : "—"}</dt>
+                  <dd>End</dd>
+                  <dt>{outlookEvent.end?.dateTime ? prettyDateToLocale(new Date(outlookEvent.end.dateTime)) : "—"}</dt>
+                  <dd>location</dd>
+                  <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
+                  <dd>onlineMeeting</dd>
+                  <dt>{String(outlookEvent.onlineMeeting)}</dt>
+                  <dd>isOnlineMeeting</dd>
+                  <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
+                  <dd>onlineMeetingProvider</dd>
+                  <dt>{outlookEvent.onlineMeetingProvider}</dt>
+                  <dd>onlineMeetingUrl</dd>
+                  <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
+                </dl>
+                <a href={outlookEvent.webLink} target="_blank">
+                  outlook link
+                </a>
+              </div>
+            ) : null
+          }
+  
+          <form
+            class="card"
+            {...formMethodEndpoint}
+            hx-swap="innerHTML"
+            hx-target="#outlook-event-result"
+            hx-target-error="#outlook-calendar-error"
+          >
+            <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
+            <fieldset>
+              <InputField
+                name="subject"
+                id="calendar.subject"
+                type="text"
+                model="event"
+                value={calendarDraft.subject}
+              />
+              <InputField
+                name="start.dateTime"
+                id="calendar.start.dateTime"
+                type="datetime-local"
+                model="event"
+                value={calendarDraft.start.dateTime}
+              />
+              <InputField
+                name="end.dateTime"
+                id="calendar.end.dateTime"
+                type="datetime-local"
+                model="event"
+                value={calendarDraft.end.dateTime}
+              />
+  
+              <!-- fixed values the user doesn't edit, but still need to reach the server -->
+              <input
+                type="hidden"
+                name="start.timeZone"
+                value={calendarDraft.start.timeZone}
+              />
+              <input
+                type="hidden"
+                name="end.timeZone"
+                value={calendarDraft.end.timeZone}
+              />
+              <input
+                type="hidden"
+                name="body.contentType"
+                value={calendarDraft.body.contentType}
+              />
+              <input
+                type="hidden"
+                name="body.content"
+                value={calendarDraft.body.content}
+              />
+              <input
+                type="hidden"
+                name="location.displayName"
+                value={calendarDraft.location.displayName}
+              />
+              <input
+                type="hidden"
+                name="transactionId"
+                value={calendarDraft.transactionId}
+              />
+  
+              <input type="hidden" name="folderId" value={parentFolderId} />
+     
+  
+              {
+                calendarDraft.attendees.map((a, i) => (
+                  <>
+                    <input
+                      type="hidden"
+                      name={`attendees[${i}].emailAddress.address`}
+                      value={a.emailAddress?.address ?? ""}
+                    />
+                    <input
+                      type="hidden"
+                      name={`attendees[${i}].emailAddress.name`}
+                      value={a.emailAddress?.name ?? ""}
+                    />
+                    <input
+                      type="hidden"
+                      name={`attendees[${i}].type`}
+                      value={a.type}
+                    />
+                  </>
+                ))
+              }
+            </fieldset>
+            <div id="outlook-event-result"></div>
+            <div id="outlook-calendar-error"></div>
+            <SubmitButton />
+          </form>
+  
+        
+  
         <form
           class="card"
-          {...formMethodEndpoint}
-          hx-swap="innerHTML"
-          hx-target="#outlook-event-result"
-          hx-target-error="#outlook-calendar-error"
+          hx-post="/partials/pdf-packet-builder"
+          hx-swap="outerHTML"
+          hx-target="this"
+          hx-target-error="#pdf-packet-builder-error"
         >
-          <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
-          <fieldset>
-            <InputField
-              name="subject"
-              id="calendar.subject"
-              type="text"
-              model="event"
-              value={calendarDraft.subject}
-            />
-            <InputField
-              name="start.dateTime"
-              id="calendar.start.dateTime"
-              type="datetime-local"
-              model="event"
-              value={calendarDraft.start.dateTime}
-            />
-            <InputField
-              name="end.dateTime"
-              id="calendar.end.dateTime"
-              type="datetime-local"
-              model="event"
-              value={calendarDraft.end.dateTime}
-            />
-
-            <!-- fixed values the user doesn't edit, but still need to reach the server -->
-            <input
-              type="hidden"
-              name="start.timeZone"
-              value={calendarDraft.start.timeZone}
-            />
-            <input
-              type="hidden"
-              name="end.timeZone"
-              value={calendarDraft.end.timeZone}
-            />
-            <input
-              type="hidden"
-              name="body.contentType"
-              value={calendarDraft.body.contentType}
-            />
-            <input
-              type="hidden"
-              name="body.content"
-              value={calendarDraft.body.content}
-            />
-            <input
-              type="hidden"
-              name="location.displayName"
-              value={calendarDraft.location.displayName}
-            />
-            <input
-              type="hidden"
-              name="transactionId"
-              value={calendarDraft.transactionId}
-            />
-
-            <input type="hidden" name="folderId" value={parentFolderId} />
-   
-
-            {
-              calendarDraft.attendees.map((a, i) => (
-                <>
-                  <input
-                    type="hidden"
-                    name={`attendees[${i}].emailAddress.address`}
-                    value={a.emailAddress?.address ?? ""}
-                  />
-                  <input
-                    type="hidden"
-                    name={`attendees[${i}].emailAddress.name`}
-                    value={a.emailAddress?.name ?? ""}
-                  />
-                  <input
-                    type="hidden"
-                    name={`attendees[${i}].type`}
-                    value={a.type}
-                  />
-                </>
-              ))
-            }
-          </fieldset>
-          <div id="outlook-event-result"></div>
-          <div id="outlook-calendar-error"></div>
-          <SubmitButton />
+          <h2>PDF Packet Builder</h2>
+          <input type="hidden" name="folderId" value={parentFolderId} />
+  
+          <div id="pdf-packet-builder-error"></div>
+          {
+            packet?.published_file_url ? (
+              <p>
+                view published packet {" "}
+                <a href={packet.published_file_url} target="_blank">
+                  {packet.published_file_url.split('/')[packet.published_file_url.split('/').length - 1]}
+                </a>
+              </p>
+            ) : null
+          }
+          <SubmitButton text="Generate New Packet" />
         </form>
-
-      
-
-      <form
-        class="card"
-        hx-post="/partials/pdf-packet-builder"
-        hx-swap="outerHTML"
-        hx-target="this"
-        hx-target-error="#pdf-packet-builder-error"
-      >
-        <h2>PDF Packet Builder</h2>
-        <input type="hidden" name="folderId" value={parentFolderId} />
-
-        <div id="pdf-packet-builder-error"></div>
+      </section>
+      </> : null}
+      <hr />
+        {error && <p style="color: red;">Error: {error}</p>}
+  
         {
-          packet?.published_file_url ? (
-            <p>
-              view published packet {" "}
-              <a href={packet.published_file_url} target="_blank">
-                {packet.published_file_url.split('/')[packet.published_file_url.split('/').length - 1]}
-              </a>
-            </p>
-          ) : null
+          !error && (
+            <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
+          )
         }
-        <SubmitButton text="Generate New Packet" />
-      </form>
-    </section>
-    </> : null}
-    <hr />
-      {error && <p style="color: red;">Error: {error}</p>}
+      </div>
+    </main>
+    <Footer />
+  </BaseLayout>
+)}
 
-      {
-        !error && (
-          <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
-        )
-      }
-    </div>
-  </main>
-  <Footer />
-</BaseLayout>

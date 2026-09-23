@@ -33,7 +33,7 @@ export function createPgAstroPool() {
   const { PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE } = process.env;
   console.log(
     "🔌 Runtime DB URL:",
-    `${PGUSER}:*****${PGHOST}:${PGPORT}/${PGDATABASE}`,
+    `${PGUSER}:*****@${PGHOST}:${PGPORT}/${PGDATABASE}`,
   );
 
   // TODO utilize Organization `dedicated_db_url` connection for future enterprise customers

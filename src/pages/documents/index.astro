@@ -14,8 +14,9 @@ import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
 import { MeetingPacket } from "@db/schema";
 import Footer from "@components/navigation/Footer.astro";
-import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
+import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
+import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
 
 const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
   MS_SHAREPOINT_MOEDOCS_SITE_ID,
@@ -47,42 +48,11 @@ interface DriveChildrenResponse {
   "@odata.nextLink"?: string;
   value: DriveItem[];
 }
-// TODO make this null
-let calendar = {
-  subject: "Test Board Meeting",
 
-  body: {
-    contentType: "HTML",
-    content: "<p>TEST TEST TEST Monthly board review</p>",
-  },
-
-  start: {
-    dateTime: "2026-09-27T09:00:00",
-    timeZone: "Central Standard Time",
-  },
-
-  end: {
-    dateTime: "2026-09-27T11:00:00",
-    timeZone: "Central Standard Time",
-  },
-
-  location: {
-    displayName: "TEST TEST TEST Conference Room TEST",
-  },
-
-  attendees: [
-    {
-      emailAddress: {
-        address: "av@moeits.com",
-        name: "MOEITS AV",
-      },
-      type: "required",
-    },
-  ],
-
-  // Prevents accidental duplicates if this exact request is retried.
-  transactionId: crypto.randomUUID(),
-};
+// TODO(locations-schema): once MeetingPacket/folder carries a location_id,
+// pass it here instead of null.
+const meetingTimeZone = await resolveMeetingTimeZone(null);
+let calendarDraft = createCalendarDraft({}, meetingTimeZone);
 let items: DriveItem[] = [];
 let error: string | null = null;
 
@@ -93,24 +63,61 @@ try {
           eq(MeetingPacket.sharepoint_drive_id, drive_id),
           eq(MeetingPacket.sharepoint_folder_id, folderId),
         ),
-        // with: { event: true },
       })
     : null;
-  // console.log({ packet });
 
-  
-if(packet?.outlook_event_id){
+    // console.log({packet});
 
-  outlookEvent = await msGraphFetch<Event>(
-    `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
-    {
-      method: "GET",
+  if (packet?.outlook_event_id) {
+    try {
+      outlookEvent = await msGraphFetch<Event>(
+        `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
+        { method: "GET", headers: outlookTimeZoneHeader(meetingTimeZone) },
+      );
+
+      // console.log({outlookEvent});
+
+      if (outlookEvent) {
+        calendarDraft = createCalendarDraft(
+          {
+            subject: outlookEvent.subject ?? calendarDraft.subject,
+            start: outlookEvent.start?.dateTime
+              ? { dateTime: outlookEvent.start.dateTime, timeZone: meetingTimeZone }
+              : calendarDraft.start,
+            end: outlookEvent.end?.dateTime
+              ? { dateTime: outlookEvent.end.dateTime, timeZone: meetingTimeZone }
+              : calendarDraft.end,
+            location: outlookEvent.location ?? calendarDraft.location,
+            body: outlookEvent.body ?? calendarDraft.body,
+          },
+          meetingTimeZone,
+        );
+      }
+    } catch (graphErr) {
+      const isMissingEvent =
+        graphErr instanceof GraphApiError &&
+        graphErr.status === 404 &&
+        graphErr.code === "ErrorItemNotFound";
+
+      if (isMissingEvent) {
+        // The event was deleted/moved in Outlook — the packet's link is stale.
+        // Clear it so the UI falls back to "Create" instead of showing a dead link.
+        await db
+          .update(MeetingPacket)
+          .set({ outlook_event_id: null, outlook_web_link: null })
+          .where(eq(MeetingPacket.id, packet.id));
+
+        packet.outlook_event_id = null;
+        packet.outlook_web_link = null;
+        outlookEvent = null;
+        // calendarDraft stays as the CST default — no re-populate needed
+      } else {
+        throw graphErr; // anything else (auth, throttling, network) is a real failure
+      }
     }
-  );
-
-}
+  }
 } catch (err) {
-  console.log("XXXXX packet error; ", err);
+  console.log("❌ packet error; ", err);
 }
 
 try {
@@ -150,9 +157,12 @@ try {
     if (department && year && monthDay) {
       isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
       if (isDayFldr) {
-        calendar.subject = `${department} | BOT Meeting`;
-        calendar.start.dateTime = `${year}-${monthDay}T07:00`;
-        calendar.end.dateTime = `${year}-${monthDay}T09:00`;
+        calendarDraft = createCalendarDraft({
+          subject: `${department} | BOT Meeting`,
+          start: { dateTime: `${year}-${monthDay}T07:00`, timeZone:meetingTimeZone },
+          end: { dateTime: `${year}-${monthDay}T09:00`, timeZone:meetingTimeZone },
+          
+        }, meetingTimeZone);
       }
     }
   }
@@ -160,6 +170,12 @@ try {
   console.error(err);
   error = err instanceof Error ? err.message : String(err);
 }
+
+const formMethodEndpoint = outlookEvent
+  ? {
+      "hx-patch": `/partials/events/outlook-event/${packet?.outlook_event_id}`,
+    }
+  : { "hx-post": "/partials/events/outlook-event" };
 ---
 
 <BaseLayout>
@@ -174,125 +190,130 @@ try {
     
     <hr />
     <section class="flex gap-m">
-      {
-        packet?.outlook_event_id && outlookEvent ? (
-          <div class="card">
-            <h2>Event:</h2>
-            <dl class="kv">
-              <dd>Subject</dd>
-              <dt>{outlookEvent.subject}</dt>
-              <dd>Start</dd>
-              <dt>{prettyDateToLocale(new Date(outlookEvent.start.dateTime))}</dt>
-              <dd>End</dd>
-              <dt>{prettyDateToLocale(new Date(outlookEvent.end.dateTime))}</dt>
-              <dd>location</dd>
-              <dt>{outlookEvent.location.displayName}</dt>
-              <dd>onlineMeeting</dd>
-              <dt>{String(outlookEvent.onlineMeeting)}</dt>
-              <dd>isOnlineMeeting</dd>
-              <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
-              <dd>onlineMeetingProvider</dd>
-              <dt>{outlookEvent.onlineMeetingProvider}</dt>
-              <dd>onlineMeetingUrl</dd>
-              <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
-            </dl>
-            <a href={outlookEvent.webLink} target="_blank">
-              outlook link
-            </a>
-          </div>
-        ) : null
-      }
+      
+        {
+          packet?.outlook_event_id && outlookEvent ? (
+            <div class="card">
+              <h2>Event:</h2>
+              <dl class="kv">
+                <dd>Subject</dd>
+                <dt>{outlookEvent.subject}</dt>
+                <dd>Start</dd>
+                <dt>{outlookEvent.start?.dateTime ? prettyDateToLocale(new Date(outlookEvent.start.dateTime)) : "—"}</dt>
+                <dd>End</dd>
+                <dt>{outlookEvent.end?.dateTime ? prettyDateToLocale(new Date(outlookEvent.end.dateTime)) : "—"}</dt>
+                <dd>location</dd>
+                <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
+                <dd>onlineMeeting</dd>
+                <dt>{String(outlookEvent.onlineMeeting)}</dt>
+                <dd>isOnlineMeeting</dd>
+                <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
+                <dd>onlineMeetingProvider</dd>
+                <dt>{outlookEvent.onlineMeetingProvider}</dt>
+                <dd>onlineMeetingUrl</dd>
+                <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
+              </dl>
+              <a href={outlookEvent.webLink} target="_blank">
+                outlook link
+              </a>
+            </div>
+          ) : null
+        }
 
-      <form
-        class="card"
-        hx-post="/partials/events/outlook-event"
-        hx-swap="outerHTML"
-        hx-target="this"
-        hx-target-error="#outlook-calendar-error"
-      >
-        <h2>{packet ? "Update" : "Create"} Calendar Event</h2>
-        <fieldset>
-          <InputField
-            name="subject"
-            id="calendar.subject"
-            type="text"
-            model="event"
-            value={calendar.subject}
-          />
-          <InputField
-            name="start.dateTime"
-            id="calendar.start.dateTime"
-            type="datetime-local"
-            model="event"
-            value={calendar.start.dateTime}
-          />
-          <InputField
-            name="end.dateTime"
-            id="calendar.end.dateTime"
-            type="datetime-local"
-            model="event"
-            value={calendar.end.dateTime}
-          />
+        <form
+          class="card"
+          {...formMethodEndpoint}
+          hx-swap="innerHTML"
+          hx-target="#outlook-event-result"
+          hx-target-error="#outlook-calendar-error"
+        >
+          <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
+          <fieldset>
+            <InputField
+              name="subject"
+              id="calendar.subject"
+              type="text"
+              model="event"
+              value={calendarDraft.subject}
+            />
+            <InputField
+              name="start.dateTime"
+              id="calendar.start.dateTime"
+              type="datetime-local"
+              model="event"
+              value={calendarDraft.start.dateTime}
+            />
+            <InputField
+              name="end.dateTime"
+              id="calendar.end.dateTime"
+              type="datetime-local"
+              model="event"
+              value={calendarDraft.end.dateTime}
+            />
 
-          <!-- fixed values the user doesn't edit, but still need to reach the server -->
-          <input
-            type="hidden"
-            name="start.timeZone"
-            value={calendar.start.timeZone}
-          />
-          <input
-            type="hidden"
-            name="end.timeZone"
-            value={calendar.end.timeZone}
-          />
-          <input
-            type="hidden"
-            name="body.contentType"
-            value={calendar.body.contentType}
-          />
-          <input
-            type="hidden"
-            name="body.content"
-            value={calendar.body.content}
-          />
-          <input
-            type="hidden"
-            name="location.displayName"
-            value={calendar.location.displayName}
-          />
-          <input
-            type="hidden"
-            name="transactionId"
-            value={calendar.transactionId}
-          />
+            <!-- fixed values the user doesn't edit, but still need to reach the server -->
+            <input
+              type="hidden"
+              name="start.timeZone"
+              value={calendarDraft.start.timeZone}
+            />
+            <input
+              type="hidden"
+              name="end.timeZone"
+              value={calendarDraft.end.timeZone}
+            />
+            <input
+              type="hidden"
+              name="body.contentType"
+              value={calendarDraft.body.contentType}
+            />
+            <input
+              type="hidden"
+              name="body.content"
+              value={calendarDraft.body.content}
+            />
+            <input
+              type="hidden"
+              name="location.displayName"
+              value={calendarDraft.location.displayName}
+            />
+            <input
+              type="hidden"
+              name="transactionId"
+              value={calendarDraft.transactionId}
+            />
 
-          <input type="hidden" name="folderId" value={parentFolderId} />
+            <input type="hidden" name="folderId" value={parentFolderId} />
+   
 
-          {
-            calendar.attendees.map((a, i) => (
-              <>
-                <input
-                  type="hidden"
-                  name={`attendees[${i}].emailAddress.address`}
-                  value={a.emailAddress.address}
-                />
-                <input
-                  type="hidden"
-                  name={`attendees[${i}].emailAddress.name`}
-                  value={a.emailAddress.name}
-                />
-                <input
-                  type="hidden"
-                  name={`attendees[${i}].type`}
-                  value={a.type}
-                />
-              </>
-            ))
-          }
-        </fieldset>
-        <div id="outlook-calendar-error"></div>
-        <SubmitButton />
-      </form>
+            {
+              calendarDraft.attendees.map((a, i) => (
+                <>
+                  <input
+                    type="hidden"
+                    name={`attendees[${i}].emailAddress.address`}
+                    value={a.emailAddress?.address ?? ""}
+                  />
+                  <input
+                    type="hidden"
+                    name={`attendees[${i}].emailAddress.name`}
+                    value={a.emailAddress?.name ?? ""}
+                  />
+                  <input
+                    type="hidden"
+                    name={`attendees[${i}].type`}
+                    value={a.type}
+                  />
+                </>
+              ))
+            }
+          </fieldset>
+          <div id="outlook-event-result"></div>
+          <div id="outlook-calendar-error"></div>
+          <SubmitButton />
+        </form>
+
+      
 
       <form
         class="card"

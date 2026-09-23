@@ -167,10 +167,13 @@ docker compose up --remove-orphans
   - Icons from https://opensvg.dev/icons
 </details>
 
+
+## outlook calendar integration
+- [ ] if outlook_id is not found then remove/delete_flag on packet?
+
 ## Document manager
 
 #todo
-
 - [ ] how to cover page and aggenda page for pdf-packet-builder?
 - [ ] Entra ID SSO (Microsoft) https://better-auth.com/docs/authentication/microsoft
 - [ ] how do i multi tenante the MS Client ID/Secret?
@@ -181,7 +184,6 @@ docker compose up --remove-orphans
 ## booking app
 
 #todo
-
 - [ ] steps. update number in real time (upon create and delete)
 - [ ] timeline: drag timerange swap is a little goofy if targeting below row (but that dragged row is already the next one in line)
 - [ ] timeline: when moment is deleted, delete all steps from idb

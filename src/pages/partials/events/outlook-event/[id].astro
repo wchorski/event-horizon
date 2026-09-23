@@ -1,0 +1,139 @@
+---
+// src/pages/partials/events/outlook-event/:id
+import type {
+  Event,
+  Attendee,
+  ItemBody,
+  Location,
+  DateTimeTimeZone,
+} from "@microsoft/microsoft-graph-types";
+import { db } from "@db/db";
+import { MeetingPacket } from "@db/schema";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { unflatten } from "@lib/formParsing";
+import { and, eq } from "drizzle-orm";
+import departments from "@db/seed/departments";
+import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
+import { outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
+
+interface EventCreatePayload {
+  subject: string;
+  body: ItemBody;
+  start: DateTimeTimeZone;
+  end: DateTimeTimeZone;
+  location: Location;
+  attendees: Attendee[];
+  transactionId: string;
+}
+type EventUpdatePayload = Omit<EventCreatePayload, "transactionId">;
+
+interface EventFormData extends EventCreatePayload {
+  folderId: string;
+}
+
+type OutlookEventSummary = Pick<Event, "id" | "webLink">;
+
+type RenderResult =
+  | { kind: "success"; eventId: string; webLink?: string | null }
+  | { kind: "top-error"; message: string };
+
+const TEST_DEPARTMENT_ID = departments[0].id;
+
+const {
+  MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
+  MS_SHAREPOINT_MOEDOCS_SITE_ID,
+  MS_MAILBOX_USER_EMAIL,
+} = import.meta.env;
+
+const site_id = MS_SHAREPOINT_MOEDOCS_SITE_ID;
+const drive_id = MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
+const mailboxUserEmail = MS_MAILBOX_USER_EMAIL;
+
+const { id: eventIdParam } = Astro.params; // present only on the PATCH route
+
+const method = Astro.request.method;
+
+if (method !== "PATCH") {
+  throw new Error(`method ${method} is NOT allowed at this endpoint`);
+}
+let result: RenderResult;
+
+try {
+  // --- UPDATE ---
+  if (!eventIdParam) {
+    throw new BadRequestError(
+      "An event id is required in the URL to update an event.",
+    );
+  }
+
+  const formData = await Astro.request.formData();
+  // const parsed = unflatten(formData) as Omit<EventFormData, "transactionId">;
+  const parsed = unflatten(formData) as EventFormData;
+  console.log("=== events/outlook-event/:id PATCH ===");
+  console.log({ parsed });
+  // i'm just pulling out transactionId cuz i'm too lazy to conditionally set in frontend...
+  const { folderId, transactionId, ...updateFields } = parsed as EventFormData;
+  const updatePayload: EventUpdatePayload = updateFields;
+
+  // TODO(locations-schema): resolve from the packet's eventual location_id.
+  const meetingTimeZone = await resolveMeetingTimeZone(null);
+
+  const url = `/users/${mailboxUserEmail}/events/${eventIdParam}`;
+  const updated = await msGraphFetch<Event>(url, {
+    method: "PATCH",
+    headers: outlookTimeZoneHeader(meetingTimeZone),
+    body: JSON.stringify(updatePayload),
+  });
+
+  console.log({ updated });
+
+  // Keep the packet's cached webLink in sync, in case it ever changes.
+  if (folderId) {
+    await db
+      .update(MeetingPacket)
+      .set({ outlook_web_link: updated.webLink })
+      .where(
+        and(
+          eq(MeetingPacket.sharepoint_drive_id, drive_id),
+          eq(MeetingPacket.sharepoint_folder_id, folderId),
+        ),
+      );
+  }
+
+  result = { kind: "success", eventId: updated.id!, webLink: updated.webLink };
+} catch (error) {
+  const { err, status } = errorHandlingOnSubmit(error);
+  console.error(JSON.stringify(err));
+  Astro.response.status = status;
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <section class="card">
+      <p>Event Updated</p>
+      <p style="max-width: 15rem; text-wrap: balance;">
+        Event ID: <code>{result.eventId}</code>
+      </p>
+
+      {result.webLink && (
+        <p>
+          <a href={result.webLink}>Open event in Outlook</a>
+        </p>
+      )}
+    </section>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to save event.</p>
+      <pre>{result.message}</pre>
+    </section>
+  )
+}

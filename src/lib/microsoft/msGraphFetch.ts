@@ -26,9 +26,29 @@ export async function msGraphFetch<T>(
 
   const text = await res.text();
 
-  if (!res.ok) {
-    throw new Error(`❌ Microsoft Graph API Error: ${res.status}\n${text}`);
+  if (!res.ok) throw new GraphApiError(res.status, text);
+
+  if (!text) {
+    // Some Graph calls (e.g. certain PATCH/DELETE) return 204 No Content.
+    return undefined as T;
   }
 
   return text ? JSON.parse(text) : ({} as T);
+}
+
+// src/lib/microsoft/msGraphFetch.ts
+
+export class GraphApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(status: number, body: string) {
+    super(`❌ Microsoft Graph API Error: ${status}\n${body}`);
+    this.status = status;
+    try {
+      this.code = JSON.parse(body)?.error?.code;
+    } catch {
+      // body wasn't JSON — leave code undefined
+    }
+  }
 }

@@ -30,7 +30,7 @@ type RenderResult =
 
 let result: RenderResult;
 
-const organizerMailbox = "av@moeits.com";
+// TODO get from client or organization db?
 const site_id =
   "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
 const drive_id =
@@ -53,9 +53,9 @@ try {
 
   const endpoint = `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${folderId}?$select=name,parentReference`;
 
+  // TODO use msGraphFetch()
   const res = await fetch(endpoint, {
     method: "GET",
-
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -130,7 +130,7 @@ try {
     .where(eq(MeetingPacket.id, existingPacket.id))
     .returning();
 
-  console.log({ updatedPacket });
+  // console.log({ updatedPacket });
 
   result = {
     kind: "success",
@@ -169,8 +169,9 @@ try {
 
       {result.webLink && (
         <p>
+            Open PDF in Browser {" "}
           <a href={result.webLink} target="_blank">
-            Open PDF in Browser
+            {result.webLink.split('/')[result.webLink.split('/').length - 1]}
           </a>
         </p>
       )}

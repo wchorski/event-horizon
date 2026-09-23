@@ -152,7 +152,7 @@ console.log(`=== Accounts (+${accounts.length})===`);
 const accountsCoreced = await Promise.all(
   accounts.map(async (item) => {
     const usr = users.find((u) => u.id === item.userId);
-    if (!usr)
+    if (!usr?.id)
       throw new Error(`usr not found: account.userId === ${item.userId}`);
     const hashed = await hashPassword(usr.id + SECRET);
     return {

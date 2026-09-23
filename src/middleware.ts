@@ -26,6 +26,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/documents",
     "/admin",
     "/dashboard",
+    "/partials/events",
+    "/partials/users",
+    "/partials/organizations",
+    "/partials/organizations",
+    "/partials/tickets",
   ];
 
   const requiresAuth = protectedRoutes.some((route) =>

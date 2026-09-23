@@ -230,6 +230,11 @@ export default defineConfig({
         access: "public",
         optional: true,
       }),
+      CREDENTIALS_ENCRYPTION_KEY: envField.string({
+        context: "server",
+        access: "secret",
+        optional: false,
+      }),
     },
   },
   // integrations: [db()]

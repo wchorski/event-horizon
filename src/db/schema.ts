@@ -113,6 +113,7 @@ export const bookingStatusEnum = pgEnum("booking_status", [
   "ACCEPTED",
   "POSTPONED",
 ]);
+
 export const meetingPacketStatusEnum = pgEnum("meeting_packet_status", [
   "DRAFT",
   "PUBLISHED",
@@ -694,6 +695,44 @@ export const Invitation = pgTable(
   (table) => [
     index("invitation_organizationId_idx").on(table.organizationId),
     index("invitation_email_idx").on(table.email),
+  ],
+);
+export const integrationProviderEnum = pgEnum("integration_provider", [
+  "microsoft",
+  "google",
+]);
+
+export const INTEGRATION_PROVIDER = bookingStatusEnum.enumValues;
+
+export const IntegrationCredential = pgTable(
+  "integration_credentials",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    organizationId: uuid()
+      .notNull()
+      .references(() => Organization.id, { onDelete: "cascade" }),
+    provider: integrationProviderEnum("provider").notNull(),
+    tenantId: text().notNull(),
+    clientId: text().notNull(),
+    // ciphertext only — never plaintext
+    encryptedClientSecret: text().notNull(),
+    // AES-GCM needs a fresh IV per encryption + the auth tag; store both alongside
+    encryptionIv: text().notNull(),
+    encryptionAuthTag: text().notNull(),
+    keyVersion: integer().notNull().default(1), // lets you rotate the master key later
+    expiresAt: timestamp(), // Azure secrets expire — track it, alert before it lapses
+    rotatedAt: timestamp(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    unique().on(table.organizationId, table.provider),
+    index("integration_credentials_org_idx").on(table.organizationId),
   ],
 );
 

@@ -30,6 +30,20 @@ const members: MemberSelect[] = [
     role: "owner",
     createdAt: new Date(),
   },
+  {
+    id: "01a0cf8d-376f-7092-957d-cf3da1ec88a1",
+    organizationId: organizations[2].id,
+    userId: users[1].id,
+    role: "owner",
+    createdAt: new Date(),
+  },
+  {
+    id: "01a0cf8d-774c-7cef-b7ac-cc1a89417e77",
+    organizationId: organizations[2].id,
+    userId: users[2].id,
+    role: "owner",
+    createdAt: new Date(),
+  },
 ];
 
 export default members;

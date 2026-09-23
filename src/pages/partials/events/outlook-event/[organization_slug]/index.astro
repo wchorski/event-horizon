@@ -1,0 +1,146 @@
+---
+// pages/partials/events/outlook-event/index
+
+import { db } from "@db/db";
+import { MeetingPacket } from "@db/schema";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { unflatten } from "@lib/formParsing";
+import { and, eq } from "drizzle-orm";
+import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
+import { requireOrganizationAccess } from "@lib/auth/guards";
+import type {
+  EventFormData,
+  OutlookEventSummary,
+  RenderResult,
+} from "@ty/OutlookEvent";
+import {
+  outlookTimeZoneHeader,
+  resolveMeetingTimeZone,
+} from "@lib/calendarFactory";
+import departments from "@db/seed/departments";
+
+if (Astro.request.method !== "POST") {
+  throw new BadRequestError(
+    `Unsupported method for this route: ${Astro.request.method}`,
+  );
+}
+
+let result: RenderResult;
+
+try {
+  const user = Astro.locals.user;
+  if (!user) throw new BadRequestError("Not authenticated.");
+
+  const { organization_slug } = Astro.params;
+  if (!organization_slug)
+    throw new BadRequestError("organization_slug is required.");
+
+  // Same check as the page this partial is embedded in — the URL segment
+  // is just routing; the request is only trusted after this passes.
+  const { organization, membership } = await requireOrganizationAccess(
+    user.id,
+    organization_slug,
+  );
+  if (!organization || !membership) {
+    throw new BadRequestError("You are not authorized for this organization.");
+  }
+
+  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } =
+    organization;
+  if (!sharepoint_site_id || !sharepoint_drive_id || !mailbox_user_email) {
+    throw new Error("Organization SharePoint config is not set up correctly.");
+  }
+
+  const formData = await Astro.request.formData();
+  // TODO integrate department schema but for now just take from pathname
+  const departmentId = departments[0].id;
+  const { folderId, ...eventFields } = unflatten(formData) as EventFormData;
+
+  if (!folderId) {
+    throw new BadRequestError(
+      "folderId is required to link this event to a folder.",
+    );
+  }
+  if (!departmentId) {
+    throw new BadRequestError(
+      "departmentId is required to create a new packet.",
+    );
+  }
+
+  const meetingTimeZone = await resolveMeetingTimeZone(null);
+
+  const created = await msGraphFetch<OutlookEventSummary>(
+    organization.id,
+    `/users/${mailbox_user_email}/events`,
+    {
+      method: "POST",
+      headers: outlookTimeZoneHeader(meetingTimeZone),
+      body: JSON.stringify(eventFields),
+    },
+  );
+
+  const existingPacket = await db.query.MeetingPacket.findFirst({
+    where: and(
+      eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
+      eq(MeetingPacket.sharepoint_folder_id, folderId),
+    ),
+  });
+
+  if (existingPacket) {
+    await db
+      .update(MeetingPacket)
+      .set({ outlook_event_id: created.id, outlook_web_link: created.webLink })
+      .where(eq(MeetingPacket.id, existingPacket.id));
+  } else {
+    await db.insert(MeetingPacket).values({
+      outlook_event_id: created.id,
+      outlook_web_link: created.webLink,
+      department_id: departmentId,
+      sharepoint_site_id,
+      sharepoint_drive_id,
+      sharepoint_folder_id: folderId,
+    });
+  }
+
+  result = {
+    kind: "success",
+    eventId: created.id!,
+    webLink: created.webLink,
+    mode: "created",
+  };
+} catch (error) {
+  const { err, status } = errorHandlingOnSubmit(error);
+  console.error(JSON.stringify(err));
+  Astro.response.status = status;
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <section class="card">
+      <p>Event Created</p>
+      <p style="max-width: 15rem; text-wrap: balance;">
+        Event ID: <code>{result.eventId}</code>
+      </p>
+
+      {result.webLink && (
+        <p>
+          <a href={result.webLink}>Open event in Outlook</a>
+        </p>
+      )}
+    </section>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to create event.</p>
+      <pre>{result.message}</pre>
+    </section>
+  )
+}

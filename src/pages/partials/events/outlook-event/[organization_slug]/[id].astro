@@ -15,6 +15,7 @@ import { and, eq } from "drizzle-orm";
 import departments from "@db/seed/departments";
 import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
+import { requireOrganizationAccess } from "@lib/auth/guards";
 
 interface EventCreatePayload {
   subject: string;
@@ -39,18 +40,18 @@ type RenderResult =
 
 const TEST_DEPARTMENT_ID = departments[0].id;
 
-const {
-  MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
-  MS_SHAREPOINT_MOEDOCS_SITE_ID,
-  MS_MAILBOX_USER_EMAIL,
-} = import.meta.env;
+// const {
+//   MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
+//   MS_SHAREPOINT_MOEDOCS_SITE_ID,
+//   MS_MAILBOX_USER_EMAIL,
+// } = import.meta.env;
 
-const site_id = MS_SHAREPOINT_MOEDOCS_SITE_ID;
-const drive_id = MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
-const mailboxUserEmail = MS_MAILBOX_USER_EMAIL;
+// const site_id = MS_SHAREPOINT_MOEDOCS_SITE_ID;
+// const drive_id = MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
+// const mailboxUserEmail = MS_MAILBOX_USER_EMAIL;
 
-const { id: eventIdParam } = Astro.params; // present only on the PATCH route
-
+const { id: eventId } = Astro.params; // present only on the PATCH route
+if (!eventId) throw new BadRequestError("eventId is required.");
 const method = Astro.request.method;
 
 if (method !== "PATCH") {
@@ -60,10 +61,27 @@ let result: RenderResult;
 
 try {
   // --- UPDATE ---
-  if (!eventIdParam) {
-    throw new BadRequestError(
-      "An event id is required in the URL to update an event.",
-    );
+   const user = Astro.locals.user;
+  if (!user) throw new BadRequestError("Not authenticated.");
+
+  const { organization_slug } = Astro.params;
+  if (!organization_slug)
+    throw new BadRequestError("organization_slug is required.");
+
+  // Same check as the page this partial is embedded in — the URL segment
+  // is just routing; the request is only trusted after this passes.
+  const { organization, membership } = await requireOrganizationAccess(
+    user.id,
+    organization_slug,
+  );
+  if (!organization || !membership) {
+    throw new BadRequestError("You are not authorized for this organization.");
+  }
+
+  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } =
+    organization;
+  if (!sharepoint_site_id || !sharepoint_drive_id || !mailbox_user_email) {
+    throw new Error("Organization SharePoint config is not set up correctly.");
   }
 
   const formData = await Astro.request.formData();
@@ -78,8 +96,8 @@ try {
   // TODO(locations-schema): resolve from the packet's eventual location_id.
   const meetingTimeZone = await resolveMeetingTimeZone(null);
 
-  const url = `/users/${mailboxUserEmail}/events/${eventIdParam}`;
-  const updated = await msGraphFetch<Event>(url, {
+  const url = `/users/${mailbox_user_email}/events/${eventId}`;
+  const updated = await msGraphFetch<OutlookEventSummary>(organization.id, url, {
     method: "PATCH",
     headers: outlookTimeZoneHeader(meetingTimeZone),
     body: JSON.stringify(updatePayload),
@@ -94,7 +112,7 @@ try {
       .set({ outlook_web_link: updated.webLink })
       .where(
         and(
-          eq(MeetingPacket.sharepoint_drive_id, drive_id),
+          eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
           eq(MeetingPacket.sharepoint_folder_id, folderId),
         ),
       );

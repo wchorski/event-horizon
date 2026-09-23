@@ -169,6 +169,7 @@ docker compose up --remove-orphans
 
 
 ## outlook calendar integration
+- [ ] need to PROTECT partial routes too as if they are api routes
 - [ ] if outlook_id is not found then remove/delete_flag on packet?
 
 ## Document manager

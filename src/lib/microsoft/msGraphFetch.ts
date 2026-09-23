@@ -1,18 +1,16 @@
-import { msAuthentication } from "@lib/auth/msAuthentication";
-
 // lib/microsoft/msGraphFetch.ts
-const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { getMsCredentials } from "@lib/auth/msCredentials";
 
 export async function msGraphFetch<T>(
+  organizationId: string,
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const accessToken = await msAuthentication(
-    TENANT_ID,
-    MS_CLIENT_ID,
-    MS_SECRET_VALUE,
-  );
+  const { tenantId, clientId, clientSecret } = await getMsCredentials(organizationId);
+  const accessToken = await msAuthentication(tenantId, clientId, clientSecret);
 
+  // TODO how do i cache this token for 60-90min instead of fetching on every request?
   // console.log({accessToken});
 
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {

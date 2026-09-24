@@ -38,12 +38,15 @@ interface ImportMeta {
 
 /// <reference path="../.astro/types.d.ts" />
 import type { auth } from "../src/lib/auth";
+import type { OrganizationSelect, MemberSelect } from "@ty/Schema";
 
 declare global {
   namespace App {
     interface Locals {
       user: typeof auth.$Infer.Session.user | null;
       session: typeof auth.$Infer.Session.session | null;
+      organization: OrganizationSelect | null;
+      member: MemberSelect | null;
     }
   }
 }

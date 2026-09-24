@@ -1,0 +1,14 @@
+---
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+
+const { user, organization, member } = Astro.locals;
+
+if(!user) return Astro.redirect('/login')
+if(!organization) return Astro.redirect('/org-not-found')
+if(!member) return Astro.redirect('/not-authorized')
+---
+
+<CommonPageLayout title={"MY ORG"}>
+  <h1>{organization.name}</h1>
+  <p>{user.email} | {member.role}</p>
+</CommonPageLayout>

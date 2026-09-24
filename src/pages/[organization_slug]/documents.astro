@@ -1,5 +1,5 @@
 ---
-// pages/documents/index
+// pages/:organization_slug/documents
 import type { Event } from "@microsoft/microsoft-graph-types";
 import type { DriveItem } from "@microsoft/microsoft-graph-types";
 import { msAuthentication } from "@lib/auth/msAuthentication";
@@ -60,7 +60,7 @@ if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) throw new
 // const mailbox_user_email = MS_MAILBOX_USER_EMAIL
 
 // This page's own path — used to build "back to this folder" links
-const basePath = `/documents/${organization_slug}`;
+const basePath = `/${organization_slug}/documents/`;
 let parentFolderId = null;
 let packet = null;
 let outlookEvent = null;

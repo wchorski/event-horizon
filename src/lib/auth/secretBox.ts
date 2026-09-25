@@ -1,5 +1,4 @@
 // lib/crypto/secretBox.ts
-import { meta } from "astro:schema";
 import crypto from "node:crypto";
 const { CREDENTIALS_ENCRYPTION_KEY } = import.meta.env;
 const MASTER_KEY = Buffer.from(CREDENTIALS_ENCRYPTION_KEY!, "base64"); // 32 bytes

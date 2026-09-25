@@ -24,9 +24,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   context.locals.user = session?.user ?? null;
   context.locals.session = session?.session ?? null;
+  context.locals.organization = null;
+  context.locals.member = null;
 
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
+  console.log({pathParts});
 
   // analytics proxy — bypasses auth/org gating entirely, same as before
   if (!isDev) {
@@ -83,6 +86,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const publicPrefixes = [
     "/api/auth",
     "/api/send",
+    // TODO what should i do with `/partials/`?
+    // "/partials/",
     `${UMAMI_PROXY_PREFIX}/api/send`,
   ];
 
@@ -97,8 +102,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
       )}&msg=${encodeURIComponent("Unauthorized. Please login to be returned back to the previous page")}`,
     );
   }
-
-  
 
   const RESERVED_ROUTE_SLUGS = new Set([
     "login",

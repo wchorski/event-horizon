@@ -1,0 +1,63 @@
+---
+// components/form/IntegrationCredForm
+interface Props {
+  organizationId: string;
+  organizationSlug: string;
+}
+import { INTEGRATION_PROVIDERS } from "@db/schema";
+import InputField from "./InputField.astro";
+import SelectField from "./SelectField.astro";
+import SubmitButton from "./SubmitButton.astro";
+const { organizationId, organizationSlug } = Astro.props;
+
+const providerOptions = INTEGRATION_PROVIDERS.map((text) => ({
+  label: text,
+  value: text,
+}));
+
+const idPrefix = "integration-form";
+const model = "integrationProvider";
+---
+
+<form
+  id={idPrefix}
+  class="card"
+  hx-post=`/${organizationSlug}/partials/integrations/${organizationId}`
+  hx-target={`#${idPrefix}-success`}
+  hx-target-error={`#${idPrefix}-error`}
+  hx-swap="innerHTML"
+>
+  <legend>Integration Form</legend>
+  <fieldset>
+    <SelectField
+      id={`${idPrefix}-provider`}
+      name={"provider"}
+      errorId={idPrefix + "-error"}
+      options={providerOptions}
+    />
+    <InputField
+      id={`${idPrefix}-tenantId`}
+      name="tenantId"
+      model={model}
+      type={"text"}
+      autocomplete="off"
+    />
+    <InputField
+      id={`${idPrefix}-clientId`}
+      name="clientId"
+      model={model}
+      type={"text"}
+      autocomplete="off"
+    />
+    <InputField
+      id={`${idPrefix}-secret`}
+      name="secret"
+      model={model}
+      type={"password"}
+      autocomplete="off"
+    />
+  </fieldset>
+  <div id={idPrefix + "-error"}></div>
+  <div id={`${idPrefix}-success`}></div>
+  <SubmitButton>Connect</SubmitButton>
+</form>

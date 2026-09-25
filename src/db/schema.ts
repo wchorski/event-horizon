@@ -702,7 +702,7 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "google",
 ]);
 
-export const INTEGRATION_PROVIDER = bookingStatusEnum.enumValues;
+export const INTEGRATION_PROVIDERS = integrationProviderEnum.enumValues;
 
 export const IntegrationCredential = pgTable(
   "integration_credentials",
@@ -717,10 +717,10 @@ export const IntegrationCredential = pgTable(
     tenantId: text().notNull(),
     clientId: text().notNull(),
     // ciphertext only — never plaintext
-    encryptedClientSecret: text().notNull(),
+    secretCiphertext: text().notNull(),
     // AES-GCM needs a fresh IV per encryption + the auth tag; store both alongside
-    encryptionIv: text().notNull(),
-    encryptionAuthTag: text().notNull(),
+    secretIv: text().notNull(),
+    secretAuthTag: text().notNull(),
     keyVersion: integer().notNull().default(1), // lets you rotate the master key later
     expiresAt: timestamp(), // Azure secrets expire — track it, alert before it lapses
     rotatedAt: timestamp(),

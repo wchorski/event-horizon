@@ -1,6 +1,7 @@
 import { z } from "astro/zod";
 import { normalizePhoneToE164Manual, slugify } from "./formatters";
-import { BOOKING_STATUSES } from "@db/schema";
+import { BOOKING_STATUSES, INTEGRATION_PROVIDERS } from "@db/schema";
+import { encryptSecret } from "./auth/secretBox";
 
 const datetimeLocalToDate = z
   .string()
@@ -56,12 +57,55 @@ export const slugSchema = z
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Invalid slug format"),
   );
 
+export type IntegrationCredentialFormInput =
+  z.input<typeof validateIntegrationCredentialForm>;
+
+export type IntegrationCredentialFormOutput =
+  z.output<typeof validateIntegrationCredentialForm>;
+
+export const validateIntegrationCredentialForm = z
+  .object({
+    provider: z.enum(INTEGRATION_PROVIDERS),
+    tenantId: z
+      .string({
+        error: "Tenant ID is required.",
+      })
+      .trim()
+      .min(1, "Tenant ID is required.")
+      .max(255, "Tenant ID is too long."),
+    clientId: z
+      .string({
+        error: "Client ID is required.",
+      })
+      .trim()
+      .min(1, "Client ID is required.")
+      .max(255, "Client ID is too long."),
+    secret: z
+      .string({
+        error: "Client secret is required.",
+      })
+      .trim()
+      .min(1, "Client secret is required.")
+      .max(4096, "Client secret is too long."),
+  })
+  .strict()
+  .transform(({ secret, ...payload }) => {
+    const { ciphertext, iv, authTag } = encryptSecret(secret);
+    return {
+      ...payload,
+      secretCiphertext: ciphertext,
+      secretIv: iv,
+      secretAuthTag: authTag,
+    };
+  });
+
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
   datetimeLocalToDate,
   id: z.uuidv7(),
   bookingStatus: z.enum(BOOKING_STATUSES),
+  integrationProvider: z.enum(INTEGRATION_PROVIDERS),
   phoneOptional: z.preprocess(
     (val) => (val === "" || val == null ? undefined : val),
     z

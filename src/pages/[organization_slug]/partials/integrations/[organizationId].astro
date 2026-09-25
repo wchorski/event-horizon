@@ -1,0 +1,132 @@
+---
+// src/pages/partials/integrations/:organizationId
+import type { IntegrationCredentialFormOutput } from "@lib/validate";
+import { validateIntegrationCredentialForm } from "@lib/validate";
+import { INTEGRATION_PROVIDERS, IntegrationCredential } from "@db/schema";
+import { db } from "@db/db";
+import { MeetingPacket } from "@db/schema";
+import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { unflatten } from "@lib/formParsing";
+import { and, eq } from "drizzle-orm";
+import departments from "@db/seed/departments";
+import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
+import {
+  outlookTimeZoneHeader,
+  resolveMeetingTimeZone,
+} from "@lib/calendarFactory";
+import { requireOrganizationAccess } from "@lib/auth/guards";
+import { encryptSecret } from "@lib/auth/secretBox";
+
+interface Payload {
+  provider: typeof INTEGRATION_PROVIDERS;
+  tenantId: string;
+  clientId: string;
+  secret: string;
+}
+
+// type OutlookEventSummary = Pick<Event, "id" | "webLink">;
+
+type RenderResult =
+  | {
+      kind: "success";
+      id: string;
+      provider: typeof INTEGRATION_PROVIDERS;
+      expiresAt?: string | null;
+    }
+  | { kind: "top-error"; message: string };
+
+const { organizationId } = Astro.params; // present only on the PATCH route
+if (!organizationId) throw new BadRequestError("organizationId is required.");
+const method = Astro.request.method;
+
+if (method !== "POST") {
+  throw new Error(`method ${method} is NOT allowed at this endpoint`);
+}
+let result: RenderResult;
+
+try {
+  // --- CREATE ---
+  //  TODO do i need to do these checks if it's handled in middleware?
+  const { user, organization, member } = Astro.locals;
+
+  //   if (!user) throw new BadRequestError("Not logged in.");
+
+  const { organizationId } = Astro.params;
+  if (!organizationId) throw new BadRequestError("organizationId is required.");
+
+  if (!user) {
+    Astro.response.status = 401;
+    throw new BadRequestError("You must be logged in.");
+  }
+
+  if (!organization || !member) {
+    Astro.response.status = 403;
+    throw new BadRequestError("You are not authorized for this organization.");
+  }
+
+  const formData = await Astro.request.formData();
+  // const parsed = unflatten(formData) as Omit<EventFormData, "transactionId">;
+  //   const parsed = unflatten(formData) as EventFormData;
+  const payload = Object.fromEntries(formData.entries());
+  console.log(
+    "=== pages/:organizationSlug/partials/integrations/:organizationId POST ===",
+  );
+  const validated = validateIntegrationCredentialForm.parse(payload) as IntegrationCredentialFormOutput;
+  console.log({ validated });
+
+  const now = new Date();
+  const twoYearsOut = new Date(now.setFullYear(now.getFullYear() + 2));
+
+  const {} = validated
+
+  const [created] = await db
+    .insert(IntegrationCredential)
+    .values({
+      ...validated,
+      organizationId: organization.id,
+      expiresAt: twoYearsOut,
+    })
+    .returning({
+      id: IntegrationCredential.id,
+      provider: IntegrationCredential.provider,
+      expiresAt: IntegrationCredential.expiresAt,
+    });
+
+  console.log({ created });
+
+  result = {
+    kind: "success",
+    provider: created.provider,
+    id: created.id!,
+    expiresAt: created.expiresAt,
+  };
+} catch (error) {
+  const { err, status } = errorHandlingOnSubmit(error);
+  console.error(JSON.stringify(err));
+  Astro.response.status = status;
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <div class="card callout success">
+      <p>Integration Connected</p>
+      <p title={result.id} style="max-width: 15rem; text-wrap: balance;">
+        {result.provider} has been integrated (expires at {result.expiresAt})
+      </p>
+    </div>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to create integration.</p>
+      <pre>{result.message}</pre>
+    </section>
+  )
+}

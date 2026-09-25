@@ -57,6 +57,13 @@
       "when": 1790194704998,
       "tag": "0007_complex_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790299429316,
+      "tag": "0008_windy_cyclops",
+      "breakpoints": true
     }
   ]
 }

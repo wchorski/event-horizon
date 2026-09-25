@@ -1,0 +1,17 @@
+---
+interface Props {
+  heading?: string;
+  message?: string;
+  type?: "success" | "error" | "warning" | "info";
+  icon?: "checkmark" | "lightbulb" | "eye";
+}
+const { heading, message, type = "plain", icon } = Astro.props;
+---
+
+<blockquote class:list={[type]}>
+  {heading ? <heading>{heading}</heading> : null}
+
+  <div slot="body" data-layout="body">
+    {message ? <p class="message">{message}</p> : null}
+  </div>
+</blockquote>

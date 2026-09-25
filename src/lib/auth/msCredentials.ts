@@ -12,12 +12,15 @@ export async function getMsCredentials(organizationId: string) {
     ),
   });
 
-  if (!row) throw new Error(`No Microsoft credentials configured for org ${organizationId}`);
+  if (!row)
+    throw new Error(
+      `No Microsoft credentials configured for org ${organizationId}`,
+    );
 
   const clientSecret = decryptSecret(
-    row.encryptedClientSecret,
-    row.encryptionIv,
-    row.encryptionAuthTag,
+    row.secretCiphertext,
+    row.secretIv,
+    row.secretAuthTag,
   );
 
   return { tenantId: row.tenantId, clientId: row.clientId, clientSecret };

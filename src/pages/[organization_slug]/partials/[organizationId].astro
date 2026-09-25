@@ -77,8 +77,6 @@ try {
   const now = new Date();
   const twoYearsOut = new Date(now.setFullYear(now.getFullYear() + 2));
 
-  const {} = validated
-
   const [created] = await db
     .insert(IntegrationCredential)
     .values({

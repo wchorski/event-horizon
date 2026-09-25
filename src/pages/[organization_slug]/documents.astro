@@ -12,13 +12,15 @@ import InputField from "@components/form/InputField.astro";
 import { isDayFolder } from "@lib/dayFolderCheck";
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
-import { MeetingPacket, Organization } from "@db/schema";
+import { IntegrationCredential, MeetingPacket, Organization } from "@db/schema";
 import Footer from "@components/navigation/Footer.astro";
 import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
 import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
 import type { OrganizationSelect } from "@ty/Schema";
 import { requireOrganizationAccess } from "@lib/auth/guards";
+import { NotFoundError } from "@lib/errors";
+import { decryptSecret } from "@lib/auth/secretBox";
 
 const user = Astro.locals.user;
 const displayName = user
@@ -44,9 +46,11 @@ if(!membership) return Astro.redirect(
     encodeURIComponent('You are not authorized to view this page. Ask to become a member of: ' + organization?.name)
   }`)
 
-const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
-  MS_SHAREPOINT_MOEDOCS_SITE_ID,
-  MS_MAILBOX_USER_EMAIL, } = import.meta.env;
+// const { tenantId, clientId, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
+//   MS_SHAREPOINT_MOEDOCS_SITE_ID,
+//   MS_MAILBOX_USER_EMAIL, } = import.meta.env;
+
+
 
 if(organization === undefined) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
 
@@ -58,6 +62,14 @@ if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) throw new
 // const sharepoint_drive_id =
 //   MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
 // const mailbox_user_email = MS_MAILBOX_USER_EMAIL
+
+// TODO don't hardcode this when supporting future integrations (or native?)
+const integrationCredential = await db.query.IntegrationCredential.findFirst({where: and(eq(IntegrationCredential.organizationId, organization.id), eq(IntegrationCredential.provider, 'microsoft'))})
+if(!integrationCredential) throw new NotFoundError(`❌ ${'microsoft'} integration is not setup for ${organization.name} `)
+
+const {tenantId, clientId, secretAuthTag, secretCiphertext, secretIv} = integrationCredential
+
+const integrationSecret = decryptSecret(secretCiphertext, secretIv, secretAuthTag)
 
 // This page's own path — used to build "back to this folder" links
 const basePath = `/${organization_slug}/documents/`;
@@ -97,17 +109,16 @@ try {
       })
     : null;
 
-    // console.log({packet});
-
   if (packet?.outlook_event_id) {
     try {
+
       outlookEvent = await msGraphFetch<Event>(
         organization.id,
         `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
         { method: "GET", headers: outlookTimeZoneHeader(meetingTimeZone) },
       );
 
-      // console.log({outlookEvent});
+      
 
       if (outlookEvent) {
         calendarDraft = createCalendarDraft(
@@ -154,9 +165,9 @@ try {
 
 try {
   const accessToken = await msAuthentication(
-    TENANT_ID,
-    MS_CLIENT_ID,
-    MS_SECRET_VALUE,
+    tenantId,
+    clientId,
+    integrationSecret,
   );
 
   const res = await fetch(url, {
@@ -366,7 +377,7 @@ const formMethodEndpoint = outlookEvent
   
         <form
           class="card"
-          hx-post="/partials/pdf-packet-builder"
+          hx-post={`/${organization.slug}/partials/pdf-packet-builder`}
           hx-swap="outerHTML"
           hx-target="this"
           hx-target-error="#pdf-packet-builder-error"

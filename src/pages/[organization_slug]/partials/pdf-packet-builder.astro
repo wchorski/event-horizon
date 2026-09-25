@@ -1,10 +1,14 @@
 ---
-// pages/partials/pdf-packet-builder
-import { MeetingPacket } from "@db/schema";
+// pages/:organization_slug/partials/pdf-packet-builder
+import { IntegrationCredential, MeetingPacket } from "@db/schema";
 import { db } from "@db/db";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { isDayFolder } from "@lib/dayFolderCheck";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  NotFoundError,
+} from "@lib/errors";
 import { buildMergedPacket } from "@lib/pdfPacketBuilder";
 import {
   ensureFolderPath,
@@ -14,8 +18,9 @@ import {
   uploadPacketResumable,
 } from "@lib/publishPacket";
 import { and, eq } from "drizzle-orm";
+import { decryptSecret } from "@lib/auth/secretBox";
 
-const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+// const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
 
 if (Astro.request.method !== "POST") {
   throw new BadRequestError(
@@ -30,11 +35,15 @@ type RenderResult =
 
 let result: RenderResult;
 
-// TODO get from client or organization db?
-const site_id =
-  "moeits.sharepoint.com,fd7cc296-d084-4604-941a-bdc70e6195e4,a20a733c-1f92-4c6f-8415-7469223ee708";
-const drive_id =
-  "b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4";
+const { organization, member } = Astro.locals;
+if (!organization || !member) {
+  Astro.response.status = 403;
+  throw new BadRequestError("You are not authorized for this organization.");
+}
+
+const { sharepoint_site_id, sharepoint_drive_id } = organization;
+if (!sharepoint_site_id || !sharepoint_drive_id)
+  throw new BadRequestError("organization is missing ms site or drive ids.");
 
 try {
   const formData = await Astro.request.formData();
@@ -45,13 +54,39 @@ try {
   // console.log({ folderId });
   if (!folderId) throw new Error("folder Id must be set");
 
-  const accessToken = await msAuthentication(
-    TENANT_ID,
-    MS_CLIENT_ID,
-    MS_SECRET_VALUE,
+  const integrationCredential = await db.query.IntegrationCredential.findFirst({
+    where: and(
+      eq(IntegrationCredential.organizationId, organization.id),
+      eq(IntegrationCredential.provider, "microsoft"),
+    ),
+  });
+  
+  if (!integrationCredential)
+    throw new NotFoundError(
+      `❌ ${"microsoft"} integration is not setup for ${organization.name} `,
+    );
+
+  const { tenantId, clientId, secretAuthTag, secretCiphertext, secretIv } =
+    integrationCredential;
+
+    
+
+  const integrationSecret = decryptSecret(
+    secretCiphertext,
+    secretIv,
+    secretAuthTag,
   );
 
-  const endpoint = `https://graph.microsoft.com/v1.0/sites/${site_id}/drives/${drive_id}/items/${folderId}?$select=name,parentReference`;
+  
+
+  const accessToken = await msAuthentication(
+    tenantId,
+    clientId,
+    integrationSecret,
+  );
+  
+
+  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}?$select=name,parentReference`;
 
   // TODO use msGraphFetch()
   const res = await fetch(endpoint, {
@@ -80,7 +115,7 @@ try {
 
   const existingPacket = await db.query.MeetingPacket.findFirst({
     where: and(
-      eq(MeetingPacket.sharepoint_drive_id, drive_id),
+      eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
       eq(MeetingPacket.sharepoint_folder_id, folderId as string),
     ),
   });
@@ -91,16 +126,9 @@ try {
     );
   }
 
-  // ...buildMergedPacket, ensureFolderPath, nextVersionedFilename, uploadPacketResumable...
-  // const pdfBytes = await buildMergedPacket(
-  //   site_id,
-  //   drive_id,
-  //   folderId as string,
-  //   accessToken,
-  // );
   const pdfBytes = await buildMergedPacket(
-    site_id,
-    drive_id,
+    sharepoint_site_id,
+    sharepoint_drive_id,
     folderId as string,
     accessToken,
     {
@@ -114,18 +142,18 @@ try {
   const publishedSegments = mirrorToPublished(sourcePath);
 
   const publishedFolderId = await ensureFolderPath(
-    drive_id,
+    sharepoint_drive_id,
     publishedSegments,
     accessToken,
   );
   const filename = await nextVersionedFilename(
-    drive_id,
+    sharepoint_drive_id,
     publishedFolderId,
     "MeetingPacket",
     accessToken,
   );
   const uploaded = await uploadPacketResumable(
-    drive_id,
+    sharepoint_drive_id,
     publishedFolderId,
     filename,
     pdfBytes,

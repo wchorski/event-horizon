@@ -29,7 +29,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
-  console.log({pathParts});
+  if(pathParts[0] === undefined) throw new Error('MIDDLEWARE: first part of path is undefined')
 
   // analytics proxy — bypasses auth/org gating entirely, same as before
   if (!isDev) {

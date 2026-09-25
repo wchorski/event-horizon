@@ -15,8 +15,6 @@ if (!member) return Astro.redirect("/not-authorized");
 const orgIntegrations = await db.query.IntegrationCredential.findMany({
   where: eq(IntegrationCredential.organizationId, organization.id),
 });
-
-console.log({ orgIntegrations });
 ---
 
 <CommonPageLayout title={organization.name + " | Organization"}>

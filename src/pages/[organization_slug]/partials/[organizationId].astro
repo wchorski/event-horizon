@@ -1,30 +1,10 @@
 ---
-// src/pages/partials/integrations/:organizationId
+// src/pages/:organization_slug/partials/integrations/:organizationId
 import type { IntegrationCredentialFormOutput } from "@lib/validate";
 import { validateIntegrationCredentialForm } from "@lib/validate";
 import { INTEGRATION_PROVIDERS, IntegrationCredential } from "@db/schema";
 import { db } from "@db/db";
-import { MeetingPacket } from "@db/schema";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
-import { unflatten } from "@lib/formParsing";
-import { and, eq } from "drizzle-orm";
-import departments from "@db/seed/departments";
-import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
-import {
-  outlookTimeZoneHeader,
-  resolveMeetingTimeZone,
-} from "@lib/calendarFactory";
-import { requireOrganizationAccess } from "@lib/auth/guards";
-import { encryptSecret } from "@lib/auth/secretBox";
-
-interface Payload {
-  provider: typeof INTEGRATION_PROVIDERS;
-  tenantId: string;
-  clientId: string;
-  secret: string;
-}
-
-// type OutlookEventSummary = Pick<Event, "id" | "webLink">;
 
 type RenderResult =
   | {
@@ -96,7 +76,7 @@ try {
     kind: "success",
     provider: created.provider,
     id: created.id!,
-    expiresAt: created.expiresAt,
+    expiresAt: created.expiresAt?.toISOString(),
   };
 } catch (error) {
   const { err, status } = errorHandlingOnSubmit(error);

@@ -29,7 +29,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
-  if(pathParts[0] === undefined) throw new Error('MIDDLEWARE: first part of path is undefined')
 
   // analytics proxy — bypasses auth/org gating entirely, same as before
   if (!isDev) {
@@ -81,12 +80,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/bye-bye-bye",
     "/forgot-password",
     "/timelines",
+    // TODO lock down with auth later
     "/bookings",
   ]);
   const publicPrefixes = [
     "/api/auth",
     "/api/send",
     // TODO what should i do with `/partials/`?
+    "/partials/timelines/",
+    "/partials/bookings/",
     // "/partials/",
     `${UMAMI_PROXY_PREFIX}/api/send`,
   ];

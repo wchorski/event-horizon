@@ -167,8 +167,12 @@ docker compose up --remove-orphans
   - Icons from https://opensvg.dev/icons
 </details>
 
+#todo
+- [ ] make sure /timelines and /bookings are still reachable with middleware auth
+- [ ] how do i enable a master admin account, and not allow any random signups (that can just add themselves to any organization)
 
 ## outlook calendar integration
+#todo
 - [ ] need to PROTECT partial routes too as if they are api routes
 - [ ] if outlook_id is not found then remove/delete_flag on packet?
 

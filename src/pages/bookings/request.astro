@@ -2,8 +2,16 @@
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import BookingRequestForm from "@components/BookingRequestForm.astro";
 import { getLocationsPage } from "@lib/getLocationsPage";
-import { seedData } from "@db/seed-data";
 import { getUsersPage } from "@lib/getUsersPage";
+
+const { user: author } = Astro.locals;
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+if (!author) {
+  return Astro.redirect(
+    `/login?msg=${encodeURIComponent("Must have an account create bookings. Login to return to booking page")}&returnTo=${encodeURIComponent(returnTo)}`,
+  );
+}
 
 const timelineId = Astro.url.searchParams.get("timelineId");
 const start = Astro.url.searchParams.get("start");
@@ -33,7 +41,7 @@ const locationOptions = locations?.map((loc) => ({
       <BookingRequestForm
         userOptions={usersOptions}
         locationOptions={locationOptions}
-        author_user_id={seedData.users[0].id}
+        author_user_id={author.id}
         timelineId={timelineId}
         start={start}
       />

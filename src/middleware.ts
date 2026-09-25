@@ -30,6 +30,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
 
+  if (pathname.startsWith("/api/auth/organization/")) {
+    // only site admins may create orgs or mutate membership
+    if (context.locals.user?.role !== "admin") {
+      return new Response("Forbidden", { status: 403 });
+    }
+  }
+
   // analytics proxy — bypasses auth/org gating entirely, same as before
   if (!isDev) {
     const remotePath = ROUTE_MAP[pathname];
@@ -105,7 +112,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     );
   }
 
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    if (context.locals.user?.role !== "admin") {
+      return context.redirect(
+        `/not-authorized?msg=${encodeURIComponent("Site admin access required")}`,
+      );
+    }
+  }
+
   const RESERVED_ROUTE_SLUGS = new Set([
+    "admin",
     "login",
     "sign-up",
     "sign-out",
@@ -118,6 +134,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "api",
     "assets",
     "_astro",
+    "partials",
   ]);
 
   const organizationSlug = pathParts[0];

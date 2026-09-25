@@ -10,7 +10,7 @@ type RenderResult =
   | {
       kind: "success";
       id: string;
-      provider: typeof INTEGRATION_PROVIDERS;
+      provider: (typeof INTEGRATION_PROVIDERS)[number];
       expiresAt?: string | null;
     }
   | { kind: "top-error"; message: string };

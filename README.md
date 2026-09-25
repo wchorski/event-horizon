@@ -144,7 +144,7 @@ pnpm db:migrate
 ```shell
 pip install oikb
 oikb init
-
+oikb sync
 ```
 
 </details>

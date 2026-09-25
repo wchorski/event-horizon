@@ -1,6 +1,6 @@
 ---
 // partials/organizations/create.astro
-import {  organizationConfigRequired } from "@lib/tableConfigs";
+import { organizationConfigRequired } from "@lib/tableConfigs";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
@@ -20,6 +20,10 @@ import { eq } from "drizzle-orm";
 import { validate } from "@lib/validate";
 
 type ZodErrorFlattened = ReturnType<ZodError<OrganizationSelect>["flatten"]>;
+
+if (Astro.locals.user?.role !== "admin") {
+  return new Response("Forbidden", { status: 403 });
+}
 
 let organization: OrganizationSelect | null | undefined = null;
 let error = null;
@@ -41,7 +45,10 @@ if (Astro.request.method === "POST") {
 
     const validated = validate.organizationCreate.parse(submitFields);
 
-    const [result] = await db.insert(Organization).values(validated).returning();
+    const [result] = await db
+      .insert(Organization)
+      .values({ ...validated, createdAt: new Date() })
+      .returning();
     if (!result) throw new NotFoundError(`Organization not created`);
     organization = result;
   } catch (e) {

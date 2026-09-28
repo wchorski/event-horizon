@@ -82,13 +82,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "/login",
     "/sign-up",
     "/sign-out",
+    "/password-reset",
     "/not-authorized",
     "/org-not-found",
     "/bye-bye-bye",
+    "/accept-invitation",
     "/forgot-password",
     "/timelines",
     // TODO lock down with auth later
     "/bookings",
+    "/dashboard"
   ]);
   const publicPrefixes = [
     "/api/auth",
@@ -96,6 +99,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // TODO what should i do with `/partials/`?
     "/partials/timelines/",
     "/partials/bookings/",
+    "/partials/auth/",
     // "/partials/",
     `${UMAMI_PROXY_PREFIX}/api/send`,
   ];

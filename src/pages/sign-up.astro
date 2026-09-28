@@ -26,7 +26,7 @@ if (Astro.request.method === "POST") {
   if (result.success) {
     const redirectResponse = new Response(null, {
       status: 302,
-      headers: { Location: "/dashboard?msg='Account Created! Welcome.'" },
+      headers: { Location: "/dashboard?msg=Account Created! Welcome." },
     });
     for (const cookie of result.setCookies) {
       redirectResponse.headers.append("set-cookie", cookie);

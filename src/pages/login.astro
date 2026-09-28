@@ -1,8 +1,10 @@
 ---
 // src/pages/login.astro
 import SocialProviderLoginForm from "@components/auth/SocialProviderLoginForm.astro";
+import Dialog from "@components/Dialog.astro";
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import VerifyOneTimePassForm from "@components/form/VerifyOneTimePassForm.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { login } from "@lib/auth/login";
 import type { LoginCredentials } from "@ty/Auth";
@@ -10,7 +12,10 @@ import type { LoginCredentials } from "@ty/Auth";
 const params = Astro.url.searchParams;
 const returnToUrl = params.get("returnTo");
 const msg = params.get("msg");
+const email = params.get("email");
+const otp = params.get("otp");
 const session = Astro.locals.session;
+const user = Astro.locals.user;
 let error: string | null = null;
 
 if (Astro.request.method === "POST") {
@@ -25,7 +30,7 @@ if (Astro.request.method === "POST") {
       headers: {
         Location: returnToUrl
           ? returnToUrl
-          : "/dashboard?msg='Login Successful. Welcome'",
+          : "/dashboard?msg=Login Successful! Welcome.",
       },
     });
     for (const cookie of result.setCookies) {
@@ -41,18 +46,21 @@ if (Astro.request.method === "POST") {
 <CommonPageLayout>
   <header>
     <h1>Login</h1>
-    <p class="callout warning">{msg}</p>
+    {msg ? <p class="callout warning">{msg}</p> : null}
   </header>
-  <div data-layout="content">
+  <div data-layout="content" class="grid gap-m max-w-s">
     {
-      session ? (
+      session && user ? (
         <p>
-          You are currently logged in as{" "}
-          <pre>{JSON.stringify(session, null, 2)}</pre>
+          You are currently logged in as <br />
+          <strong>
+            {`${user.first_name} ${user.last_name} <${user.email}>`}{" "}
+          </strong>
         </p>
       ) : null
     }
-    <form id="sign-up-form" method="POST">
+    <form class="card" id="sign-up-form" method="POST">
+      <legend>Login</legend>
       <InputField
         name="email"
         type={"email"}
@@ -78,9 +86,34 @@ if (Astro.request.method === "POST") {
       <SubmitButton text="Login" />
     </form>
 
+    <form class="card" hx-post="/partials/auth/password-reset-request">
+      <legend>Request Password Reset</legend>
+      <InputField
+        name="email"
+        type={"email"}
+        id="password"
+        model={"accounts"}
+        required={true}
+        value={email}
+      />
+      <div class="row-error error top-level">
+        <p class="message">
+          <span id={`password-reset-error`}></span>
+        </p>
+      </div>
+      <SubmitButton text="Request Code" />
+    </form>
+
     <hr />
 
     <SocialProviderLoginForm provider="github" />
     <SocialProviderLoginForm provider="microsoft" />
+
+    <Dialog modal id="dialog-otp" open={otp ? true : false}>
+      <VerifyOneTimePassForm
+        otp={otp}
+        email={email ? decodeURIComponent(email) : null}
+      />
+    </Dialog>
   </div>
 </CommonPageLayout>

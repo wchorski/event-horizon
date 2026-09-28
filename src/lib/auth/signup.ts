@@ -34,6 +34,21 @@ export async function signup(
       };
     }
 
+    const verify = await auth.api.sendVerificationOTP({
+      body: {
+        email, // required, Email address to send the OTP.
+        type: "sign-in", // required, Type of the OTP. `sign-in`, `email-verification`, or `forget-password`.
+      },
+    });
+
+    if (!verify.success) {
+      console.log({ verify });
+      return {
+        success: false,
+        error: "OTP verification did not send",
+      };
+    }
+
     const setCookies = response.headers.getSetCookie?.() ?? [];
     return { success: true, setCookies };
   } catch (err: any) {

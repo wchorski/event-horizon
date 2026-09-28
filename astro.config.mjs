@@ -235,6 +235,31 @@ export default defineConfig({
         access: "secret",
         optional: false,
       }),
+      SITE_MAIL_PORT: envField.string({
+        context: "server",
+        access: "public",
+        optional: false,
+      }),
+      SITE_MAIL_HOST: envField.string({
+        context: "server",
+        access: "public",
+        optional: false,
+      }),
+      SITE_MAIL_AUTH_USER: envField.string({
+        context: "server",
+        access: "public",
+        optional: false,
+      }),
+      SITE_MAIL_AUTH_PASS: envField.string({
+        context: "server",
+        access: "secret",
+        optional: false,
+      }),
+      SITE_MAIL_ALIAS_EMAIL: envField.string({
+        context: "client",
+        access: "public",
+        optional: false,
+      }),
     },
   },
   // integrations: [db()]

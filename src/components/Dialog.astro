@@ -1,39 +1,64 @@
 ---
-interface Props {
+// components/Dialog.astro
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"dialog"> {
   id: string;
-  title: string;
+  title?: string;
   class?: string;
+  modal?: boolean;
 }
 
-const { id, title, class: className } = Astro.props;
+const {
+  id,
+  title,
+  class: className,
+  open,
+  modal = true,
+  ...attrs
+} = Astro.props;
 ---
 
-<dialog id={id} class:list={["dialog", className]}>
-  <div class="dialog-header">
-    <h2>{title}</h2>
-    <button class="dialog-close" aria-label="Close">✕</button>
-  </div>
+<dialog
+  {...attrs}
+  data-modal={modal}
+  id={id}
+  class:list={["dialog", className]}
+>
+  <header class="dialog-header">
+    {title ? <h2>{title}</h2> : null}
+    <div class="window-actions">
+      <button class="dialog-close" aria-label="Close">✕</button>
+    </div>
+  </header>
   <div class="dialog-body">
     <slot />
   </div>
 </dialog>
 
-<script>
-  // Runs once — handles ALL dialogs on the page
-  document.querySelectorAll("dialog").forEach((dialog) => {
-    // Close button
-    dialog.querySelector(".dialog-close")?.addEventListener("click", () => {
-      dialog.close();
-    });
+<script is:inline define:vars={{ id, open }}>
+  console.log({ id, open });
+  const dialog = document.getElementById(id);
 
-    // Backdrop click to close
+  const isModal = dialog.dataset.modal === "true";
+  if (open) dialog.showModal();
+
+  dialog.querySelector(".dialog-close")?.addEventListener("click", () => {
+    dialog.close();
+  });
+
+  // Only modal dialogs have a backdrop
+  if (isModal) {
     dialog.addEventListener("click", (e) => {
       if (e.target === dialog) dialog.close();
     });
+  }
 
-    // After HTMX swaps content into dialog, re-open it
-    dialog.addEventListener("htmx:afterSwap", () => {
+  dialog.addEventListener("htmx:afterSwap", () => {
+    if (isModal) {
       dialog.showModal();
-    });
+    } else {
+      dialog.show();
+    }
   });
 </script>

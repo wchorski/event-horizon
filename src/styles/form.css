@@ -101,6 +101,12 @@ form {
     display: none;
   }
 
+  fieldset.no-style {
+    padding: 0;
+    margin: 0;
+    border: none;
+  }
+
   fieldset.actions {
     border: none;
     padding: 0;

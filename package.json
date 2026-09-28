@@ -32,6 +32,7 @@
     "fast-xml-parser": "^5.10.1",
     "htmx-ext-response-targets": "^2.0.4",
     "htmx.org": "^2.0.10",
+    "nodemailer": "^10.0.10",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
     "postgres": "^3.4.9"
@@ -41,6 +42,7 @@
     "@microsoft/microsoft-graph-types": "^2.43.1",
     "@playwright/test": "^1.61.1",
     "@types/node": "^25.9.5",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-seed": "^0.3.1",

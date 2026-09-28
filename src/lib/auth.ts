@@ -15,13 +15,16 @@ const {
 } = process.env;
 
 // const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = import.meta.env;
-
+import transporter, {
+  verificationEmailTemplate,
+  invitationEmailTemplate,
+} from "@lib/email";
 import { passkey } from "@better-auth/passkey";
 import { db } from "@db/db";
 import * as schema from "@db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, username, organization } from "better-auth/plugins";
+import { admin, username, organization, emailOTP } from "better-auth/plugins";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -134,7 +137,56 @@ export const auth = betterAuth({
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
       allowUserToCreateOrganization: async (user) => user.role === "admin",
+      async sendInvitationEmail(data) {
+        // Construct the acceptance link (frontend route)
+        const inviteLink = `${process.env.VITE_APP_URL}/accept-invitation/${data.id}`;
+
+        // Send the email
+        await transporter.sendMail(
+          invitationEmailTemplate({
+            email: data.email,
+            inviterName: data.inviter.user.name || "A user",
+            inviterEmail: data.inviter.user.email,
+            organizationName: data.organization.name,
+            inviteLink,
+            role: data.role,
+          }),
+        );
+      },
     }),
+    emailOTP({
+      async sendVerificationOTP({ email, otp, type }) {
+        if (type === "sign-in") {
+          // Send the OTP for sign in
+          await transporter.sendMail(
+            verificationEmailTemplate({ email, otp, type }),
+          );
+        } else if (type === "email-verification") {
+          // Send the OTP for email verification
+          await transporter.sendMail(
+            verificationEmailTemplate({ email, otp, type }),
+          );
+        } else {
+          // Send the OTP for password reset
+          await transporter.sendMail(
+            verificationEmailTemplate({ email, otp, type }),
+          );
+        }
+      },
+      otpLength: 6,
+      expiresIn: 300, // 5 minutes
+    }),
+    // emailOTP({
+    //   async sendVerificationOTP({ email, otp, type }) {
+    //     // Send the OTP
+    //     console.log("🔑 Send the OTP");
+    //     await transporter.sendMail(
+    //       verificationEmailTemplate({ email, otp, type }),
+    //     );
+    //   },
+    //   otpLength: 6,
+    //   expiresIn: 300, // 5 minutes
+    // }),
   ],
   advanced: {
     cookiePrefix: "eh",

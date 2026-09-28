@@ -1,0 +1,61 @@
+---
+// pages/partials/auth/check-verification-otp
+type PasswordResetFields = {
+  otp: string;
+  email: string;
+  password: string;
+};
+import { auth } from "@lib/auth";
+import { BadRequestError } from "@lib/errors";
+
+if (Astro.request.method !== "POST")
+  return new Response("only POST method is allowed", { status: 405 });
+
+let error = null;
+
+try {
+  const formData = await Astro.request.formData();
+  const payload = Object.fromEntries(formData.entries()) as PasswordResetFields;
+  const { email, otp, password } = payload;
+  if (!email || !otp || !password)
+    throw new BadRequestError("email, otp, or password not in formData");
+
+  const verify = await auth.api.checkVerificationOTP({
+    body: {
+      email, // required, Email address to send the OTP.
+      type: "forget-password", // required, Type of the OTP.
+      otp, // required, OTP sent to the email.
+    },
+  });
+
+  if (!verify.success)
+    throw new Error("uh oh. no good: " + JSON.stringify(verify));
+
+  const reset = await auth.api.resetPasswordEmailOTP({
+    body: {
+      email, // required, Email address to reset the password.
+      otp, // required, OTP sent to the email.
+      password, // required, New password.
+    },
+  });
+
+  if (!reset.success)
+    throw new Error("uh oh. no good: " + JSON.stringify(reset));
+
+  return Astro.redirect("/dashboard?msg=Password successfully reset");
+} catch (err) {
+  console.log({ err });
+  error = String(err);
+}
+---
+
+{
+  error ? (
+    <p class="callout error">an error happened {error}</p>
+  ) : (
+    <p class="callout success">
+      Password has been updated.
+      <a href="/dashboard?msg=Reset your password!s">Dashboard</a>
+    </p>
+  )
+}

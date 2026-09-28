@@ -8,6 +8,7 @@ import {
   Ticket,
   Booking,
   bookingStatusEnum,
+  memberRoleEnum,
   assignmentsRoleEnum,
   BookingContractorWithRole,
   Timeline,
@@ -101,6 +102,7 @@ export type UserCreditFlat = {
 
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
+export type MemberRoles = (typeof memberRoleEnum.enumValues)[number]
 
 export type MomentStep = {
   id: number;

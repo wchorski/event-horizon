@@ -1,0 +1,171 @@
+---
+// /pages/accept-invitation/[id].astro
+import Footer from "@components/navigation/Footer.astro";
+import { db } from "@db/db";
+import { Invitation } from "@db/schema";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { auth } from "@lib/auth";
+import { BadRequestError } from "@lib/errors";
+import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
+
+const { id } = Astro.params;
+if (!id) throw new BadRequestError("invitation id was not provided");
+
+const { user } = Astro.locals;
+// path only, so we never bounce users to an arbitrary origin
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+if (!user) {
+  const msg = "You must be logged in to accept the organization invite";
+  return Astro.redirect(
+    `/login?msg=${encodeURIComponent(msg)}&returnTo=${encodeURIComponent(returnTo)}`,
+  );
+}
+
+const invitation = await db.query.Invitation.findFirst({
+  where: eq(Invitation.id, id),
+  with: { organization: { columns: { name: true, slug: true, logo: true } } },
+});
+if (!invitation) return Astro.rewrite("/404");
+
+const { organization, ...invite } = invitation;
+
+// ---- work out what state the invite is in ----
+type State =
+  | "ready"
+  | "wrong_user"
+  | "accepted"
+  | "rejected"
+  | "canceled"
+  | "expired";
+
+let state: State = "ready";
+if (invite.email.toLowerCase() !== user.email.toLowerCase()) state = "wrong_user";
+else if (invite.status === "accepted") state = "accepted";
+else if (invite.status === "rejected") state = "rejected";
+else if (invite.status === "canceled") state = "canceled";
+else if (invite.expiresAt < new Date()) state = "expired";
+
+// ---- accept ----
+let errorMessage: string | undefined;
+
+if (Astro.request.method === "POST" && state === "ready") {
+  try {
+    const data = await auth.api.acceptInvitation({
+      body: { invitationId: id },
+      headers: Astro.request.headers, // requires session cookies
+    });
+    if (data?.invitation.status === "accepted") {
+      return Astro.redirect(`/org/${organization.slug}`);
+    }
+    errorMessage = "The invitation could not be accepted. Please try again.";
+  } catch (err) {
+    if (err instanceof APIError) {
+      // Better Auth gives readable messages, e.g. already a member, invitation not found
+      errorMessage = err.body?.message ?? err.message;
+    } else {
+      console.error(err);
+      errorMessage = "Something went wrong on our end. Please try again.";
+    }
+  }
+}
+
+// ---- copy for the states that block accepting ----
+const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> = {
+  wrong_user: {
+    title: "Wrong account",
+    body: `You're signed in as ${user.email}, but this invitation was sent to ${invite.email}. Sign in with that account to accept it.`,
+  },
+  accepted: {
+    title: "Already accepted",
+    body: `This invitation has already been accepted.`,
+  },
+  rejected: {
+    title: "Invitation declined",
+    body: "This invitation was declined and can no longer be used.",
+  },
+  canceled: {
+    title: "Invitation canceled",
+    body: `${organization.name} canceled this invitation. Ask them to send a new one.`,
+  },
+  expired: {
+    title: "Invitation expired",
+    body: `This invitation expired on ${invite.expiresAt.toLocaleDateString("en-US", { dateStyle: "long" })}. Ask ${organization.name} to send a new one.`,
+  },
+};
+
+if (state === "wrong_user") Astro.response.status = 403;
+if (state === "expired") Astro.response.status = 410;
+---
+
+<BaseLayout>
+  <header slot="header" class="flex space-between gap-l">
+    <div>
+      <h1>{state === "ready" ? "You're Invited!" : blocked[state].title}</h1>
+      {
+        state === "ready" && (
+          <p>
+            {organization.name} is inviting you to become a {invite.role} of
+            the organization.
+          </p>
+        )
+      }
+    </div>
+    {
+      organization.logo && (
+        <img
+          src={organization.logo}
+          alt={`${organization.name} logo`}
+          width="200"
+          height="auto"
+        />
+      )
+    }
+  </header>
+
+  {
+    state === "ready" ? (
+      <form method="POST" class="card" id="accept-form">
+        {errorMessage && (
+          <p role="alert" class="error">
+            {errorMessage}
+          </p>
+        )}
+        <button type="submit" class="m">Join Organization</button>
+      </form>
+    ) : (
+      <div class="card" role="status">
+        <p>{blocked[state].body}</p>
+        {state === "wrong_user" && (
+          // adjust to whatever your logout route is
+          <a>
+            href={`/logout?returnTo=${encodeURIComponent(returnTo)}`}
+            class="button"
+          >
+            Switch account
+          </a>
+        )}
+        {state === "accepted" && (
+          <a href={`/org/${organization.slug}`} class="button">
+            Go to {organization.name}
+          </a>
+        )}
+      </div>
+    )
+  }
+
+  <Footer slot="footer" />
+</BaseLayout>
+
+<script>
+  // stop double submits and show progress
+  const form = document.getElementById("accept-form");
+  form?.addEventListener("submit", () => {
+    const btn = form.querySelector("button");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Joining…";
+    }
+  });
+</script>

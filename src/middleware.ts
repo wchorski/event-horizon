@@ -17,9 +17,10 @@ const publicRoutesPrefixes = [
   "/api/auth",
   "/api/send",
   // TODO what should i do with `/partials/`?
-  "/partials/timelines/",
-  "/partials/bookings/",
-  "/partials/auth/",
+  "/partials/timelines",
+  "/partials/bookings",
+  "/bookings",
+  "/partials/auth",
   // "/partials/",
   "/login",
   "/sign-up",

@@ -1,0 +1,52 @@
+---
+interface Props {
+  organizationSlug: string;
+  organizationId: string;
+}
+import { MEMBER_ROLES } from "@db/schema";
+import InputField from "@components/form/InputField.astro";
+import SelectField from "@components/form/SelectField.astro";
+import SubmitButton from "@components/form/SubmitButton.astro";
+
+const { organizationSlug, organizationId } = Astro.props;
+
+const roleOptions = MEMBER_ROLES.map((text) => ({
+  label: text,
+  value: text,
+})).reverse();
+
+const idPrefix = "members-form";
+const model = "member";
+// TODO target list of users instead to self populate
+---
+
+<form
+  class="card"
+  id={idPrefix}
+  class="card"
+  hx-post=`/org/${organizationSlug}/partials/invite-member/${organizationId}`
+  hx-target={`#${idPrefix}-success`}
+  hx-target-error={`#${idPrefix}-error`}
+  hx-swap="innerHTML"
+>
+  <legend>Invite someone to become a Member</legend>
+  <fieldset class="no-style">
+    <SelectField
+      id={`${idPrefix}-role`}
+      name={"role"}
+      errorId={idPrefix + "-role"}
+      options={roleOptions}
+    />
+    <InputField
+      id={`${idPrefix}-email`}
+      name="email"
+      model={model}
+      type={"email"}
+      autocomplete="off"
+      value={'fireatwill35+eh4@gmail.com'}
+    />
+  </fieldset>
+  <div id={idPrefix + "-error"}></div>
+  <div id={`${idPrefix}-success`}></div>
+  <SubmitButton text="Send Invite" />
+</form>

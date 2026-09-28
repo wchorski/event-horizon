@@ -18,11 +18,16 @@ const session = Astro.locals.session;
 const user = Astro.locals.user;
 let error: string | null = null;
 
+// TODO do i need a trycatch here?
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
+  // @ts-ignore
   const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
 
-  const result = await login({ callbackURL: returnToUrl ?? undefined, ...payload });
+  const result = await login({
+    ...payload,
+    callbackURL: returnToUrl ?? undefined,
+  });
 
   if (result.success) {
     const redirectResponse = new Response(null, {
@@ -30,7 +35,7 @@ if (Astro.request.method === "POST") {
       headers: {
         Location: returnToUrl
           ? returnToUrl
-          : "/dashboard?msg=Login Successful! Welcome.",
+          : `/dashboard?msg=${encodeURIComponent("Login Successful! Welcome.")}`,
       },
     });
     for (const cookie of result.setCookies) {
@@ -86,7 +91,13 @@ if (Astro.request.method === "POST") {
       <SubmitButton text="Login" />
     </form>
 
-    <form class="card" hx-post="/partials/auth/password-reset-request">
+    <form
+      class="card"
+      hx-post="/partials/auth/password-reset-request"
+      hx-target={this}
+      hx-target-error={`#password-reset-error`}
+      hx-swap="outerHTML"
+    >
       <legend>Request Password Reset</legend>
       <InputField
         name="email"
@@ -101,6 +112,7 @@ if (Astro.request.method === "POST") {
           <span id={`password-reset-error`}></span>
         </p>
       </div>
+
       <SubmitButton text="Request Code" />
     </form>
 

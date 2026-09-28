@@ -377,7 +377,7 @@ const formMethodEndpoint = outlookEvent
   
         <form
           class="card"
-          hx-post={`/${organization.slug}/partials/pdf-packet-builder`}
+          hx-post={`/org/${organization.slug}/partials/pdf-packet-builder`}
           hx-swap="outerHTML"
           hx-target="this"
           hx-target-error="#pdf-packet-builder-error"

@@ -102,6 +102,9 @@ export const auth = betterAuth({
       account: schema.Account,
       verification: schema.Verification,
       passkey: schema.Passkey,
+      organization: schema.Organization,
+      member: schema.Member,
+      invitation: schema.Invitation,
     },
   }),
   user: {
@@ -136,10 +139,12 @@ export const auth = betterAuth({
     }),
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
+      // TODO add this in later
+      // requireEmailVerificationOnInvitation: true, 
       allowUserToCreateOrganization: async (user) => user.role === "admin",
       async sendInvitationEmail(data) {
         // Construct the acceptance link (frontend route)
-        const inviteLink = `${process.env.VITE_APP_URL}/accept-invitation/${data.id}`;
+        const inviteLink = `${BETTER_AUTH_URL}/accept-invitation/${data.id}`;
 
         // Send the email
         await transporter.sendMail(
@@ -153,6 +158,17 @@ export const auth = betterAuth({
           }),
         );
       },
+      // TODO dynamic roles and access control - https://better-auth.com/docs/plugins/organization#enabling-dynamic-access-control
+      // ac, // Must be defined in order for dynamic access control to work
+      // dynamicAccessControl: {
+      //   enabled: true,
+      // },
+      // TODO consider using this for 'department' level control
+      // teams: {
+      //   enabled: true,
+      //   maximumTeams: 10, // Optional: limit teams per organization
+      //   allowRemovingAllTeams: false, // Optional: prevent removing the last team
+      // },
     }),
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {

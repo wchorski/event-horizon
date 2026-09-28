@@ -166,15 +166,16 @@ form {
   visibility: hidden;
   position: absolute;
 }
-
+/* TODO set submit button to disabled and grey out form fields. maybe i should go off of form's data-status attr? */
 .htmx-request {
   background-color: var(--c-seperator);
   border-bottom-color: var(--c-secondary);
   & .submit-indicator {
     visibility: visible;
+    display: inline-block;
   }
   & .text {
-    display: none;
+    visibility: hidden;
   }
 }
 
@@ -198,7 +199,7 @@ form .message {
 }
 
 form .hide {
-  display: none;
+  visibility: hidden;
 }
 
 .separator {
@@ -268,26 +269,26 @@ form .hide {
   opacity: 1;
 }
 
-input[maxlength="5"]{
+input[maxlength="5"] {
   max-width: 5ch;
 }
 
 /* TODO, make this scaleable or remove completely */
 select.color-code {
-    --color-1: rgb(177, 177, 244);
-    --color-2: rgb(191, 218, 242);
-    --color-3: rgb(162, 149, 181);
-    --color-4: rgb(177, 244, 226);
-    --color-5: rgb(191, 242, 228);
-    --color-6: rgb(149, 181, 173);
-    --color-7: rgb(181, 149, 178);
-    --color-8: rgb(183, 130, 149);
-  }
-  select.color-code {
-    border-color: var(--color, orange);
-  }
+  --color-1: rgb(177, 177, 244);
+  --color-2: rgb(191, 218, 242);
+  --color-3: rgb(162, 149, 181);
+  --color-4: rgb(177, 244, 226);
+  --color-5: rgb(191, 242, 228);
+  --color-6: rgb(149, 181, 173);
+  --color-7: rgb(181, 149, 178);
+  --color-8: rgb(183, 130, 149);
+}
+select.color-code {
+  border-color: var(--color, orange);
+}
 
-  /* select.color-code:has(option[value="1"]:checked) {
+/* select.color-code:has(option[value="1"]:checked) {
     border-color: var(--color-1);
   }
   select.color-code:has(option[value="2"]:checked) {

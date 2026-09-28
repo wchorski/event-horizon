@@ -1,0 +1,63 @@
+---
+// pages/org/partials/invite-member/:organizationId
+type MemberInvitation = {
+  email: string;
+  organizationId: string;
+  role: MemberRoles;
+};
+import { auth } from "@lib/auth";
+import { BadRequestError } from "@lib/errors";
+import type { MemberRoles } from "@ty/Schema";
+
+if (Astro.request.method !== "POST")
+  return new Response("only POST method is allowed", { status: 405 });
+
+const { organizationId } = Astro.params;
+console.log({ organizationId });
+if (!organizationId) throw new BadRequestError("organizationId not set in url");
+
+let error = null;
+let success = null;
+
+try {
+  const formData = await Astro.request.formData();
+  const payload = Object.fromEntries(formData.entries()) as MemberInvitation;
+  const { email, role } = payload;
+
+  // TODO validate with zod
+  if (!email || !role)
+    throw new BadRequestError("[email, role, organizationId] not in formData");
+  console.log({ payload });
+
+  const data = await auth.api.createInvitation({
+    body: {
+      email, // required, The email address of the user to invite.
+      role, // required, The role(s) to assign to the user. It can be `admin`, `member`, `owner`
+      organizationId, // The organization ID to invite the user to. Defaults to the active organization.
+      resend: true, // Resend the invitation email, if the user is already invited.
+      //   teamId: "team-id", // The team ID to invite the user to.
+    },
+    // This endpoint requires session cookies.
+    headers: Astro.request.headers,
+  });
+
+  console.log({ data });
+
+  if (!data) throw new Error("uh oh. no good: " + JSON.stringify(data));
+
+  success = data;
+} catch (err) {
+  console.log({ err });
+  error = String(err);
+}
+---
+
+{
+  error ? (
+    <p class="callout error">an error happened {error}</p>
+  ) : (
+    <p class="callout success">
+      Invitation Sent to <pre>{JSON.stringify(success, null, 2)}</pre>
+    </p>
+  )
+}

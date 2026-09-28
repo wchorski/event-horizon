@@ -105,6 +105,14 @@ export const User = pgTable(
 //   // ... service fields
 // });
 
+export const memberRoleEnum = pgEnum("member_role", [
+  "owner",
+  "admin",
+  "member",
+]);
+
+export const MEMBER_ROLES = memberRoleEnum.enumValues;
+
 export const bookingStatusEnum = pgEnum("booking_status", [
   "REQUESTED",
   "CANCELED",
@@ -653,6 +661,7 @@ export const Department = pgTable(
   },
   (table) => [unique().on(table.organization_id, table.slug)],
 );
+// TODO make the roles an enum so it's static accross all
 export const Member = pgTable(
   "members",
   {
@@ -665,7 +674,7 @@ export const Member = pgTable(
     userId: uuid()
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
-    role: text().default("default").notNull(),
+    role: memberRoleEnum().default("member").notNull(),
     createdAt: timestamp().notNull(),
   },
   (table) => [

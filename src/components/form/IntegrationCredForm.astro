@@ -22,7 +22,7 @@ const model = "integrationProvider";
 <form
   id={idPrefix}
   class="card"
-  hx-post=`/${organizationSlug}/partials/integrations/${organizationId}`
+  hx-post=`/org/${organizationSlug}/partials/integrations/${organizationId}`
   hx-target={`#${idPrefix}-success`}
   hx-target-error={`#${idPrefix}-error`}
   hx-swap="innerHTML"

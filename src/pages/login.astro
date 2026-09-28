@@ -22,7 +22,7 @@ if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
 
-  const result = await login(payload);
+  const result = await login({ callbackURL: returnToUrl ?? undefined, ...payload });
 
   if (result.success) {
     const redirectResponse = new Response(null, {
@@ -45,13 +45,13 @@ if (Astro.request.method === "POST") {
 
 <CommonPageLayout>
   <header>
-    <h1>Login</h1>
+    <h1 class="display none">Login</h1>
     {msg ? <p class="callout warning">{msg}</p> : null}
   </header>
   <div data-layout="content" class="grid gap-m max-w-s">
     {
       session && user ? (
-        <p>
+        <p class="callout">
           You are currently logged in as <br />
           <strong>
             {`${user.first_name} ${user.last_name} <${user.email}>`}{" "}

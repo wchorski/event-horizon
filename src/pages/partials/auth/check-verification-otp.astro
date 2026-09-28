@@ -42,7 +42,12 @@ try {
   if (!reset.success)
     throw new Error("uh oh. no good: " + JSON.stringify(reset));
 
-  return Astro.redirect("/dashboard?msg=Password successfully reset");
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Password successfully reset")}`,
+    },
+  });
 } catch (err) {
   console.log({ err });
   error = String(err);
@@ -54,8 +59,7 @@ try {
     <p class="callout error">an error happened {error}</p>
   ) : (
     <p class="callout success">
-      Password has been updated.
-      <a href="/dashboard?msg=Reset your password!s">Dashboard</a>
+      Password has been updated. <a href="/dashboard">Go to your Dashboard</a>
     </p>
   )
 }

@@ -1,6 +1,8 @@
 export type LoginCredentials = {
   email: string;
   password: string;
+  callbackURL?: string | undefined;
+  rememberMe?: boolean | undefined;
   //   username: string;
 };
 export type SignupCredentials = {

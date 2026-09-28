@@ -12,6 +12,32 @@ import { and, eq } from "drizzle-orm";
 
 const isDev = import.meta.env.DEV;
 
+const publicRoutesPrefixes = [
+  "/",
+  "/api/auth",
+  "/api/send",
+  // TODO what should i do with `/partials/`?
+  "/partials/timelines/",
+  "/partials/bookings/",
+  "/partials/auth/",
+  // "/partials/",
+  "/login",
+  "/sign-up",
+  "/sign-out",
+  "/password-reset",
+  "/not-authorized",
+  "/org-not-found",
+  "/bye-bye-bye",
+  "/accept-invitation",
+  "/forgot-password",
+  "/org-not-found",
+  "/not-authorized",
+  "/bye-bye-bye",
+  // "/accept-invitation",
+  "/timelines",
+  `${UMAMI_PROXY_PREFIX}/api/send`,
+];
+
 const ROUTE_MAP: Record<string, string> = {
   [UMAMI_PROXY_PREFIX]: `/${UMAMI_SCRIPT}`, // script
   [`${UMAMI_PROXY_PREFIX}/api/send`]: "/api/send", // data collection
@@ -30,12 +56,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
 
-  if (pathname.startsWith("/api/auth/organization/")) {
-    // only site admins may create orgs or mutate membership
-    if (context.locals.user?.role !== "admin") {
-      return new Response("Forbidden", { status: 403 });
-    }
-  }
+  // this handled with better-auth "allowUserToCreateOrganization"
+  // if (pathname.startsWith("/api/auth/organization/")) {
+  //   // only site admins may create orgs or mutate membership
+  //   if (context.locals.user?.role !== "admin") {
+  //     return new Response("Forbidden", { status: 403 });
+  //   }
+  // }
 
   // analytics proxy — bypasses auth/org gating entirely, same as before
   if (!isDev) {
@@ -77,36 +104,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  const exactPublicRoutes = new Set([
-    "/",
-    "/login",
-    "/sign-up",
-    "/sign-out",
-    "/password-reset",
-    "/not-authorized",
-    "/org-not-found",
-    "/bye-bye-bye",
-    "/accept-invitation",
-    "/forgot-password",
-    "/timelines",
-    // TODO lock down with auth later
-    "/bookings",
-    "/dashboard"
-  ]);
-  const publicPrefixes = [
-    "/api/auth",
-    "/api/send",
-    // TODO what should i do with `/partials/`?
-    "/partials/timelines/",
-    "/partials/bookings/",
-    "/partials/auth/",
-    // "/partials/",
-    `${UMAMI_PROXY_PREFIX}/api/send`,
-  ];
+  const organizationSlug = pathname.startsWith("/org/") ? pathParts[1] : null;
 
-  const isPublic =
-    exactPublicRoutes.has(pathname) ||
-    publicPrefixes.some((prefix) => pathname.startsWith(prefix));
+  const isPublic = publicRoutesPrefixes.some((route) =>
+    pathname.startsWith(route),
+  );
 
   if (!isPublic && !context.locals.user) {
     return context.redirect(
@@ -124,53 +126,34 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  const RESERVED_ROUTE_SLUGS = new Set([
-    "admin",
-    "login",
-    "sign-up",
-    "sign-out",
-    "not-authorized",
-    "org-not-found",
-    "bye-bye-bye",
-    "forgot-password",
-    "timelines",
-    "bookings",
-    "api",
-    "assets",
-    "_astro",
-    "partials",
-  ]);
+  if (organizationSlug && context.locals.user) {
+    const [row] = await db
+      .select({ organization: Organization, member: Member })
+      .from(Organization)
+      .leftJoin(
+        Member,
+        and(
+          eq(Member.organizationId, Organization.id),
+          eq(Member.userId, context.locals.user.id),
+        ),
+      )
+      .where(eq(Organization.slug, organizationSlug))
+      .limit(1);
 
-  const organizationSlug = pathParts[0];
-  const isOrgCandidate =
-    organizationSlug && !RESERVED_ROUTE_SLUGS.has(organizationSlug);
-
-  if (isOrgCandidate && context.locals.user && !isPublic) {
-    const organization = await db.query.Organization.findFirst({
-      where: eq(Organization.slug, organizationSlug),
-    });
-
-    if (!organization) {
+    if (!row) {
       return context.redirect(
         `/org-not-found?msg=${encodeURIComponent("No organization found for: " + organizationSlug)}`,
       );
     }
 
-    const member = await db.query.Member.findFirst({
-      where: and(
-        eq(Member.userId, context.locals.user.id),
-        eq(Member.organizationId, organization.id),
-      ),
-    });
-
-    if (!member) {
+    if (!row.member) {
       return context.redirect(
         `/not-authorized?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
       );
     }
 
-    context.locals.organization = organization;
-    context.locals.member = member;
+    context.locals.organization = row.organization;
+    context.locals.member = row.member;
   }
 
   return next();

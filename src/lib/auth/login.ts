@@ -1,11 +1,11 @@
-// src/lib/login.ts
+// src/lib/auth/login
 import { auth } from "@lib/auth";
 import type { LoginCredentials, LoginSignupResult } from "@ty/Auth";
 
 export async function login(
-  credentials: LoginCredentials
+  credentials: LoginCredentials,
 ): Promise<LoginSignupResult> {
-  const { email, password } = credentials;
+  const { email, password, callbackURL, rememberMe } = credentials;
 
   if (!email || !password) {
     return { success: false, error: "Email and password are required." };
@@ -13,8 +13,9 @@ export async function login(
 
   try {
     const response = await auth.api.signInEmail({
-      body: { email, password },
-      asResponse: true,  // returns a real Response so you can forward its Set-Cookie header
+      body: { email, password, callbackURL, rememberMe },
+
+      asResponse: true, // returns a real Response so you can forward its Set-Cookie header
     });
 
     if (response.status > 399) {

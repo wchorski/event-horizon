@@ -6,11 +6,19 @@ import { IntegrationCredential, Member } from "@db/schema";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { eq, or } from "drizzle-orm";
 
+const { organization_slug } = Astro.params;
 const { user, organization, member } = Astro.locals;
 
-if (!user) return Astro.redirect("/login");
-if (!organization) return Astro.redirect("/org-not-found");
-if (!member) return Astro.redirect("/not-authorized");
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+if (!user)
+  return Astro.redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+if (!organization)
+  return Astro.redirect(`/org-not-found?slug=${organization_slug}`);
+if (!member)
+  return Astro.redirect(
+    `/not-authorized?msg=${encodeURIComponent("you are not a member of this org: " + organization_slug)}`,
+  );
 
 const members = await db.query.Member.findMany({
   where: eq(Member.organizationId, organization.id),

@@ -132,6 +132,26 @@ pnpm db:generate
 pnpm db:migrate
 ```
 
+### Fix the DB
+Eventually you will run into a migration error. Here is my fix when I changed an `text` column into a an `enum`.
+
+I had a custom role type `staff` but better-auth defaults to use `owner, admin, member`. So I'm going to prune this offending data and fix the seed again.
+
+```sh
+docker compose exec db psql -U event_horizon_db_user -d event_horizon_db_1
+## See what
+SELECT * FROM members WHERE role = 'staff';
+
+SELECT role, count(*) FROM members GROUP BY role;
+
+BEGIN;
+DELETE FROM members WHERE role = 'staff';
+-- check the reported row count matches what you expected
+COMMIT;   -- or ROLLBACK; if something looks off
+
+SELECT * FROM members WHERE role = 'staff';
+```
+
 </details>
 
 <details>
@@ -168,6 +188,7 @@ docker compose up --remove-orphans
 </details>
 
 #todo
+- [ ] password rest form doesn't throw error if user doesn't exist
 - [ ] make sure /timelines and /bookings are still reachable with middleware auth
 - [ ] how do i enable a master admin account, and not allow any random signups (that can just add themselves to any organization)
 

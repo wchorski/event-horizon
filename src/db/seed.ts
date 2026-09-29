@@ -26,7 +26,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
   );
 }
 
-console.log("seed.ts DATABASE_URL: ", getPGDatabaseUrl());
+// console.log("🌱🌱🌱 seed.ts DATABASE_URL: ", getPGDatabaseUrl());
 
 const client = createPgClient(); // pg auto-reads PG* env vars
 console.log("pg connectionParameters:", (client as any).connectionParameters);
@@ -119,7 +119,7 @@ const orgCoreced = organizations.map((item) => ({
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Organization).values(orgCoreced);
+await db.insert(schema.Organization).values(orgCoreced).onConflictDoNothing();
 
 console.log(`=== Departments (+${departments.length}) ===`);
 const departmentsCoreced = departments.map((item) => ({
@@ -127,10 +127,10 @@ const departmentsCoreced = departments.map((item) => ({
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Department).values(departmentsCoreced);
+await db.insert(schema.Department).values(departmentsCoreced).onConflictDoNothing();;
 
 console.log(`=== Roles (+${roles.length})===`);
-await db.insert(schema.Role).values(roles);
+await db.insert(schema.Role).values(roles).onConflictDoNothing();;
 
 console.log(`=== Users (+${users.length}) ===`);
 const usersCoreced = users.map((item) => ({
@@ -138,7 +138,7 @@ const usersCoreced = users.map((item) => ({
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.User).values(usersCoreced);
+await db.insert(schema.User).values(usersCoreced).onConflictDoNothing();;
 
 console.log(`=== Members (+${members.length}) ===`);
 const membersCoreced = members.map((item) => ({
@@ -146,7 +146,7 @@ const membersCoreced = members.map((item) => ({
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Member).values(membersCoreced);
+await db.insert(schema.Member).values(membersCoreced).onConflictDoNothing();;
 
 console.log(`=== Accounts (+${accounts.length})===`);
 const accountsCoreced = await Promise.all(
@@ -179,7 +179,7 @@ const accountsCoreced = await Promise.all(
 //     console.error(`❌ failed to create account for ${email}:`, err);
 //   }
 // }
-await db.insert(schema.Account).values(accountsCoreced);
+await db.insert(schema.Account).values(accountsCoreced).onConflictDoNothing();;
 
 console.log(`=== Locations (+${locations.length})===`);
 const locationsCoreced = locations.map((item) => ({
@@ -187,7 +187,7 @@ const locationsCoreced = locations.map((item) => ({
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Location).values(locationsCoreced);
+await db.insert(schema.Location).values(locationsCoreced).onConflictDoNothing();;
 
 console.log(`=== Events (+${events.length})===`);
 const eventsCoreced = events.map((e) => ({
@@ -196,11 +196,11 @@ const eventsCoreced = events.map((e) => ({
   createdAt: new Date(e.createdAt),
   updatedAt: new Date(e.updatedAt),
 }));
-await db.insert(schema.Event).values(eventsCoreced);
+await db.insert(schema.Event).values(eventsCoreced).onConflictDoNothing();;
 
 const randomBookings = bookings;
 console.log(`=== Bookings (+${randomBookings.length})===`);
-await db.insert(schema.Booking).values(randomBookings);
+await db.insert(schema.Booking).values(randomBookings).onConflictDoNothing();;
 
 const bookingAssignments = randomBookings.flatMap((b) =>
   createAssignmentsForBooking(b.id),
@@ -218,7 +218,7 @@ const ticketsCoreced = tickets.map((t) => ({
   createdAt: new Date(t.createdAt),
   updatedAt: new Date(t.updatedAt),
 }));
-await db.insert(schema.Ticket).values(ticketsCoreced);
+await db.insert(schema.Ticket).values(ticketsCoreced).onConflictDoNothing();;
 // const accountsCoreced = seedData.accounts.map((t) => ({
 //   ...t,
 //   timestamp: new Date(t.timestamp),

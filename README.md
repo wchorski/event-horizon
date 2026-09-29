@@ -179,6 +179,12 @@ docker compose build
 docker compose up --remove-orphans
 ```
 
+## Seed Production Database
+With the app running you can manually seed the database. This seed skips over matching primary keys with `onConflictDoNothing()`. 
+```sh
+docker compose run --rm seed
+```
+
 </details>
 
 <details>

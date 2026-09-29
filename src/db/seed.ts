@@ -113,42 +113,61 @@ const {
 } = seedData;
 
 console.log("🌱 Seeding Database 🌱");
-console.log(`=== Organizations (+${organizations.length}) ===`);
 const orgCoreced = organizations.map((item) => ({
   ...item,
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Organization).values(orgCoreced).onConflictDoNothing();
+const inOrgs = await db
+  .insert(schema.Organization)
+  .values(orgCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Organizations (+${inOrgs.length}) ===`);
 
-console.log(`=== Departments (+${departments.length}) ===`);
 const departmentsCoreced = departments.map((item) => ({
   ...item,
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Department).values(departmentsCoreced).onConflictDoNothing();;
+const inDepts = await db
+  .insert(schema.Department)
+  .values(departmentsCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Departments (+${inDepts.length}) ===`);
 
-console.log(`=== Roles (+${roles.length})===`);
-await db.insert(schema.Role).values(roles).onConflictDoNothing();;
+const inRoles = await db
+  .insert(schema.Role)
+  .values(roles)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Roles (+${inRoles.length})===`);
 
-console.log(`=== Users (+${users.length}) ===`);
 const usersCoreced = users.map((item) => ({
   ...item,
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.User).values(usersCoreced).onConflictDoNothing();;
+const inUsers = await db
+  .insert(schema.User)
+  .values(usersCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Users (+${inUsers.length}) ===`);
 
-console.log(`=== Members (+${members.length}) ===`);
 const membersCoreced = members.map((item) => ({
   ...item,
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Member).values(membersCoreced).onConflictDoNothing();;
+const inMembers = await db
+  .insert(schema.Member)
+  .values(membersCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Members (+${inMembers.length}) ===`);
 
-console.log(`=== Accounts (+${accounts.length})===`);
 const accountsCoreced = await Promise.all(
   accounts.map(async (item) => {
     const usr = users.find((u) => u.id === item.userId);
@@ -179,46 +198,68 @@ const accountsCoreced = await Promise.all(
 //     console.error(`❌ failed to create account for ${email}:`, err);
 //   }
 // }
-await db.insert(schema.Account).values(accountsCoreced).onConflictDoNothing();;
+const inAccounts = await db
+  .insert(schema.Account)
+  .values(accountsCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Accounts (+${inAccounts.length})===`);
 
-console.log(`=== Locations (+${locations.length})===`);
 const locationsCoreced = locations.map((item) => ({
   ...item,
   createdAt: new Date(item.createdAt),
   updatedAt: new Date(item.updatedAt),
 }));
-await db.insert(schema.Location).values(locationsCoreced).onConflictDoNothing();;
+const inLocs = await db
+  .insert(schema.Location)
+  .values(locationsCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Locations (+${inLocs.length})===`);
 
-console.log(`=== Events (+${events.length})===`);
 const eventsCoreced = events.map((e) => ({
   ...e,
   timestamp: new Date(e.timestamp),
   createdAt: new Date(e.createdAt),
   updatedAt: new Date(e.updatedAt),
 }));
-await db.insert(schema.Event).values(eventsCoreced).onConflictDoNothing();;
+const inEvents = await db
+  .insert(schema.Event)
+  .values(eventsCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Events (+${inEvents.length})===`);
 
 const randomBookings = bookings;
-console.log(`=== Bookings (+${randomBookings.length})===`);
-await db.insert(schema.Booking).values(randomBookings).onConflictDoNothing();;
+const inBooks = await db
+  .insert(schema.Booking)
+  .values(randomBookings)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Bookings (+${inBooks.length})===`);
 
 const bookingAssignments = randomBookings.flatMap((b) =>
   createAssignmentsForBooking(b.id),
 );
-console.log(`=== Booking Assignments (+${bookingAssignments.length})===`);
-await db
+const inBookAss = await db
   .insert(schema.BookingAssignment)
   .values(bookingAssignments)
-  .onConflictDoNothing();
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Booking Assignments (+${inBookAss.length})===`);
 
-console.log(`=== Tickets (+${tickets.length})===`);
 const ticketsCoreced = tickets.map((t) => ({
   ...t,
   timestamp: new Date(t.timestamp),
   createdAt: new Date(t.createdAt),
   updatedAt: new Date(t.updatedAt),
 }));
-await db.insert(schema.Ticket).values(ticketsCoreced).onConflictDoNothing();;
+const inTixs = await db
+  .insert(schema.Ticket)
+  .values(ticketsCoreced)
+  .onConflictDoNothing()
+  .returning();
+console.log(`=== Tickets (+${inTixs.length})===`);
 // const accountsCoreced = seedData.accounts.map((t) => ({
 //   ...t,
 //   timestamp: new Date(t.timestamp),
@@ -237,6 +278,23 @@ const total =
   locations.length +
   tickets.length +
   users.length +
-  accounts.length;
+  accounts.length +
+  departments.length +
+  organizations.length +
+  members.length;
 
-console.log(`🌲 Database seeded successfully. ${total} items added 🌲`);
+const inserted =
+  inRoles.length +
+  inBooks.length +
+  inEvents.length +
+  inLocs.length +
+  inTixs.length +
+  inUsers.length +
+  inAccounts.length +
+  inOrgs.length +
+  inDepts.length +
+  inMembers.length;
+
+console.log(
+  `🌲 Database seeded successfully. +${inserted} of ${total} items added 🌲`,
+);

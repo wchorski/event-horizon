@@ -1,0 +1,50 @@
+---
+// pages/org/:organization_slug/packets/:itemId
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { getMsCredentials } from "@lib/auth/msCredentials";
+
+const { itemId } = Astro.params;
+if (!itemId) throw new Error("no url set");
+
+console.log({ itemId });
+
+const { organization, member, user } = Astro.locals;
+if (!organization) return Astro.redirect("/404");
+if (!member) return Astro.redirect("/404");
+
+const { sharepoint_drive_id, sharepoint_site_id } = organization;
+
+try {
+  // /sites/{site-id}/drives/{drive-id}/items/{item-id}/content
+  // or  /drives/{drive-id}/root:/Board Document Library/PUBLISHED/MOEITS Board/2026/09-22/MeetingPacket-v6.pdf:/content
+  const { tenantId, clientId, clientSecret } = await getMsCredentials(
+    organization.id,
+  );
+  const token = await msAuthentication(tenantId, clientId, clientSecret);
+
+  const pdfRes = await fetch(
+    `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${itemId}/content`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const pdfBuffer = await pdfRes.arrayBuffer();
+
+  return new Response(pdfBuffer, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": "inline",
+    },
+  });
+} catch (err) {
+  console.log({ err });
+}
+---
+
+<BaseLayout>
+  <h1>Packet {itemId}</h1>
+</BaseLayout>

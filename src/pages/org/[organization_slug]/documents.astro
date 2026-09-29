@@ -65,7 +65,11 @@ if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) throw new
 
 // TODO don't hardcode this when supporting future integrations (or native?)
 const integrationCredential = await db.query.IntegrationCredential.findFirst({where: and(eq(IntegrationCredential.organizationId, organization.id), eq(IntegrationCredential.provider, 'microsoft'))})
-if(!integrationCredential) throw new NotFoundError(`❌ ${'microsoft'} integration is not setup for ${organization.name} `)
+if(!integrationCredential){
+  const msg = `❌ ${'microsoft'} integration is not setup for ${organization.name}`
+  Astro.redirect(`/org/${organization.slug}?msg=${encodeURIComponent(msg)}`)
+  throw new NotFoundError(msg)
+}
 
 const {tenantId, clientId, secretAuthTag, secretCiphertext, secretIv} = integrationCredential
 

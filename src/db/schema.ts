@@ -475,49 +475,6 @@ export const Ticket = pgTable(
     // ),
   ],
 );
-//? self made org (before better-auth)
-// export const Organization = pgTable("organizations", {
-//   id: uuid()
-//     .primaryKey()
-//     .default(sql`uuidv7()`),
-//   name: text().notNull(),
-//   slug: text().notNull().unique(), // for subdomains/URLs: acme.yourapp.com
-//   // for isolated DB (needed for some enterprise buisness)
-//   dedicated_db_url: text(),
-//   color: text(),
-//   color_2: text(),
-//   logo: text(),
-//   createdAt: timestamp().notNull().defaultNow(),
-//   updatedAt: timestamp()
-//     .defaultNow()
-//     .$onUpdate(() => /* @__PURE__ */ new Date())
-//     .notNull(),
-// });
-
-export const orgMemberRoleEnum = pgEnum("org_member_role", [
-  "OWNER",
-  "ADMIN",
-  "STAFF",
-  "CLIENT",
-]);
-
-// export const OrganizationMembership = pgTable(
-//   "organization_memberships",
-//   {
-//     id: uuid()
-//       .primaryKey()
-//       .default(sql`uuidv7()`),
-//     organization_id: uuid()
-//       .notNull()
-//       .references(() => Organization.id, { onDelete: "cascade" }),
-//     user_id: uuid()
-//       .notNull()
-//       .references(() => User.id, { onDelete: "cascade" }),
-//     role: orgMemberRoleEnum("role").notNull().default("STAFF"),
-//     date_joined: timestamp().notNull().defaultNow(),
-//   },
-//   (table) => [unique().on(table.organization_id, table.user_id)],
-// );
 
 export const Session = pgTable(
   "sessions",

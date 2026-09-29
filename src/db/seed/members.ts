@@ -13,7 +13,7 @@ const members: MemberSelect[] = [
     id: "01a0cf5b-71f0-755b-9be9-46a8afccefd3",
     organizationId: organizations[0].id,
     userId: users[1].id,
-    role: "staff",
+    role: "member",
     createdAt: new Date(),
   },
   {

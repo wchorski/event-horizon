@@ -14,7 +14,10 @@ import { unflatten } from "@lib/formParsing";
 import { and, eq } from "drizzle-orm";
 import departments from "@db/seed/departments";
 import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
-import { outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
+import {
+  outlookTimeZoneHeader,
+  resolveMeetingTimeZone,
+} from "@lib/calendarFactory";
 import { requireOrganizationAccess } from "@lib/auth/guards";
 
 interface EventCreatePayload {
@@ -61,7 +64,9 @@ let result: RenderResult;
 
 try {
   // --- UPDATE ---
-   const user = Astro.locals.user;
+  // TODO move this to /org/:slug/outlook-events
+  // can use Astro.locals for {organization, member}
+  const user = Astro.locals.user;
   if (!user) throw new BadRequestError("Not authenticated.");
 
   const { organization_slug } = Astro.params;
@@ -97,11 +102,15 @@ try {
   const meetingTimeZone = await resolveMeetingTimeZone(null);
 
   const url = `/users/${mailbox_user_email}/events/${eventId}`;
-  const updated = await msGraphFetch<OutlookEventSummary>(organization.id, url, {
-    method: "PATCH",
-    headers: outlookTimeZoneHeader(meetingTimeZone),
-    body: JSON.stringify(updatePayload),
-  });
+  const updated = await msGraphFetch<OutlookEventSummary>(
+    organization.id,
+    url,
+    {
+      method: "PATCH",
+      headers: outlookTimeZoneHeader(meetingTimeZone),
+      body: JSON.stringify(updatePayload),
+    },
+  );
 
   console.log({ updated });
 
@@ -134,9 +143,9 @@ try {
   result.kind === "success" && (
     <section class="card">
       <p>Event Updated</p>
-      <p style="max-width: 15rem; text-wrap: balance;">
+      {/* <p style="max-width: 15rem; text-wrap: balance;">
         Event ID: <code>{result.eventId}</code>
-      </p>
+      </p> */}
 
       {result.webLink && (
         <p>

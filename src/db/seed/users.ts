@@ -1,9 +1,6 @@
 import type { UserInsert } from "@ty/Schema";
 
-export type UserSeedInsert = Omit<
-  UserInsert,
-  "createdAt" | "updatedAt"
-> & {
+export type UserSeedInsert = Omit<UserInsert, "createdAt" | "updatedAt"> & {
   createdAt: string;
   updatedAt: string;
 };
@@ -26,6 +23,8 @@ const users: UserSeedInsert[] = [
     id: "019f392d-8814-76aa-93f6-bd1c6c6bff19",
     username: "will_tawtaw",
     name: "Will",
+    role: "admin",
+    emailVerified: true,
   },
   {
     role_id: "019f392b-fad6-77f5-9b67-db18b9f9fcee",
@@ -44,6 +43,7 @@ const users: UserSeedInsert[] = [
     id: "019f392d-8814-76aa-93f6-bd1c6c6bff19",
     username: "nancy",
     name: "Nancy",
+    emailVerified: true,
   },
   {
     role_id: "019f392b-fad6-77f5-9b67-db18b9f9fcee",
@@ -62,6 +62,7 @@ const users: UserSeedInsert[] = [
     id: "019f392d-8814-76aa-93f6-bd1c6c6bff19",
     username: "colleen",
     name: "Colleen",
+    emailVerified: true,
   },
   {
     role_id: "019f392b-fad6-77f5-9b67-db18b9f9fcee",

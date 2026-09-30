@@ -16,6 +16,12 @@ const { user } = Astro.locals;
 // path only, so we never bounce users to an arbitrary origin
 const returnTo = Astro.url.pathname + Astro.url.search;
 
+if (!user?.emailVerified) {
+  const msg = "You must be logged in to accept the organization invite";
+  return Astro.redirect(
+    `/login?msg=${encodeURIComponent(msg)}&returnTo=${encodeURIComponent(returnTo)}`,
+  );
+}
 if (!user) {
   const msg = "You must be logged in to accept the organization invite";
   return Astro.redirect(

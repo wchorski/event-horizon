@@ -19,6 +19,7 @@ import {
 } from "@lib/publishPacket";
 import { and, eq } from "drizzle-orm";
 import { decryptSecret } from "@lib/auth/secretBox";
+import { updateEventPacketLink } from "@lib/microsoft/outlookPacketLink";
 
 // const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
 
@@ -30,7 +31,12 @@ if (Astro.request.method !== "POST") {
 
 type RenderResult =
   | { kind: "redirect"; url: string; setCookies: string[] }
-  | { kind: "success"; pdfId: string; webLink?: string }
+  | {
+      kind: "success";
+      pdfId: string;
+      webLink?: string;
+      calendarWarning?: string;
+    }
   | { kind: "top-error"; message: string };
 
 let result: RenderResult;
@@ -60,7 +66,7 @@ try {
       eq(IntegrationCredential.provider, "microsoft"),
     ),
   });
-  
+
   if (!integrationCredential)
     throw new NotFoundError(
       `❌ ${"microsoft"} integration is not setup for ${organization.name} `,
@@ -69,22 +75,17 @@ try {
   const { tenantId, clientId, secretAuthTag, secretCiphertext, secretIv } =
     integrationCredential;
 
-    
-
   const integrationSecret = decryptSecret(
     secretCiphertext,
     secretIv,
     secretAuthTag,
   );
 
-  
-
   const accessToken = await msAuthentication(
     tenantId,
     clientId,
     integrationSecret,
   );
-  
 
   const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}?$select=name,parentReference`;
 
@@ -171,12 +172,40 @@ try {
     .where(eq(MeetingPacket.id, existingPacket.id))
     .returning();
 
-  // console.log({ updatedPacket });
+  // Point the calendar event at the newly published packet.
+  // Non-fatal: the PDF is already published, so a failure here becomes a warning.
+  let calendarWarning: string | undefined;
+  const { mailbox_user_email } = organization;
+
+  if (!updatedPacket.outlook_event_id) {
+    calendarWarning =
+      "Packet published, but no calendar event is linked to it.";
+  } else if (!mailbox_user_email) {
+    calendarWarning =
+      "Packet published, but the organization has no mailbox configured.";
+  } else {
+    try {
+      await updateEventPacketLink({
+        organizationId: organization.id,
+        mailboxUserEmail: mailbox_user_email,
+        outlookEventId: updatedPacket.outlook_event_id,
+        // Pick one (see note below):
+        href: `${Astro.url.origin}/org/${organization.slug}/packets/${uploaded.id}`,
+        // href: uploaded.webUrl,
+        label: filename,
+      });
+    } catch (e) {
+      console.error("Packet published but calendar link update failed:", e);
+      calendarWarning =
+        "Packet was published, but the calendar event link couldn't be updated.";
+    }
+  }
 
   result = {
     kind: "success",
     pdfId: uploaded.id,
     webLink: uploaded.webUrl,
+    calendarWarning,
   };
 
   //? if sending pdf directly back to client
@@ -202,11 +231,8 @@ try {
 
 {
   result.kind === "success" && (
-    <section>
+    <section class="callout success">
       <p>Packet Created.</p>
-      <p>
-        File ID: <code>{result.pdfId}</code>
-      </p>
 
       {result.webLink && (
         <p>
@@ -216,6 +242,8 @@ try {
           </a>
         </p>
       )}
+
+      {result.calendarWarning && <p role="status">{result.calendarWarning}</p>}
     </section>
   )
 }

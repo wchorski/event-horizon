@@ -32,6 +32,7 @@
     "fast-xml-parser": "^5.10.1",
     "htmx-ext-response-targets": "^2.0.4",
     "htmx.org": "^2.0.10",
+    "node-html-parser": "^9.0.4",
     "nodemailer": "^10.0.10",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
@@ -52,5 +53,5 @@
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@12.4.1"
+  "packageManager": "pnpm@12.8.1"
 }

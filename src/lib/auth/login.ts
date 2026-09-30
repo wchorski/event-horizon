@@ -8,7 +8,11 @@ export async function login(
   const { email, password, callbackURL, rememberMe } = credentials;
 
   if (!email || !password) {
-    return { success: false, error: "Email and password are required." };
+    return {
+      success: false,
+      error: "Email and password are required.",
+      code: "000",
+    };
   }
 
   try {
@@ -23,12 +27,17 @@ export async function login(
       return {
         success: false,
         error: errorBody?.message ?? `Login failed (status ${response.status})`,
+        code: errorBody?.code as string | undefined,
       };
     }
 
     const setCookies = response.headers.getSetCookie?.() ?? [];
     return { success: true, setCookies };
   } catch (err: any) {
-    return { success: false, error: `Login failed. ${String(err)}` };
+    return {
+      success: false,
+      error: `Login failed. ${String(err)}`,
+      code: "500",
+    };
   }
 }

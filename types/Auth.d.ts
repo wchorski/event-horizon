@@ -16,7 +16,7 @@ export type SignupCredentials = {
 
 export type LoginSignupResult =
   | { success: true; setCookies: string[] }
-  | { success: false; error: string };
+  | { success: false; error: string; code: string | undefined };
 export type CreateUserResult =
   | { success: true; user: CreatedUser }
   | { success: false; error: string };

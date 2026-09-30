@@ -127,7 +127,8 @@ body {
   color: var(--c-txt);
 
   & > footer {
-    background-color: var(--c-secondary);
+    /* background-color: var(--c-secondary); */
+    background-color: hsla(0, 0%, 25%, 0.567);
   }
 }
 

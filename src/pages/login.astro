@@ -14,9 +14,14 @@ const returnToUrl = params.get("returnTo");
 const msg = params.get("msg");
 const email = params.get("email");
 const otp = params.get("otp");
+const type = params.get("type") as
+  "sign-in" | "email-verification" | "forget-password" | null;
 const session = Astro.locals.session;
 const user = Astro.locals.user;
 let error: string | null = null;
+let notice: string | null = null;
+let needsVerification = false;
+let verifyEmail: string | null = null;
 
 // TODO do i need a trycatch here?
 if (Astro.request.method === "POST") {
@@ -28,6 +33,15 @@ if (Astro.request.method === "POST") {
     ...payload,
     callbackURL: returnToUrl ?? undefined,
   });
+
+  // TODO this is just a type error. i should handle login errors, notices, messages better and put them into the types
+  if (result.code === "EMAIL_NOT_VERIFIED") {
+    needsVerification = true;
+    verifyEmail = payload.email;
+    notice = `A new verification code has been sent to ${payload.email}. Follow the instructions sent to your inbox.`;
+  } else {
+    error = result.error;
+  }
 
   if (result.success) {
     const redirectResponse = new Response(null, {
@@ -64,7 +78,7 @@ if (Astro.request.method === "POST") {
         </p>
       ) : null
     }
-    <form class="card" id="sign-up-form" method="POST">
+    <form class="card" id="sign-up-form" method="POST" data-lock-on-submit>
       <legend>Login</legend>
       <InputField
         name="email"
@@ -80,7 +94,6 @@ if (Astro.request.method === "POST") {
         model={"accounts"}
         required={true}
       />
-
       {
         error && (
           <p class="form-error error callout" role="alert">
@@ -88,6 +101,14 @@ if (Astro.request.method === "POST") {
           </p>
         )
       }
+      {
+        notice && (
+          <p class="callout success" role="status">
+            {notice}
+          </p>
+        )
+      }
+
       <SubmitButton text="Login" />
     </form>
 
@@ -102,7 +123,7 @@ if (Astro.request.method === "POST") {
       <InputField
         name="email"
         type={"email"}
-        id="password"
+        id="password-reset"
         model={"accounts"}
         required={true}
         value={email}
@@ -125,7 +146,37 @@ if (Astro.request.method === "POST") {
       <VerifyOneTimePassForm
         otp={otp}
         email={email ? decodeURIComponent(email) : null}
+        type={type ?? "forget-password"}
       />
     </Dialog>
   </div>
 </CommonPageLayout>
+
+<script>
+  const forms = document.querySelectorAll<HTMLFormElement>(
+    "form[data-lock-on-submit]",
+  );
+
+  forms.forEach((form) => {
+    const btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (!btn) return;
+
+    // The submit event only fires after native validation passes
+    form.addEventListener("submit", () => {
+      btn.disabled = true;
+      btn.setAttribute("aria-busy", "true");
+    });
+  });
+
+  // Back button restores the page from bfcache with the button still locked
+  window.addEventListener("pageshow", (e) => {
+    if (!e.persisted) return;
+    forms.forEach((form) => {
+      const btn = form.querySelector<HTMLButtonElement>(
+        'button[type="submit"]',
+      );
+      btn?.removeAttribute("disabled");
+      btn?.removeAttribute("aria-busy");
+    });
+  });
+</script>

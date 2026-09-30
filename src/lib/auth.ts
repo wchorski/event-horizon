@@ -120,9 +120,14 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     // TODO later enable this
-    requireEmailVerification: false,
+    requireEmailVerification: true,
     minPasswordLength: 8,
     autoSignIn: true,
+  },
+  emailVerification: {
+    sendOnSignUp: true, // trigger verification on sign-up
+    sendOnSignIn: true, // re-send when an unverified user tries to log in
+    autoSignInAfterVerification: true,
   },
   socialProviders,
   session: {
@@ -140,7 +145,7 @@ export const auth = betterAuth({
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
       // TODO add this in later
-      // requireEmailVerificationOnInvitation: true, 
+      // requireEmailVerificationOnInvitation: true,
       allowUserToCreateOrganization: async (user) => user.role === "admin",
       async sendInvitationEmail(data) {
         // Construct the acceptance link (frontend route)
@@ -171,7 +176,10 @@ export const auth = betterAuth({
       // },
     }),
     emailOTP({
+      overrideDefaultEmailVerification: true,
       async sendVerificationOTP({ email, otp, type }) {
+        // console.log("===== sendVerificationOTP =====");
+        // console.log({ email, otp, type });
         if (type === "sign-in") {
           // Send the OTP for sign in
           await transporter.sendMail(
@@ -183,7 +191,7 @@ export const auth = betterAuth({
             verificationEmailTemplate({ email, otp, type }),
           );
         } else {
-          // Send the OTP for password reset
+          // Send the OTP for `forget-password`
           await transporter.sendMail(
             verificationEmailTemplate({ email, otp, type }),
           );
@@ -192,17 +200,6 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 300, // 5 minutes
     }),
-    // emailOTP({
-    //   async sendVerificationOTP({ email, otp, type }) {
-    //     // Send the OTP
-    //     console.log("🔑 Send the OTP");
-    //     await transporter.sendMail(
-    //       verificationEmailTemplate({ email, otp, type }),
-    //     );
-    //   },
-    //   otpLength: 6,
-    //   expiresIn: 300, // 5 minutes
-    // }),
   ],
   advanced: {
     cookiePrefix: "eh",

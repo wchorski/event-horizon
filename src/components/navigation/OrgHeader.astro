@@ -1,0 +1,50 @@
+---
+import type { MemberSelect, OrganizationSelect, UserSelect } from "@ty/Schema";
+
+interface Props {
+  organization: OrganizationSelect;
+  user: UserSelect;
+  member: MemberSelect;
+}
+
+const { organization, user, member } = Astro.props;
+
+const displayName = user
+  ? user.name
+    ? `${user.name} <${user.email}>`
+    : (user.username ?? user.email)
+  : "anonymous";
+---
+
+<header>
+  <div class="flex gap-m space-between">
+    <div>
+      <h1>{organization.name} | Documents</h1>
+      <br />
+      <a href=`/org/${organization.slug}/`>Organization Dashboard</a>
+    </div>
+    <div>
+      <img
+        class="org-logo"
+        src={organization.logo}
+        alt={`${organization.name} logo`}
+        width="100"
+        height="auto"
+      />
+      <br />
+      <br />
+      <span class="pill">
+        <a href={`/dashboard`}>{displayName}</a>
+      </span>
+      <br />
+      <span>org {member.role}</span>
+    </div>
+  </div>
+</header>
+
+<style>
+  .org-logo {
+    padding: var(--size-xs);
+    background-color: hsla(0, 0%, 0%, 0.441);
+  }
+</style>

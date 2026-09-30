@@ -21,27 +21,34 @@ import type { OrganizationSelect } from "@ty/Schema";
 import { requireOrganizationAccess } from "@lib/auth/guards";
 import { NotFoundError } from "@lib/errors";
 import { decryptSecret } from "@lib/auth/secretBox";
+import { PLACEHOLDER_BODY } from "@lib/microsoft/outlookPacketLink";
+import OrgHeader from "@components/navigation/OrgHeader.astro";
 
-const user = Astro.locals.user;
+const {user, organization, member} = Astro.locals;
 const displayName = user
   ? (user.name ? `${user.name} <${user.email}>` : user.username ?? user.email)
   : "anonymous";
 
+  const returnTo = Astro.url.pathname + Astro.url.search
+
 // do i need this if it's handled in middleware?
 if (!user) {
-  return Astro.redirect("/login");
+  return Astro.redirect(`/login?msg=Must be logged into your account&${encodeURIComponent(returnTo)}`);
 }
 
 const { organization_slug } = Astro.params;
-if (!organization_slug) throw new Error("no id found. throw 404");
+if (!organization_slug) throw new Error("no slug set");
 
-const { organization, membership } =
-  await requireOrganizationAccess(
-    user.id,
-    organization_slug
-  );
+// TODO can get rid? check happens in middleware
+// const { organization, member } =
+//   await requireOrganizationAccess(
+//     user.id,
+//     organization_slug
+//   );
 
-if(!membership) return Astro.redirect(
+if(!organization) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
+
+if(!member) return Astro.redirect(
   `/not-authorized?msg=${
     encodeURIComponent('You are not authorized to view this page. Ask to become a member of: ' + organization?.name)
   }`)
@@ -50,9 +57,6 @@ if(!membership) return Astro.redirect(
 //   MS_SHAREPOINT_MOEDOCS_SITE_ID,
 //   MS_MAILBOX_USER_EMAIL, } = import.meta.env;
 
-
-
-if(organization === undefined) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
 
 const {sharepoint_site_url, sharepoint_drive_id, sharepoint_site_id, mailbox_user_email} = organization
 
@@ -208,10 +212,7 @@ try {
           subject: `${department} | BOT Meeting`,
           start: { dateTime: `${year}-${monthDay}T07:00`, timeZone:meetingTimeZone },
           end: { dateTime: `${year}-${monthDay}T09:00`, timeZone:meetingTimeZone },
-          body: {
-            contentType: 'html',
-            content: `<p>View The published packet: ${packet?.published_file_url ?? "[Not Created Yet]"}<p>`
-          }
+          body: PLACEHOLDER_BODY
           
         }, meetingTimeZone);
       }
@@ -233,22 +234,8 @@ const formMethodEndpoint = outlookEvent
 
   <BaseLayout title={organization.name + " | Documents"}>
     <main>
-      <header>
-        <div class="flex gap-m space-between">
-        <h1>{organization.name} | Documents</h1>
-        <div>
-          <img class="org-logo" src={organization.logo} alt={`${organization.name} logo`} width="100" height="auto"/>
-          <br />
-          <br />
-          <span class="pill">
-            <a href={`/dashboard`}>{displayName}</a>
-          </span>
-        </div>
-
-        </div>
-        <Breadcrumbs crumbs={crumbs} basePath={basePath} />
-      </header>
-  
+      <OrgHeader organization={organization} member={member} user={user} />
+      
       <div data-layout="content">
         {isDayFldr ? <>
       
@@ -268,14 +255,14 @@ const formMethodEndpoint = outlookEvent
                   <dt>{outlookEvent.end?.dateTime ? prettyDateToLocale(new Date(outlookEvent.end.dateTime)) : "—"}</dt>
                   <dd>location</dd>
                   <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
-                  <dd>onlineMeeting</dd>
+                  {/* <dd>onlineMeeting</dd>
                   <dt>{String(outlookEvent.onlineMeeting)}</dt>
                   <dd>isOnlineMeeting</dd>
                   <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
                   <dd>onlineMeetingProvider</dd>
                   <dt>{outlookEvent.onlineMeetingProvider}</dt>
                   <dd>onlineMeetingUrl</dd>
-                  <dt>{String(outlookEvent.onlineMeetingUrl)}</dt>
+                  <dt>{String(outlookEvent.onlineMeetingUrl)}</dt> */}
                 </dl>
                 <a href={outlookEvent.webLink} target="_blank">
                   outlook link
@@ -292,7 +279,7 @@ const formMethodEndpoint = outlookEvent
             hx-target-error="#outlook-calendar-error"
           >
             <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
-            <fieldset>
+            <fieldset class="no-style">
               <InputField
                 name="subject"
                 id="calendar.subject"
@@ -302,6 +289,7 @@ const formMethodEndpoint = outlookEvent
               />
               <InputField
                 name="start.dateTime"
+                label={'Start'}
                 id="calendar.start.dateTime"
                 type="datetime-local"
                 model="event"
@@ -309,6 +297,7 @@ const formMethodEndpoint = outlookEvent
               />
               <InputField
                 name="end.dateTime"
+                label={'End'}
                 id="calendar.end.dateTime"
                 type="datetime-local"
                 model="event"
@@ -406,7 +395,7 @@ const formMethodEndpoint = outlookEvent
       </> : null}
       <hr />
         {error && <p style="color: red;">Error: {error}</p>}
-  
+        <Breadcrumbs crumbs={crumbs} basePath={basePath} />
         {
           !error && (
             <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />

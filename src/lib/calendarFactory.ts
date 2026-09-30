@@ -5,6 +5,7 @@ import type {
   ItemBody,
   Location,
 } from "@microsoft/microsoft-graph-types";
+import { PLACEHOLDER_BODY } from "./microsoft/outlookPacketLink";
 
 interface CalendarEventDraft {
   subject: string;
@@ -22,10 +23,7 @@ export function createCalendarDraft(
 ): CalendarEventDraft {
   return {
     subject: "Default Board Meeting",
-    body: {
-      contentType: "html",
-      content: "<p>TEST TEST TEST Monthly board review</p>",
-    },
+    body: PLACEHOLDER_BODY,
     start: {
       dateTime: "2026-09-27T09:00:00",
       timeZone,
@@ -35,7 +33,7 @@ export function createCalendarDraft(
       timeZone,
     },
     location: {
-      displayName: "TEST TEST TEST Conference Room TEST",
+      // displayName: "TEST TEST TEST Conference Room TEST",
     },
     attendees: [
       {

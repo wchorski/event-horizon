@@ -39,6 +39,11 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
   {msg ? <p class="callout warning">{msg}</p> : null}
   <h1>{organization.name}</h1>
   <p>{user.email} | {member.role}</p>
+  <p>
+    <a class="btn" href=`./${organization.slug}/documents`
+      >Documents and Packet Builder</a
+    >
+  </p>
 
   <section class="grid gap-m auto-fit">
     <div>

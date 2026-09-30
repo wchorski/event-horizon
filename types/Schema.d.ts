@@ -15,6 +15,7 @@ import {
   Account,
   Organization,
   Department,
+  Member,
 } from "@db/schema";
 
 export const models = {
@@ -55,7 +56,7 @@ export type MeetingPacketInsert = typeof MeetingPacket.$inferSelect;
 export type MeetingPacketDirectorySelect = typeof MeetingPacketDirectory.$inferSelect;
 export type MeetingPacketDirectoryInsert = typeof MeetingPacketDirectory.$inferSelect;
 export type MeetingPacketSelect = typeof MeetingPacket.$inferSelect;
-export type MemberInsert = typeof Member.$inferSelect;
+export type MemberInsert = typeof Member.$inferInsert;
 export type MemberSelect = typeof Member.$inferSelect;
 export type AccountInsert = typeof Account.$inferSelect;
 export type AccountSelect = typeof Account.$inferSelect;

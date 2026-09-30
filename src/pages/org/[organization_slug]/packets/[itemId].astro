@@ -1,23 +1,48 @@
 ---
 // pages/org/:organization_slug/packets/:itemId
+// TODO move this to an /api route instead of partial
 import BaseLayout from "@layouts/BaseLayout.astro";
+import { db } from "@db/db";
+import { MeetingPacket } from "@db/schema";
+import { and, eq } from "drizzle-orm";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { getMsCredentials } from "@lib/auth/msCredentials";
 
 const { itemId } = Astro.params;
-if (!itemId) throw new Error("no url set");
+if (!itemId) return Astro.redirect("/404?msg=Item Id not set");
 
-console.log({ itemId });
+const { user, organization, member } = Astro.locals;
 
-const { organization, member, user } = Astro.locals;
-if (!organization) return Astro.redirect("/404");
-if (!member) return Astro.redirect("/404");
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+if (!user)
+  return Astro.redirect(
+    `/login?msg=${"Must Be logged in to view this document"}&returnTo=${encodeURIComponent(returnTo)}`,
+  );
+if (!organization)
+  return Astro.redirect(
+    `/404?msg=${"You are not appart of this organization, or this organization has not been setup"}`,
+  );
+if (!member)
+  return Astro.redirect(
+    `/not-authorized?msg=${encodeURIComponent("you are not a member of this organization: ", organization.name)}`,
+  );
 
 const { sharepoint_drive_id, sharepoint_site_id } = organization;
 
+// Only serve files that were actually published as packets for this drive
+const packet = await db.query.MeetingPacket.findFirst({
+  where: and(
+    eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id!),
+    eq(MeetingPacket.published_file_id, itemId),
+  ),
+});
+
+if (!packet) return Astro.redirect("/404");
+
+let errorMessage: string | undefined;
+
 try {
-  // /sites/{site-id}/drives/{drive-id}/items/{item-id}/content
-  // or  /drives/{drive-id}/root:/Board Document Library/PUBLISHED/MOEITS Board/2026/09-22/MeetingPacket-v6.pdf:/content
   const { tenantId, clientId, clientSecret } = await getMsCredentials(
     organization.id,
   );
@@ -25,26 +50,29 @@ try {
 
   const pdfRes = await fetch(
     `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${itemId}/content`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
+    { headers: { Authorization: `Bearer ${token}` } },
   );
 
-  const pdfBuffer = await pdfRes.arrayBuffer();
-
-  return new Response(pdfBuffer, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "inline",
-    },
-  });
+  if (!pdfRes.ok) {
+    console.error("Packet fetch failed", pdfRes.status, await pdfRes.text());
+    Astro.response.status = pdfRes.status === 404 ? 404 : 502;
+    errorMessage = "Unable to load packet.";
+  } else {
+    return new Response(pdfRes.body, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
 } catch (err) {
-  console.log({ err });
+  console.error({ err });
+  Astro.response.status = 500;
+  errorMessage = "Unable to load packet.";
 }
 ---
 
 <BaseLayout>
-  <h1>Packet {itemId}</h1>
+  <h1>{errorMessage ?? `Packet ${itemId}`}</h1>
 </BaseLayout>

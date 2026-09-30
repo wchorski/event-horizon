@@ -138,7 +138,7 @@ Eventually you will run into a migration error. Here is my fix when I changed an
 I had a custom role type `staff` but better-auth defaults to use `owner, admin, member`. So I'm going to prune this offending data and fix the seed again.
 
 ```sh
-docker compose exec db psql -U event_horizon_db_user -d event_horizon_db_1
+docker compose exec db psql -U PGUSER -d PGDATABASE
 ## See what
 SELECT * FROM members WHERE role = 'staff';
 
@@ -150,6 +150,11 @@ DELETE FROM members WHERE role = 'staff';
 COMMIT;   -- or ROLLBACK; if something looks off
 
 SELECT * FROM members WHERE role = 'staff';
+
+## manually verify a user
+UPDATE users
+SET email_verified = true
+WHERE email = 'will@tawtaw.site';
 ```
 
 </details>

@@ -13,7 +13,7 @@ if (Astro.request.method !== "POST")
   return new Response("only POST method is allowed", { status: 405 });
 
 const { organizationId } = Astro.params;
-console.log({ organizationId });
+
 if (!organizationId) throw new BadRequestError("organizationId not set in url");
 
 let error = null;
@@ -27,7 +27,6 @@ try {
   // TODO validate with zod
   if (!email || !role)
     throw new BadRequestError("[email, role, organizationId] not in formData");
-  console.log({ payload });
 
   const data = await auth.api.createInvitation({
     body: {
@@ -40,8 +39,6 @@ try {
     // This endpoint requires session cookies.
     headers: Astro.request.headers,
   });
-
-  console.log({ data });
 
   if (!data) throw new Error("uh oh. no good: " + JSON.stringify(data));
 

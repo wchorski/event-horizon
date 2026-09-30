@@ -122,6 +122,10 @@ button.cancel,
 button:disabled {
   cursor: not-allowed;
 }
+button[aria-busy="true"] {
+  color: gray !important;
+  cursor: progress !important;
+}
 
 .result {
   margin-top: 1rem;

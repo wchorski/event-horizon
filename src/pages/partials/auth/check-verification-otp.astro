@@ -1,9 +1,15 @@
 ---
 // pages/partials/auth/check-verification-otp
 type PasswordResetFields = {
-  otp: string;
-  email: string;
-  password: string;
+  otp: string | null;
+  email: string | null;
+  password: string | null;
+  type:
+    | "sign-in"
+    | "email-verification"
+    | "forget-password"
+    | "change-email"
+    | null;
 };
 import { auth } from "@lib/auth";
 import { BadRequestError } from "@lib/errors";
@@ -16,38 +22,61 @@ let error = null;
 try {
   const formData = await Astro.request.formData();
   const payload = Object.fromEntries(formData.entries()) as PasswordResetFields;
-  const { email, otp, password } = payload;
-  if (!email || !otp || !password)
-    throw new BadRequestError("email, otp, or password not in formData");
+  const { email, otp, password, type } = payload;
+  if (!email || !otp || !type)
+    throw new BadRequestError("email, otp, type not in formData");
+  // console.log("=== auth/check-verification-otp");
+  // console.log({ payload });
 
-  const verify = await auth.api.checkVerificationOTP({
-    body: {
-      email, // required, Email address to send the OTP.
-      type: "forget-password", // required, Type of the OTP.
-      otp, // required, OTP sent to the email.
-    },
-  });
+  if (type === "email-verification") {
+    const { headers: authHeaders, response } = await auth.api.verifyEmailOTP({
+      body: { email, otp },
+      returnHeaders: true,
+    });
 
-  if (!verify.success)
-    throw new Error("uh oh. no good: " + JSON.stringify(verify));
+    // Errors throw an APIError, so reaching here means it succeeded
+    if (!response.status) throw new Error("Email verification failed");
 
-  const reset = await auth.api.resetPasswordEmailOTP({
-    body: {
-      email, // required, Email address to reset the password.
-      otp, // required, OTP sent to the email.
-      password, // required, New password.
-    },
-  });
+    const headers = new Headers({
+      "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Email verified")}`,
+    });
+    for (const cookie of authHeaders.getSetCookie()) {
+      headers.append("Set-Cookie", cookie);
+    }
 
-  if (!reset.success)
-    throw new Error("uh oh. no good: " + JSON.stringify(reset));
+    return new Response(null, { status: 204, headers });
+  }
 
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Password successfully reset")}`,
-    },
-  });
+  if (type === "forget-password" && password) {
+    const verify = await auth.api.checkVerificationOTP({
+      body: {
+        email, // required, Email address to send the OTP.
+        type: type ?? "forget-password", // required, Type of the OTP.
+        otp, // required, OTP sent to the email.
+      },
+    });
+
+    if (!verify.success)
+      throw new Error("uh oh. no good: " + JSON.stringify(verify));
+
+    const reset = await auth.api.resetPasswordEmailOTP({
+      body: {
+        email, // required, Email address to reset the password.
+        otp, // required, OTP sent to the email.
+        password, // required, New password.
+      },
+    });
+
+    if (!reset.success)
+      throw new Error("uh oh. no good: " + JSON.stringify(reset));
+
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Password successfully reset")}`,
+      },
+    });
+  }
 } catch (err) {
   console.log({ err });
   error = String(err);

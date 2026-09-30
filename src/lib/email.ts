@@ -45,7 +45,7 @@ export const verificationEmailTemplate = ({
     html: `
             <div style="font-family: sans-serif; padding: 20px;">
               <h2>Verification Code from ${SITE_TITLE}</h2>
-              <p>Use the following code to complete your ${type} (This code expires in 5 minutes. <a href="${DOMAIN_URL + `/login?msg=Enter your one-time-password&otp=${otp}&email=${encodeURIComponent(email)}`}">One-Click Login</a>)</p>
+              <p>Use the following code to complete your ${type} (This code expires in 5 minutes. <a href="${DOMAIN_URL + `/login?msg=Enter your one-time-password&otp=${otp}&type=${type}&email=${encodeURIComponent(email)}`}">One-Click Login</a>)</p>
               <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
                 ${otp}
               </div>

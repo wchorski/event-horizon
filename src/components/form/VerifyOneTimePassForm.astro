@@ -4,9 +4,10 @@ import SubmitButton from "./SubmitButton.astro";
 interface Props {
   otp: string | null;
   email: string | null;
+  type: "sign-in" | "email-verification" | "forget-password";
 }
 
-const { otp, email } = Astro.props;
+const { otp, email, type } = Astro.props;
 
 const formId = "check-verification-otp";
 ---
@@ -29,14 +30,18 @@ const formId = "check-verification-otp";
       required={true}
       value={otp}
     />
-    <InputField
-      id={formId + "-password"}
-      name={"password"}
-      label={"New Password"}
-      model={"account"}
-      type={"password"}
-      required={true}
-    />
+    {
+      type === "forget-password" ? (
+        <InputField
+          id={formId + "-password"}
+          name={"password"}
+          label={"New Password"}
+          model={"account"}
+          type={"password"}
+          required={true}
+        />
+      ) : null
+    }
     <InputField
       id={formId + "-email"}
       name={"email"}
@@ -44,6 +49,14 @@ const formId = "check-verification-otp";
       type={"email"}
       required={true}
       value={email}
+    />
+    <InputField
+      id={formId + "-type"}
+      name={"type"}
+      model={"account"}
+      type={"text"}
+      required={true}
+      value={type}
     />
   </fieldset>
   <div class="row-error error top-level">

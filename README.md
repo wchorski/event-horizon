@@ -212,6 +212,7 @@ docker compose run --rm seed
 ## Document manager
 
 #todo
+- [ ] make files like this viewable `Documents/PREPERATIONS/MOEITS Board/2026/10-08/1. Approval of the Minutes`
 - [ ] how to cover page and aggenda page for pdf-packet-builder?
 - [ ] Entra ID SSO (Microsoft) https://better-auth.com/docs/authentication/microsoft
 - [ ] how do i multi tenante the MS Client ID/Secret?

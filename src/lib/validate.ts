@@ -57,11 +57,13 @@ export const slugSchema = z
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Invalid slug format"),
   );
 
-export type IntegrationCredentialFormInput =
-  z.input<typeof validateIntegrationCredentialForm>;
+export type IntegrationCredentialFormInput = z.input<
+  typeof validateIntegrationCredentialForm
+>;
 
-export type IntegrationCredentialFormOutput =
-  z.output<typeof validateIntegrationCredentialForm>;
+export type IntegrationCredentialFormOutput = z.output<
+  typeof validateIntegrationCredentialForm
+>;
 
 export const validateIntegrationCredentialForm = z
   .object({
@@ -102,6 +104,13 @@ export const validateIntegrationCredentialForm = z
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
+  signup: z.object({
+    email: z.string().trim().toLowerCase().email(),
+    password: z.string().min(8).max(128),
+    first_name: z.string().trim().max(100),
+    last_name: z.string().trim().max(100),
+    image: z.string().url().optional().or(z.literal("")),
+  }),
   datetimeLocalToDate,
   id: z.uuidv7(),
   bookingStatus: z.enum(BOOKING_STATUSES),

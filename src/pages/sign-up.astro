@@ -1,5 +1,6 @@
 ---
 // pages/sign-up.astro
+import CardForm from "@components/form/CardForm.astro";
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
@@ -54,7 +55,39 @@ if (Astro.request.method === "POST") {
         </p>
       ) : null
     }
-    <form
+    <CardForm id="sign-up-form" method="post" submitText="Sign Up">
+      <div class="flex gap-m">
+        <InputField
+          name="first_name"
+          type={"text"}
+          id="first_name"
+          model={"accounts"}
+        />
+        <InputField
+          name="last_name"
+          type={"text"}
+          id="last_name"
+          model={"accounts"}
+        />
+      </div>
+      <InputField
+        name="email"
+        type={"email"}
+        id="email"
+        model={"accounts"}
+        required={true}
+      />
+      <InputField
+        name="password"
+        type={"password"}
+        id="password"
+        model={"accounts"}
+        required={true}
+      />
+      <InputField name="image" type={"text"} id="image" model={"accounts"} />
+    </CardForm>
+    <!-- OLD FORM -->
+    <!-- <form
       id="sign-up-form"
       method="POST"
       hx-boost="true"
@@ -91,7 +124,7 @@ if (Astro.request.method === "POST") {
       <InputField name="image" type={"text"} id="image" model={"accounts"} />
 
       <SubmitButton text="Sign Up" />
-    </form>
+    </form> -->
     {
       error && (
         <p class="form-error error callout" role="alert">

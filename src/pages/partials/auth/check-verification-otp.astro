@@ -1,98 +1,72 @@
 ---
-// pages/partials/auth/check-verification-otp
-type PasswordResetFields = {
-  otp: string | null;
-  email: string | null;
-  password: string | null;
-  type:
-    | "sign-in"
-    | "email-verification"
-    | "forget-password"
-    | "change-email"
-    | null;
-};
+// pages/partials/auth/check-verification-otp.astro
+import { z } from "astro/zod"; // same zod copy as validate.ts
 import { auth } from "@lib/auth";
-import { BadRequestError } from "@lib/errors";
+import { FormError, runForm } from "@lib/form-action";
+import { authRedirect, safeReturnTo } from "@lib/auth/respond";
 
-if (Astro.request.method !== "POST")
-  return new Response("only POST method is allowed", { status: 405 });
+if (Astro.request.method !== "POST") {
+  return new Response("Only POST is allowed", { status: 405 });
+}
 
-let error = null;
+const schema = z
+  .object({
+    otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+    email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email")),
+    type: z.enum(["sign-in", "email-verification", "forget-password"]),
+    password: z.string().min(8, "Password must be at least 8 characters").max(128).optional(),
+    redirectTo: z.string().optional(),
+  })
+  .refine((d) => d.type !== "forget-password" || !!d.password, {
+    path: ["password"],
+    message: "Enter a new password",
+  });
 
-try {
-  const formData = await Astro.request.formData();
-  const payload = Object.fromEntries(formData.entries()) as PasswordResetFields;
-  const { email, otp, password, type } = payload;
-  if (!email || !otp || !type)
-    throw new BadRequestError("email, otp, type not in formData");
-  // console.log("=== auth/check-verification-otp");
-  // console.log({ payload });
+type Input = z.output<typeof schema>;
+
+async function verify({ otp, email, type, password, redirectTo }: Input) {
+  const dest = safeReturnTo(redirectTo ?? null);
 
   if (type === "email-verification") {
-    const { headers: authHeaders, response } = await auth.api.verifyEmailOTP({
+    const { headers, response } = await auth.api.verifyEmailOTP({
       body: { email, otp },
       returnHeaders: true,
     });
-
-    // Errors throw an APIError, so reaching here means it succeeded
-    if (!response.status) throw new Error("Email verification failed");
-
-    const params = new URLSearchParams({
-      msg: "Email has been successfully verified",
-      status: "success",
-    });
-    const headers = new Headers({
-      "HX-Redirect": `/dashboard?${params}}`,
-    });
-    for (const cookie of authHeaders.getSetCookie()) {
-      headers.append("Set-Cookie", cookie);
-    }
-
-    return new Response(null, { status: 204, headers });
+    if (!response.status) throw new FormError("That code is invalid or expired.", 400);
+    return {
+      setCookies: headers.getSetCookie(),
+      dest: dest ?? `/dashboard?${new URLSearchParams({ msg: "Email verified. Welcome!" })}`,
+    };
   }
 
-  if (type === "forget-password" && password) {
-    const verify = await auth.api.checkVerificationOTP({
-      body: {
-        email, // required, Email address to send the OTP.
-        type: type ?? "forget-password", // required, Type of the OTP.
-        otp, // required, OTP sent to the email.
-      },
-    });
-
-    if (!verify.success)
-      throw new Error("uh oh. no good: " + JSON.stringify(verify));
-
+  if (type === "forget-password") {
     const reset = await auth.api.resetPasswordEmailOTP({
-      body: {
-        email, // required, Email address to reset the password.
-        otp, // required, OTP sent to the email.
-        password, // required, New password.
-      },
+      body: { email, otp, password: password! },
     });
-
-    if (!reset.success)
-      throw new Error("uh oh. no good: " + JSON.stringify(reset));
-
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Password successfully reset")}`,
-      },
-    });
+    if (!reset.success) throw new FormError("That code is invalid or expired.", 400);
+    return {
+      setCookies: [],
+      dest: `/login?${new URLSearchParams({ msg: "Password updated. Please log in." })}`,
+    };
   }
-} catch (err) {
-  console.log({ err });
-  error = String(err);
+
+  // "sign-in" is not handled by this endpoint yet
+  throw new FormError("Unsupported verification type.", 400);
 }
+
+const outcome = await runForm(await Astro.request.formData(), {
+  schema,
+  sensitive: ["otp", "password"],
+  run: verify,
+});
+
+if (outcome.ok) {
+  return authRedirect(Astro.request, outcome.data.dest, outcome.data.setCookies);
+}
+
+// One message area on this form: show the first field error if there is one
+const message = Object.values(outcome.state.fieldErrors)[0] ?? outcome.state.error ?? "";
+Astro.response.status = outcome.state.status;
 ---
 
-{
-  error ? (
-    <p class="callout error">an error happened {error}</p>
-  ) : (
-    <p class="callout success">
-      Password has been updated. <a href="/dashboard">Go to your Dashboard</a>
-    </p>
-  )
-}
+<p class="form-error error callout" role="alert">{message}</p>

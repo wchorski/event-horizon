@@ -23,13 +23,28 @@ const { members } = Astro.props;
   <tbody>
     {
       members.length > 0 ? (
-        members.map(({role, user}) => (
+        members.map(({ role, user }) => (
           <tr>
             <td>{user.name}</td>
-            <td>{user.email}</td>
+            <td>
+              {user.email}
+              {!user.emailVerified && (
+                <>
+                  <br />
+                  <span
+                    style="color: red;"
+                    data-verified={user.emailVerified}
+                  >
+                    email not verified
+                  </span>
+                </>
+              )}
+            </td>
             <td>{role}</td>
             <td>-</td>
-            <td><button>edit</button></td>
+            <td>
+              <button>edit</button>
+            </td>
           </tr>
         ))
       ) : (

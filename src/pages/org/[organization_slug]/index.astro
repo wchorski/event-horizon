@@ -6,7 +6,7 @@ import { db } from "@db/db";
 import { IntegrationCredential, Member } from "@db/schema";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 const { organization_slug } = Astro.params;
 const search = Astro.url.searchParams;

@@ -1,7 +1,7 @@
 ---
 // src/pages/sign-out.astro
 import { signout } from "@lib/auth/signout";
-import { authRedirect } from "@lib/auth/respond";
+import { authRedirect, safeReturnTo } from "@lib/auth/respond";
 import { emptyForm, fail } from "@lib/form-state";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import FormCard from "@components/form/FormCard.astro";
@@ -10,13 +10,20 @@ const { user } = Astro.locals;
 if (!user && Astro.request.method === "GET") return Astro.redirect("/login");
 let state = emptyForm();
 
+const dest =
+  safeReturnTo(Astro.url.searchParams.get("returnTo")) ??
+  `/bye-bye-bye?msg=${encodeURIComponent("You've been signed out.")}`;
+
 if (Astro.request.method === "POST") {
   try {
     const { setCookies } = await signout(Astro.request.headers);
-    return authRedirect(Astro.request, `/bye-bye-bye?msg=${encodeURIComponent("You've been signed out.")}`, setCookies);
+    return authRedirect(Astro.request, dest, setCookies);
   } catch (e) {
     console.error("signout failed", e);
-    state = fail({ status: 500, error: "Couldn't sign you out. Please try again." });
+    state = fail({
+      status: 500,
+      error: "Couldn't sign you out. Please try again.",
+    });
     Astro.response.status = 500;
   }
 }

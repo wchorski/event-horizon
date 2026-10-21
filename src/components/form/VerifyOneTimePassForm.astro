@@ -1,69 +1,80 @@
 ---
+// components/form/VerifyOneTimePassForm.astro
+import FormCard from "./FormCard.astro";
 import InputField from "./InputField.astro";
-import SubmitButton from "./SubmitButton.astro";
+
 interface Props {
-  otp: string | null;
-  email: string | null;
+  id?: string;
+  otp?: string | null;
+  email?: string | null;
   type: "sign-in" | "email-verification" | "forget-password";
+  redirectTo?: string; // where to land after success; validated server-side
 }
 
-const { otp, email, type } = Astro.props;
-
-const formId = "check-verification-otp";
+const {
+  id = "check-verification-otp",
+  otp,
+  email,
+  type,
+  redirectTo,
+} = Astro.props;
 ---
 
-<form
-  hx-post="/partials/auth/check-verification-otp"
-  hx-target-error={`#${formId}-error`}
-  hx-target={`#${formId}-success`}
-  hx-swap="innerHTML"
-  class="card theme c-primary"
+<FormCard
+  {id}
+  method="post"
+  endpoint="/partials/auth/check-verification-otp"
+  submitText="Verify"
+  class="theme c-primary"
 >
-  <legend>Confirm Verification Code</legend>
-  <fieldset class="no-style">
-    <InputField
-      id={formId + "-code"}
-      name={"otp"}
-      label={"Code"}
-      model={"account"}
-      type={"text"}
-      required={true}
-      value={otp}
-    />
-    {
-      type === "forget-password" ? (
-        <InputField
-          id={formId + "-password"}
-          name={"password"}
-          label={"New Password"}
-          model={"account"}
-          type={"password"}
-          required={true}
-        />
-      ) : null
-    }
-    <InputField
-      id={formId + "-email"}
-      name={"email"}
-      model={"account"}
-      type={"email"}
-      required={true}
-      value={email}
-    />
-    <InputField
-      id={formId + "-type"}
-      name={"type"}
-      model={"account"}
-      type={"text"}
-      required={true}
-      value={type}
-    />
-  </fieldset>
-  <div class="row-error error top-level">
-    <p class="message">
-      <span id={`${formId}-error`}></span>
-    </p>
-  </div>
-  <div id={`${formId}-success`}></div>
-  <SubmitButton text="Verify" />
-</form>
+  <h2>Confirm Verification Code</h2>
+
+  <input type="hidden" name="type" value={type} />
+  {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
+
+  {
+    email ? (
+      <>
+        <input type="hidden" name="email" value={email} />
+        <p>
+          Code sent to <strong>{email}</strong>
+        </p>
+      </>
+    ) : (
+      <InputField
+        id={`${id}-email`}
+        name="email"
+        type="email"
+        model="accounts"
+        required
+      />
+    )
+  }
+
+  <InputField
+    id={`${id}-code`}
+    name="otp"
+    label="Code"
+    type="text"
+    model="accounts"
+    required
+    value={otp ?? undefined}
+    inputmode="numeric"
+    autocomplete="one-time-code"
+    maxlength="6"
+  />
+
+  {
+    type === "forget-password" && (
+      <InputField
+        id={`${id}-password`}
+        name="password"
+        label="New Password"
+        type="password"
+        model="accounts"
+        required
+        autocomplete="new-password"
+      />
+    )
+  }
+</FormCard>

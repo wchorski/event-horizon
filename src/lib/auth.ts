@@ -150,7 +150,7 @@ export const auth = betterAuth({
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
       // TODO add this in later
-      // requireEmailVerificationOnInvitation: true,
+      requireEmailVerificationOnInvitation: true,
       allowUserToCreateOrganization: async (user) => user.role === "admin",
       async sendInvitationEmail(data) {
         // Construct the acceptance link (frontend route)

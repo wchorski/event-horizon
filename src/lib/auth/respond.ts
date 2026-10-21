@@ -14,3 +14,8 @@ export function authRedirect(
   headers.set("Location", location);
   return new Response(null, { status: 302, headers });
 }
+
+export function safeReturnTo(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  return raw;
+}

@@ -3,15 +3,21 @@
 import PasswordResetForm from "@components/auth/PasswordResetForm.astro";
 import SocialProviderLoginForm from "@components/auth/SocialProviderLoginForm.astro";
 import Dialog from "@components/Dialog.astro";
+import FormCard from "@components/form/FormCard.astro";
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
 import VerifyOneTimePassForm from "@components/form/VerifyOneTimePassForm.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { login } from "@lib/auth/login";
-import type { LoginCredentials } from "@ty/Auth";
+import { safeReturnTo } from "@lib/auth/respond";
+import { runForm } from "@lib/form-action";
+import { emptyForm } from "@lib/form-state";
+import { validate } from "@lib/validate";
+import { authRedirect } from "@lib/auth/respond";
 
 const params = Astro.url.searchParams;
 const returnToUrl = params.get("returnTo");
+const returnTo = safeReturnTo(params.get("returnTo"));
 const msg = params.get("msg");
 const email = params.get("email");
 const isReset = params.get("password-reset");
@@ -25,42 +31,75 @@ let notice: string | null = null;
 let needsVerification = false;
 let verifyEmail: string | null = null;
 
+let state = emptyForm();
+
 // TODO do i need a trycatch here?
 if (Astro.request.method === "POST") {
-  const formData = await Astro.request.formData();
-  // @ts-ignore
-  const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
-
-  const result = await login({
-    ...payload,
-    callbackURL: returnToUrl ?? undefined,
+  const outcome = await runForm(await Astro.request.formData(), {
+    schema: validate.login,
+    sensitive: ["password"],
+    // labels: { first_name: "first name", last_name: "last name" },
+    // successMessage: "Login Successful!",
+    run: login,
   });
 
-  // TODO this is just a type error. i should handle login errors, notices, messages better and put them into the types
-  if (result.code === "EMAIL_NOT_VERIFIED") {
-    needsVerification = true;
-    verifyEmail = payload.email;
-    notice = `A new verification code has been sent to ${payload.email}. Follow the instructions sent to your inbox.`;
-  } else {
-    error = result.error;
-  }
+  if (outcome.ok) {
+    const result = outcome.data;
 
-  if (result.success) {
-    const redirectResponse = new Response(null, {
-      status: 302,
-      headers: {
-        Location: returnToUrl
-          ? returnToUrl
-          : `/dashboard?msg=${encodeURIComponent("Login Successful! Welcome.")}`,
-      },
-    });
-    for (const cookie of result.setCookies) {
-      redirectResponse.headers.append("set-cookie", cookie);
+    if (result.kind === "needs-verification") {
+      const q = new URLSearchParams({
+        email: result.email,
+        type: "email-verification",
+        msg: `We sent a verification code to ${result.email}.`,
+      });
+      if (returnTo) q.set("returnTo", returnTo); // keep the destination through verification
+      return authRedirect(Astro.request, `/login?${q}`, []);
     }
-    return redirectResponse;
+
+    return authRedirect(
+      Astro.request,
+      returnTo ??
+        `/dashboard?msg=${encodeURIComponent("Login successful! Welcome.")}`,
+      result.setCookies,
+    );
   }
 
-  error = result.error;
+  state = outcome.state;
+  Astro.response.status = state.status;
+  // const formData = await Astro.request.formData();
+  // // @ts-ignore
+  // const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
+
+  // const result = await login({
+  //   ...payload,
+  //   callbackURL: returnToUrl ?? undefined,
+  // });
+
+  // // TODO this is just a type error. i should handle login errors, notices, messages better and put them into the types
+  // if (result.code === "EMAIL_NOT_VERIFIED") {
+  //   needsVerification = true;
+  //   verifyEmail = payload.email;
+  //   notice = `A new verification code has been sent to ${payload.email}. Follow the instructions sent to your inbox.`;
+  // } else {
+  //   error = result.error;
+  // }
+
+  // if (result.success) {
+  //   const redirectResponse = new Response(null, {
+  //     status: 302,
+  //     headers: {
+  //       Location: returnToUrl
+  //         ? returnToUrl
+  //         : `/dashboard?msg=${encodeURIComponent("Login Successful! Welcome.")}`,
+  //     },
+  //   });
+  //   for (const cookie of result.setCookies) {
+  //     redirectResponse.headers.append("set-cookie", cookie);
+  //   }
+  //   return redirectResponse;
+  // }
+
+  // error = result.error;
 }
 ---
 
@@ -80,39 +119,26 @@ if (Astro.request.method === "POST") {
         </p>
       ) : null
     }
-    <form class="card" id="sign-up-form" method="POST" data-lock-on-submit>
-      <legend>Login</legend>
+    <FormCard id="login-form" submitText="Login" {state}>
+      <h2>Login</h2>
       <InputField
         name="email"
-        type={"email"}
+        type="email"
         id="email"
-        model={"accounts"}
-        required={true}
+        model="accounts"
+        required
+        value={state.values.email ?? email ?? undefined}
+        fieldError={state.fieldErrors.email}
       />
       <InputField
         name="password"
-        type={"password"}
+        type="password"
         id="password"
-        model={"accounts"}
-        required={true}
+        model="accounts"
+        required
+        fieldError={state.fieldErrors.password}
       />
-      {
-        error && (
-          <p class="form-error error callout" role="alert">
-            {error}
-          </p>
-        )
-      }
-      {
-        notice && (
-          <p class="callout success" role="status">
-            {notice}
-          </p>
-        )
-      }
-
-      <SubmitButton text="Login" />
-    </form>
+    </FormCard>
 
     <hr />
 
@@ -120,7 +146,7 @@ if (Astro.request.method === "POST") {
     <SocialProviderLoginForm provider="microsoft" />
 
     <Dialog modal id="dialog-password-reset" open={isReset}>
-      <PasswordResetForm email={email}/>
+      <PasswordResetForm email={email} />
     </Dialog>
 
     <Dialog modal id="dialog-otp" open={otpType ? true : false}>

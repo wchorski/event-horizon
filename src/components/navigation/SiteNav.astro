@@ -34,6 +34,12 @@ const displayName = user
     </a>
   </nav>
   <span class="pill">
-    <a href={`/dashboard`}>{displayName}</a>
+    {
+      user ? (
+        <a href={`/dashboard`}>{displayName}</a>
+      ) : (
+        <a href={`/login`}>Login</a>
+      )
+    }
   </span>
 </header>

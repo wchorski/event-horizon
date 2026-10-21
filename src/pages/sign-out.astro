@@ -1,34 +1,24 @@
 ---
 // src/pages/sign-out.astro
-import InputField from "@components/form/InputField.astro";
-import SubmitButton from "@components/form/SubmitButton.astro";
-import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { signout } from "@lib/auth/signout";
+import { authRedirect } from "@lib/auth/respond";
+import { emptyForm, fail } from "@lib/form-state";
+import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import FormCard from "@components/form/FormCard.astro";
 
 const { user } = Astro.locals;
-let error: string | null = null;
+if (!user && Astro.request.method === "GET") return Astro.redirect("/login");
+let state = emptyForm();
 
 if (Astro.request.method === "POST") {
-  const result = await signout(Astro.request.headers);
-  console.log({result});
-
-  if (result.success) {
-    const redirectResponse = new Response(null, {
-      status: 302,
-      headers: {
-        Location:
-          "/bye-bye-bye?msg='Might sound crazy, but it ain't no lie Baby, bye, bye, bye (Oh, oh)'",
-      },
-    });
-
-    for (const cookie of result.setCookies) {
-      redirectResponse.headers.append("set-cookie", cookie);
-    }
-
-    return redirectResponse;
+  try {
+    const { setCookies } = await signout(Astro.request.headers);
+    return authRedirect(Astro.request, `/bye-bye-bye?msg=${encodeURIComponent("You've been signed out.")}`, setCookies);
+  } catch (e) {
+    console.error("signout failed", e);
+    state = fail({ status: 500, error: "Couldn't sign you out. Please try again." });
+    Astro.response.status = 500;
   }
-
-  error = result.error;
 }
 ---
 
@@ -42,21 +32,15 @@ if (Astro.request.method === "POST") {
         <>
           <p>You are currently logged in as</p>
           <ul>
-            <li>{user.first_name} {user.last_name}</li>
+            <li>
+              {user.first_name} {user.last_name}
+            </li>
             <li>{user.email}</li>
           </ul>
         </>
       ) : null
     }
-    <form id="sign-out-form" method="POST" class="card">
-      <SubmitButton text="Sign Out" size="m"/>
-    </form>
-    {
-      error && (
-        <p class="form-error error callout" role="alert">
-          {error}
-        </p>
-      )
-    }
+
+    <FormCard id="sign-out-form" submitText="Sign Out" {state} />
   </div>
 </CommonPageLayout>

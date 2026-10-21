@@ -16,7 +16,7 @@ type Opts<S extends ZodType | undefined, T> = {
   schema?: S;
   labels?: Record<string, string>;
   sensitive?: string[]; // never echoed back into values
-  successMessage: string | ((data: T) => string);
+  successMessage?: string | ((data: T) => string);
   run: (input: S extends ZodType ? z.output<S> : Record<string, string>) => Promise<T>;
 };
 
@@ -63,7 +63,7 @@ export async function runForm<S extends ZodType | undefined, T>(
   try {
     const input = o.schema ? o.schema.parse(entries) : entries;
     const data = await o.run(input as any);
-    const msg = typeof o.successMessage === "function" ? o.successMessage(data) : o.successMessage;
+    const msg = typeof o.successMessage === "function" ? o.successMessage(data) : (o.successMessage ?? "");
     return { ok: true, data, state: succeed(msg) };
   } catch (e) {
     return { ok: false, state: fail({ ...toFailure(e), values, labels: o.labels }) };

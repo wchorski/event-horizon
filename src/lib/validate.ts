@@ -102,10 +102,19 @@ export const validateIntegrationCredentialForm = z
   });
 
 export type SignupCredentials = z.infer<typeof validate.signup>;
+export type LoginCredentials = z.infer<typeof validate.login>;
+
+// TODO make a seperate password z validation that is shared
+// needs number and special character
+// can't be an email or commonly used
 
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
+  login: z.object({
+    email: z.email().trim().toLowerCase(),
+    password: z.string().min(1, "Enter your password"),
+  }),
   signup: z.object({
     email: z.email().trim().toLowerCase(),
     password: z.string().min(8, "Password must be at least 8 characters").max(128),

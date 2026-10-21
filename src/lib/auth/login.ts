@@ -1,43 +1,33 @@
-// src/lib/auth/login
+// lib/auth/login.ts
 import { auth } from "@lib/auth";
-import type { LoginCredentials, LoginSignupResult } from "@ty/Auth";
+import { FormError } from "@lib/form-action";
+import type { LoginCredentials } from "@lib/validate";
+import type { AuthCookies } from "./signup";
 
-export async function login(
-  credentials: LoginCredentials,
-): Promise<LoginSignupResult> {
-  const { email, password, callbackURL, rememberMe } = credentials;
+export type LoginResult =
+  | (AuthCookies & { kind: "ok" })
+  | { kind: "needs-verification"; email: string };
 
-  if (!email || !password) {
-    return {
-      success: false,
-      error: "Email and password are required.",
-      code: "000",
-    };
-  }
+type AuthErrorBody = { message?: string; code?: string };
 
-  try {
-    const response = await auth.api.signInEmail({
-      body: { email, password, callbackURL, rememberMe },
+export async function login({ email, password }: LoginCredentials): Promise<LoginResult> {
+  const response = await auth.api.signInEmail({
+    body: { email, password },
+    asResponse: true,
+  });
 
-      asResponse: true, // returns a real Response so you can forward its Set-Cookie header
-    });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as AuthErrorBody | null;
 
-    if (response.status > 399) {
-      const errorBody = await response.json().catch(() => null);
-      return {
-        success: false,
-        error: errorBody?.message ?? `Login failed (status ${response.status})`,
-        code: errorBody?.code as string | undefined,
-      };
+    // sendOnSignIn: true already emailed a fresh code, so don't send another
+    if (body?.code === "EMAIL_NOT_VERIFIED") return { kind: "needs-verification", email };
+
+    if (body?.code === "INVALID_EMAIL_OR_PASSWORD" || response.status === 401) {
+      // Deliberately not attached to a field: don't reveal which one was wrong
+      throw new FormError("Invalid email or password.", 401);
     }
-
-    const setCookies = response.headers.getSetCookie?.() ?? [];
-    return { success: true, setCookies };
-  } catch (err: any) {
-    return {
-      success: false,
-      error: `Login failed. ${String(err)}`,
-      code: "500",
-    };
+    throw new FormError(body?.message ?? "Login failed.", response.status);
   }
+
+  return { kind: "ok", setCookies: response.headers.getSetCookie() };
 }

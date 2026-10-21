@@ -15,7 +15,7 @@ const formSchema = z.object({
   last_name: z.string().min(1, "Last name is required"),
   middle_initial: z.string().optional(),
   phone: z.string().min(10, "Phone must be at least 10 digits"),
-  email: z.string().email("Invalid email address"),
+  email: z.email("Invalid email address"),
   address_1: z.string().min(1, "Address is required"),
   address_2: z.string().optional(),
   city: z.string().min(1, "City is required"),

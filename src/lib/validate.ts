@@ -104,10 +104,19 @@ export const validateIntegrationCredentialForm = z
 export type SignupCredentials = z.infer<typeof validate.signup>;
 export type LoginCredentials = z.infer<typeof validate.login>;
 
-// TODO make a seperate password z validation that is shared
-// needs number and special character
-// can't be an email or commonly used
-
+//TODO look into this for local check https://github.com/HaveIBeenPwned/PwnedPasswordsDownloader
+const commonPasswords = new Set(["password1!", "qwerty123!", "welcome1!"]);
+const passwordVerification = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(128, "Password must be at most 128 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character")
+  .refine((pw) => !commonPasswords.has(pw.toLowerCase()), {
+    message: "This password is too common",
+  });
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
@@ -117,9 +126,17 @@ export const validate = {
   }),
   signup: z.object({
     email: z.email().trim().toLowerCase(),
-    password: z.string().min(8, "Password must be at least 8 characters").max(128),
-    first_name: z.string().trim().max(100).min(3, "First name must be 3 characters or more"),
-    last_name: z.string().trim().max(100).min(1, "Last name must be 1 character or more"),
+    password: passwordVerification,
+    first_name: z
+      .string()
+      .trim()
+      .max(100)
+      .min(3, "First name must be 3 characters or more"),
+    last_name: z
+      .string()
+      .trim()
+      .max(100)
+      .min(1, "Last name must be 1 character or more"),
     image: z.preprocess(
       (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
       z.url({ protocol: /^https?$/ }).optional(),

@@ -37,8 +37,12 @@ try {
     // Errors throw an APIError, so reaching here means it succeeded
     if (!response.status) throw new Error("Email verification failed");
 
+    const params = new URLSearchParams({
+      msg: "Email has been successfully verified",
+      status: "success",
+    });
     const headers = new Headers({
-      "HX-Redirect": `/dashboard?msg=${encodeURIComponent("Email verified")}`,
+      "HX-Redirect": `/dashboard?${params}}`,
     });
     for (const cookie of authHeaders.getSetCookie()) {
       headers.append("Set-Cookie", cookie);

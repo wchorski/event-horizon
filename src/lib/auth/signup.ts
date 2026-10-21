@@ -1,57 +1,68 @@
+// lib/auth/signup.ts
 import { auth } from "@lib/auth";
 import { slugify } from "@lib/formatters";
-import type { LoginSignupResult, SignupCredentials } from "@ty/Auth";
+import { FormError } from "@lib/form-action";
+import type { SignupCredentials } from "@lib/validate";
+
+export type AuthCookies = { setCookies: string[] };
+export type SignupResult = AuthCookies & {
+  email: string;
+};
+
+
+type AuthErrorBody = { message?: string; code?: string };
+
+const makeUsername = (first: string, last: string) => {
+  const base = slugify(`${first}_${[...last][0] ?? ""}`).replaceAll("-", "_");
+  return base ? `${base}_${crypto.randomUUID().slice(0, 4)}` : undefined;
+};
 
 export async function signup(
   credentials: SignupCredentials,
-): Promise<LoginSignupResult> {
-  const { first_name, last_name, email, password, image, phone } = credentials;
-  try {
-    const response = await auth.api.signUpEmail({
-      body: {
-        email,
-        password,
-        image,
-        username:
-          slugify(first_name + "_" + Array.from(last_name)[0]).replaceAll(
-            "-",
-            "_",
-          ) || undefined,
-        name: `${first_name} ${last_name}`,
-        first_name,
-        last_name,
-        //   displayUsername: username || undefined,
-      },
-      asResponse: true, // returns a real Response so you can forward its Set-Cookie header
-    });
+): Promise<SignupResult> {
+  const { first_name, last_name, email, password, image } = credentials;
 
-    if (response.status > 399) {
-      const errorBody = await response.json().catch(() => null);
-      return {
-        success: false,
-        error:
-          errorBody?.message ?? `Sign-Up failed (status ${response.status})`,
-      };
-    }
+  const response = await auth.api.signUpEmail({
+    body: {
+      email,
+      password,
+      image,
+      username: makeUsername(first_name, last_name),
+      name: `${first_name} ${last_name}`,
+      first_name,
+      last_name,
+    },
+    asResponse: true, // real Response, so we can forward Set-Cookie
+  });
 
-    const verify = await auth.api.sendVerificationOTP({
-      body: {
-        email, // required, Email address to send the OTP.
-        type: "sign-in", // required, Type of the OTP. `sign-in`, `email-verification`, or `forget-password`.
-      },
-    });
-
-    if (!verify.success) {
-      console.log({ verify });
-      return {
-        success: false,
-        error: "OTP verification did not send",
-      };
-    }
-
-    const setCookies = response.headers.getSetCookie?.() ?? [];
-    return { success: true, setCookies };
-  } catch (err: any) {
-    return { success: false, error: `Sign-Up failed. ${String(err)}` };
+  if (!response.ok) {
+    const body = (await response
+      .json()
+      .catch(() => null)) as AuthErrorBody | null;
+    //? This will never trigger because of of "enumeration" security
+    // this is handled with auth.ts -> `onExistingUserSignUp`
+    throw new FormError(
+      body?.message ?? "Sign-up failed",
+      response.status,
+      body?.code?.startsWith("USER_ALREADY_EXISTS") ? "email" : undefined,
+    );
   }
+
+  // Account exists at this point, so a failed OTP must not turn into an error.
+  // let otpSent = false;
+  // try {
+  //   const verify = await auth.api.sendVerificationOTP({
+  //     body: { email, type: "email-verification" },
+  //   });
+  //   otpSent = verify.success;
+  // } catch (err) {
+  //   console.error("sendVerificationOTP failed", err);
+  // }
+
+  return {
+    setCookies: response.headers.getSetCookie(),
+    // otpSent,
+    email,
+    // type: "email-verification",
+  };
 }

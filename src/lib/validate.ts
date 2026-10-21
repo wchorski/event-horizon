@@ -101,15 +101,20 @@ export const validateIntegrationCredentialForm = z
     };
   });
 
+export type SignupCredentials = z.infer<typeof validate.signup>;
+
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
   signup: z.object({
-    email: z.string().trim().toLowerCase().email(),
-    password: z.string().min(8).max(128),
-    first_name: z.string().trim().max(100),
-    last_name: z.string().trim().max(100),
-    image: z.string().url().optional().or(z.literal("")),
+    email: z.email().trim().toLowerCase(),
+    password: z.string().min(8, "Password must be at least 8 characters").max(128),
+    first_name: z.string().trim().max(100).min(3, "First name must be 3 characters or more"),
+    last_name: z.string().trim().max(100).min(1, "Last name must be 1 character or more"),
+    image: z.preprocess(
+      (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+      z.url({ protocol: /^https?$/ }).optional(),
+    ),
   }),
   datetimeLocalToDate,
   id: z.uuidv7(),

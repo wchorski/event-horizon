@@ -5,11 +5,12 @@ import SubmitButton from "@components/form/SubmitButton.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { signout } from "@lib/auth/signout";
 
-const session = Astro.locals.session;
+const { user } = Astro.locals;
 let error: string | null = null;
 
 if (Astro.request.method === "POST") {
   const result = await signout(Astro.request.headers);
+  console.log({result});
 
   if (result.success) {
     const redirectResponse = new Response(null, {
@@ -37,15 +38,18 @@ if (Astro.request.method === "POST") {
   </header>
   <div data-layout="content">
     {
-      session ? (
-        <p>
-          You are currently logged in as{" "}
-          <pre>{JSON.stringify(session, null, 2)}</pre>
-        </p>
+      user ? (
+        <>
+          <p>You are currently logged in as</p>
+          <ul>
+            <li>{user.first_name} {user.last_name}</li>
+            <li>{user.email}</li>
+          </ul>
+        </>
       ) : null
     }
-    <form id="sign-out-form" method="POST">
-      <SubmitButton text="Sign Out" />
+    <form id="sign-out-form" method="POST" class="card">
+      <SubmitButton text="Sign Out" size="m"/>
     </form>
     {
       error && (

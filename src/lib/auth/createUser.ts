@@ -4,7 +4,6 @@ import { slugify } from "@lib/formatters";
 import type {
   CreatedUser,
   CreateUserResult,
-  LoginSignupResult,
   SignupCredentials,
 } from "@ty/Auth";
 

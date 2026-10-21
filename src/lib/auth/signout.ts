@@ -1,26 +1,14 @@
 import { auth } from "@lib/auth";
-import type { LoginSignupResult } from "@ty/Auth";
+import type { AuthCookies } from "./signup";
 
-export async function signout(headers: Headers,): Promise<LoginSignupResult> {
-  try {
-    const response = await auth.api.signOut({
-      // This endpoint requires session cookies.
-      headers: headers,
-      asResponse: true,
-    });
+export async function signout(headers: Headers): Promise<AuthCookies> {
+  const response = await auth.api.signOut({ headers, asResponse: true });
 
-    if (response.status > 399) {
-      const errorBody = await response.json().catch(() => null);
-      return {
-        success: false,
-        error:
-          errorBody?.message ?? `Sign-Out failed (status ${response.status})`,
-      };
-    }
-
-    const setCookies = response.headers.getSetCookie?.() ?? [];
-    return { success: true, setCookies };
-  } catch (err: any) {
-    return { success: false, error: `Sign-Out failed. ${String(err)}` };
+  if (!response.ok) {
+    console.error("signOut failed", response.status);
+    throw new Error("Sign-out failed");
   }
+
+  // These are the Set-Cookie headers that *clear* the session cookie
+  return { setCookies: response.headers.getSetCookie() };
 }

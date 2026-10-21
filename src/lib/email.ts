@@ -45,7 +45,8 @@ export const verificationEmailTemplate = ({
     html: `
             <div style="font-family: sans-serif; padding: 20px;">
               <h2>Verification Code from ${SITE_TITLE}</h2>
-              <p>Use the following code to complete your ${type} (This code expires in 5 minutes. <a href="${DOMAIN_URL + `/login?msg=Enter your one-time-password&otp=${otp}&type=${type}&email=${encodeURIComponent(email)}`}">One-Click Login</a>)</p>
+              <p>complete your <strong>${type}</strong> (This code expires in 5 minutes).</p>
+              <p><a href="${DOMAIN_URL + `/login?msg=Enter your one-time-password&otp=${otp}&type=${type}&email=${encodeURIComponent(email)}`}">One-Click ${type}</a></p>
               <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px;">
                 ${otp}
               </div>
@@ -78,6 +79,30 @@ export const invitationEmailTemplate = (data: InvitationProps) => {
                 Accept Invitation
               </a>
               <p style="margin-top: 20px; font-size: 12px; color: #666;">Or copy this link: ${data.inviteLink}</p>
+            </div>
+        `,
+  };
+};
+
+export const userExistsEmailTemplate = ({ email }: { email: string }) => {
+  return {
+    from: `${SITE_TITLE} <${SITE_MAIL_ALIAS_EMAIL}>`,
+    to: email,
+    subject: `Attempted Sign Up`,
+    html: `
+            <div style="font-family: sans-serif; padding: 20px;">
+              <h2>You already have an account with ${SITE_TITLE}</h2>
+              <p>Someone has attempted to sign up with your email to our website. If this was you you can ignore this and contine to login</p>
+              <br />
+              <a href="${DOMAIN_URL}/login?email=${email}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Login
+              </a>
+              <p>If this was not you, it is strongly encouraged that you update or reset to a strong password</p>
+              <hr />
+              <br />
+              <a href="${DOMAIN_URL}/login?email=${email}&password-reset=true" style="background: #ffa200; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Reset Password
+              </a>
             </div>
         `,
   };

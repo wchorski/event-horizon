@@ -111,6 +111,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     pathname.startsWith(route),
   );
 
+  // console.log({user: context.locals.user});
+
   if (!isPublic && !context.locals.user) {
     return context.redirect(
       `/login?returnTo=${encodeURIComponent(

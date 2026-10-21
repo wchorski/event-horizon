@@ -18,6 +18,7 @@ const {
 import transporter, {
   verificationEmailTemplate,
   invitationEmailTemplate,
+  userExistsEmailTemplate,
 } from "@lib/email";
 import { passkey } from "@better-auth/passkey";
 import { db } from "@db/db";
@@ -123,6 +124,10 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     minPasswordLength: 8,
     autoSignIn: true,
+    onExistingUserSignUp: async ({ user }, request) => {
+      const { email } = user;
+      await transporter.sendMail(userExistsEmailTemplate({ email }));
+    },
   },
   emailVerification: {
     sendOnSignUp: true, // trigger verification on sign-up

@@ -21,7 +21,7 @@ interface Props extends Omit<
   model: string;
   label?: string;
   type?: InputFieldType | null;
-  value?: string|null;
+  value?: string | null;
   checked?: string | boolean | null;
   fieldError?: string | unknown | null;
   isCreate?: boolean;
@@ -91,6 +91,8 @@ const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
         value={type !== "checkbox" ? prettyVal : undefined}
         checked={checked ?? undefined}
         list={datalist ? `datalist-${name}` : undefined}
+        aria-invalid={fieldError ? "true" : undefined}
+        aria-describedby={fieldError ? errorId : undefined}
       />
       <span id={errorId} class="anim-vibrate field-error">
         {fieldError ?? ""}

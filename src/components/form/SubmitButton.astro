@@ -5,6 +5,7 @@ interface Props extends HTMLAttributes<"button"> {
   text?: string;
   indicatorText?: string;
   hideText?: boolean;
+  size?: "s" | "m" | "l";
 }
 const {
   id = "submit-button",
@@ -12,8 +13,15 @@ const {
   indicatorText = "Submitting...",
   hideText = false,
   class: className,
+  size,
   ...attrs
 } = Astro.props;
+
+type Style = HTMLAttributes<"span">["style"];
+
+const style = {
+  ...(size ? { padding: `var(--size-${size})` } : {}),
+};
 ---
 
 <button
@@ -21,6 +29,7 @@ const {
   title={hideText ? text : ""}
   id={id}
   class:list={[className]}
+  {style}
   {...attrs}
 >
   <span class:list={["text", hideText ? "hide" : ""]}>{text}</span>

@@ -1,5 +1,6 @@
 ---
 // src/pages/login.astro
+import PasswordResetForm from "@components/auth/PasswordResetForm.astro";
 import SocialProviderLoginForm from "@components/auth/SocialProviderLoginForm.astro";
 import Dialog from "@components/Dialog.astro";
 import InputField from "@components/form/InputField.astro";
@@ -13,8 +14,9 @@ const params = Astro.url.searchParams;
 const returnToUrl = params.get("returnTo");
 const msg = params.get("msg");
 const email = params.get("email");
+const isReset = params.get("password-reset");
 const otp = params.get("otp");
-const type = params.get("type") as
+const otpType = params.get("type") as
   "sign-in" | "email-verification" | "forget-password" | null;
 const session = Astro.locals.session;
 const user = Astro.locals.user;
@@ -62,7 +64,7 @@ if (Astro.request.method === "POST") {
 }
 ---
 
-<CommonPageLayout>
+<CommonPageLayout title={"Login"}>
   <header>
     <h1 class="display none">Login</h1>
     {msg ? <p class="callout warning">{msg}</p> : null}
@@ -112,41 +114,21 @@ if (Astro.request.method === "POST") {
       <SubmitButton text="Login" />
     </form>
 
-    <form
-      class="card"
-      hx-post="/partials/auth/password-reset-request"
-      hx-target={this}
-      hx-target-error={`#password-reset-error`}
-      hx-swap="outerHTML"
-    >
-      <legend>Request Password Reset</legend>
-      <InputField
-        name="email"
-        type={"email"}
-        id="password-reset"
-        model={"accounts"}
-        required={true}
-        value={email}
-      />
-      <div class="row-error error top-level">
-        <p class="message">
-          <span id={`password-reset-error`}></span>
-        </p>
-      </div>
-
-      <SubmitButton text="Request Code" />
-    </form>
-
     <hr />
 
     <SocialProviderLoginForm provider="github" />
     <SocialProviderLoginForm provider="microsoft" />
 
-    <Dialog modal id="dialog-otp" open={otp ? true : false}>
+    <Dialog modal id="dialog-password-reset" open={isReset}>
+      <PasswordResetForm email={email}/>
+    </Dialog>
+
+    <Dialog modal id="dialog-otp" open={otpType ? true : false}>
+      {msg ? <p class="callout warning">{msg}</p> : null}
       <VerifyOneTimePassForm
         otp={otp}
         email={email ? decodeURIComponent(email) : null}
-        type={type ?? "forget-password"}
+        type={otpType ?? "forget-password"}
       />
     </Dialog>
   </div>

@@ -1,0 +1,71 @@
+---
+// components/form/FormCard
+import type { HTMLAttributes } from "astro/types";
+import type { FormState } from "@lib/form-state";
+import SubmitButton from "./SubmitButton.astro";
+
+type HtmxMethod = "get" | "post" | "put" | "patch" | "delete";
+
+type Base = Omit<HTMLAttributes<"form">, "method" | "id"> & {
+  id: string;
+  submitText?: string;
+  state?: Pick<FormState, "error" | "success">;
+};
+
+type Props = Base &
+  (
+    | { endpoint: string; method?: HtmxMethod }          // pure htmx
+    | { endpoint?: undefined; method?: "get" | "post" }  // native + boost
+  );
+
+const {
+  id,
+  state,
+  submitText,
+  endpoint,
+  method = "post",
+  class: className,
+  ...attrs
+} = Astro.props;
+
+const msgId = `${id}-toplevel-msg`;
+const formSel = `#${id}`;
+const msgSel = `#${msgId}`;
+
+const modeAttrs = endpoint
+  ? {
+      [`hx-${method}`]: endpoint,
+      "hx-target": msgSel,
+      "hx-target-error": msgSel,
+      "hx-swap": "innerHTML",
+    }
+  : {
+      method,
+      "hx-boost": "true",
+      "hx-target": formSel,
+      "hx-target-error": formSel,
+      "hx-select": formSel,
+      "hx-swap": "outerHTML",
+      "hx-push-url": "false",
+    };
+---
+
+<form
+  id={id}
+  class:list={["card", className]}
+  hx-ext="response-targets"
+  hx-disabled-elt="find button[type=submit]"
+  {...modeAttrs}
+  {...attrs}
+>
+  <slot />
+  <div id={msgId} class="toplevel-msg">
+    {state?.error && (
+      <p class="form-error error callout" role="alert">{state.error}</p>
+    )}
+    {state?.success && (
+      <p class="form-success success callout" role="status">{state.success}</p>
+    )}
+  </div>
+  <SubmitButton text={submitText} />
+</form>

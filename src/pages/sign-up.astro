@@ -1,136 +1,104 @@
 ---
-// pages/sign-up.astro
-import CardForm from "@components/form/CardForm.astro";
-import InputField from "@components/form/InputField.astro";
-import SubmitButton from "@components/form/SubmitButton.astro";
-import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
+// pages/sign-up
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import FormCard from "@components/form/FormCard.astro";
+import InputField from "@components/form/InputField.astro";
 import { signup } from "@lib/auth/signup";
+import { runForm } from "@lib/form-action";
+import { authRedirect } from "@lib/auth/respond";
+import { emptyForm } from "@lib/form-state";
 import { validate } from "@lib/validate";
-import type { SignupCredentials } from "@ty/Auth";
 
-type SignUpFields = {
-  email: string;
-  password: string;
-  image: string;
-  username: string;
-};
+const { user } = Astro.locals;
 
-const { session, user } = Astro.locals;
+// if (user)
+//   return Astro.redirect(
+//     `/dashboard?msg=Already signed in as ${user.first_name}`,
+//   );
 
-let error: string | null = null;
+let state = emptyForm(); // every request starts clean
 
 if (Astro.request.method === "POST") {
-  const formData = Object.fromEntries(await Astro.request.formData());
-  const validated = validate.signup.safeParse(formData);
-  // const { email, password, image, first_name, last_name } = payload;
-  const result = await signup(validated);
+  const outcome = await runForm(await Astro.request.formData(), {
+    schema: validate.signup,
+    sensitive: ["password"],
+    labels: { first_name: "first name", last_name: "last name" },
+    successMessage: "Account created! Check your email for a code.",
+    run: signup,
+  });
 
-  if (result.success) {
-    const redirectResponse = new Response(null, {
-      status: 302,
-      headers: {
-        Location: `/dashboard?msg=${encodeURIComponent("Account Created! Welcome.")}`,
-      },
+  if (outcome.ok) {
+    const { email, setCookies } = outcome.data;
+    const params = new URLSearchParams({
+      email,
+      type: "email-verification",
+      msg: `Use the code sent to ${email}'s inbox. Check the junk folder.`,
     });
-    for (const cookie of result.setCookies) {
-      redirectResponse.headers.append("set-cookie", cookie);
-    }
-    return redirectResponse;
+    return authRedirect(Astro.request, `/login?${params}`, setCookies);
   }
 
-  error = result.error;
+  state = outcome.state;
+  Astro.response.status = state.status;
 }
 ---
 
-<CommonPageLayout>
+<CommonPageLayout title={'Sign Up'}>
   <header>
     <h1>Sign Up</h1>
   </header>
   <div data-layout="content">
-    {
-      user ? (
+    <!-- {
+      user && (
         <p>
-          You are currently logged in as <pre>{user.email}</pre>
-        </p>
-      ) : null
-    }
-    <CardForm id="sign-up-form" method="post" submitText="Sign Up">
-      <div class="flex gap-m">
-        <InputField
-          name="first_name"
-          type={"text"}
-          id="first_name"
-          model={"accounts"}
-        />
-        <InputField
-          name="last_name"
-          type={"text"}
-          id="last_name"
-          model={"accounts"}
-        />
-      </div>
-      <InputField
-        name="email"
-        type={"email"}
-        id="email"
-        model={"accounts"}
-        required={true}
-      />
-      <InputField
-        name="password"
-        type={"password"}
-        id="password"
-        model={"accounts"}
-        required={true}
-      />
-      <InputField name="image" type={"text"} id="image" model={"accounts"} />
-    </CardForm>
-    <!-- OLD FORM -->
-    <!-- <form
-      id="sign-up-form"
-      method="POST"
-      hx-boost="true"
-      hx-disabled-elt="find button[type=submit]"
-    >
-      <div class="flex gap-m">
-        <InputField
-          name="first_name"
-          type={"text"}
-          id="first_name"
-          model={"accounts"}
-        />
-        <InputField
-          name="last_name"
-          type={"text"}
-          id="last_name"
-          model={"accounts"}
-        />
-      </div>
-      <InputField
-        name="email"
-        type={"email"}
-        id="email"
-        model={"accounts"}
-        required={true}
-      />
-      <InputField
-        name="password"
-        type={"password"}
-        id="password"
-        model={"accounts"}
-        required={true}
-      />
-      <InputField name="image" type={"text"} id="image" model={"accounts"} />
-
-      <SubmitButton text="Sign Up" />
-    </form> -->
-    {
-      error && (
-        <p class="form-error error callout" role="alert">
-          {error}
+          You are currently logged in as <code>{user.email}</code>
         </p>
       )
-    }
+    } -->
+
+    <FormCard id="sign-up-form" submitText="Sign Up" {state}>
+      <div class="flex gap-m">
+        <InputField
+          name="first_name"
+          type="text"
+          id="first_name"
+          model="accounts"
+          value={state.values.first_name}
+          fieldError={state.fieldErrors.first_name}
+        />
+        <InputField
+          name="last_name"
+          type="text"
+          id="last_name"
+          model="accounts"
+          value={state.values.last_name}
+          fieldError={state.fieldErrors.last_name}
+        />
+      </div>
+      <InputField
+        name="email"
+        type="email"
+        id="email"
+        model="accounts"
+        required
+        value={state.values.email}
+        fieldError={state.fieldErrors.email}
+      />
+      <InputField
+        name="password"
+        type="password"
+        id="password"
+        model="accounts"
+        required
+        fieldError={state.fieldErrors.password}
+      />
+      <InputField
+        name="image"
+        type="text"
+        id="image"
+        model="accounts"
+        value={state.values.image}
+        fieldError={state.fieldErrors.image}
+      />
+    </FormCard>
   </div>
 </CommonPageLayout>

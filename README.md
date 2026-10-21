@@ -31,7 +31,7 @@ pnpm db:push
 > npx drizzle-kit push
 
 No config path provided, using default 'drizzle.config.ts'
-Reading config file '/Volumes/edata/vscode/moeits_staff-astro-htmx/drizzle.config.ts'
+Reading config file '../drizzle.config.ts'
 Using 'pg' driver for database querying
 [✓] Pulling schema from database...
 
@@ -65,6 +65,24 @@ HOW to generate sql files and migrations with
 npx drizzle-kit generate   # generates SQL migration files
 npx drizzle-kit migrate    # runs them against your DB
 ```
+
+How to handle failures
+
+```sh
+drizzle-kit migrate
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '../drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] applying migrations...[ELIFECYCLE] Command failed with exit code 1
+```
+
+The errors you're looking for will be in your database logs. i.e. the postgres container
+
+```log
+2026-10-21 17:31:01.486 UTC [281] ERROR:  invalid input value for enum member_role: "staff"
+2026-10-21 17:31:01.486 UTC [281] STATEMENT:  
+	ALTER TABLE "members" ALTER COLUMN "role" SET DATA TYPE "public"."member_role" USING "role"::"public"."member_role";
+  ```
 
 ### Better Auth config
 

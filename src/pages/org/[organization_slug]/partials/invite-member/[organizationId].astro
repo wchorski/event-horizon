@@ -40,7 +40,7 @@ try {
     headers: Astro.request.headers,
   });
 
-  if (!data) throw new Error("uh oh. no good: " + JSON.stringify(data));
+  if (!data) throw new Error("uh oh. no good. contact site developer");
 
   success = data;
 } catch (err) {
@@ -54,7 +54,7 @@ try {
     <p class="callout error">an error happened {error}</p>
   ) : (
     <p class="callout success">
-      Invitation Sent to <pre>{JSON.stringify(success, null, 2)}</pre>
+      Invitation Sent to <pre>{success?.email}</pre>
     </p>
   )
 }

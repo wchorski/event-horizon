@@ -23,6 +23,7 @@ import { NotFoundError } from "@lib/errors";
 import { decryptSecret } from "@lib/auth/secretBox";
 import { PLACEHOLDER_BODY } from "@lib/microsoft/outlookPacketLink";
 import OrgHeader from "@components/navigation/OrgHeader.astro";
+import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 
 const {user, organization, member} = Astro.locals;
 const displayName = user
@@ -232,14 +233,14 @@ const formMethodEndpoint = outlookEvent
 
 
 
-  <BaseLayout title={organization.name + " | Documents"}>
-    <main>
-      <OrgHeader organization={organization} member={member} user={user} />
+  <OrgMemberPageLayout title={organization.name + " | Documents"}>
+    
+      
       
       <div data-layout="content">
         {isDayFldr ? <>
       
-      <hr />
+
       <section class="flex gap-m">
         
           {
@@ -393,7 +394,7 @@ const formMethodEndpoint = outlookEvent
         </form>
       </section>
       </> : null}
-      <hr />
+      
         {error && <p style="color: red;">Error: {error}</p>}
         <Breadcrumbs crumbs={crumbs} basePath={basePath} />
         {
@@ -402,8 +403,8 @@ const formMethodEndpoint = outlookEvent
           )
         }
       </div>
-    </main>
+    
     <Footer />
-  </BaseLayout>
+  </OrgMemberPageLayout>
 
 

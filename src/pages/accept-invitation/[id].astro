@@ -39,15 +39,11 @@ const { organization, ...invite } = invitation;
 
 // ---- work out what state the invite is in ----
 type State =
-  | "ready"
-  | "wrong_user"
-  | "accepted"
-  | "rejected"
-  | "canceled"
-  | "expired";
+  "ready" | "wrong_user" | "accepted" | "rejected" | "canceled" | "expired";
 
 let state: State = "ready";
-if (invite.email.toLowerCase() !== user.email.toLowerCase()) state = "wrong_user";
+if (invite.email.toLowerCase() !== user.email.toLowerCase())
+  state = "wrong_user";
 else if (invite.status === "accepted") state = "accepted";
 else if (invite.status === "rejected") state = "rejected";
 else if (invite.status === "canceled") state = "canceled";
@@ -78,7 +74,10 @@ if (Astro.request.method === "POST" && state === "ready") {
 }
 
 // ---- copy for the states that block accepting ----
-const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> = {
+const blocked: Record<
+  Exclude<State, "ready">,
+  { title: string; body: string }
+> = {
   wrong_user: {
     title: "Wrong account",
     body: `You're signed in as ${user.email}, but this invitation was sent to ${invite.email}. Sign in with that account to accept it.`,
@@ -112,8 +111,8 @@ if (state === "expired") Astro.response.status = 410;
       {
         state === "ready" && (
           <p>
-            {organization.name} is inviting you to become a {invite.role} of
-            the organization.
+            {organization.name} is inviting you to become a {invite.role} of the
+            organization.
           </p>
         )
       }
@@ -129,37 +128,39 @@ if (state === "expired") Astro.response.status = 410;
       )
     }
   </header>
-
-  {
-    state === "ready" ? (
-      <form method="POST" class="card" id="accept-form">
-        {errorMessage && (
-          <p role="alert" class="error">
-            {errorMessage}
-          </p>
-        )}
-        <button type="submit" class="m">Join Organization</button>
-      </form>
-    ) : (
-      <div class="card" role="status">
-        <p>{blocked[state].body}</p>
-        {state === "wrong_user" && (
-          // adjust to whatever your logout route is
-          <a>
-            href={`/logout?returnTo=${encodeURIComponent(returnTo)}`}
-            class="button"
-          >
-            Switch account
-          </a>
-        )}
-        {state === "accepted" && (
-          <a href={`/org/${organization.slug}`} class="button">
-            Go to {organization.name}
-          </a>
-        )}
-      </div>
-    )
-  }
+  <main>
+    {
+      state === "ready" ? (
+        <form method="POST" class="card" id="accept-form">
+          {errorMessage && (
+            <p role="alert" class="error">
+              {errorMessage}
+            </p>
+          )}
+          <button type="submit" class="m">
+            Join Organization
+          </button>
+        </form>
+      ) : (
+        <div class="card" role="status">
+          <p>{blocked[state].body}</p>
+          {state === "wrong_user" && (
+            <a
+              href={`/sign-out?returnTo=${encodeURIComponent(returnTo)}`}
+              class="button"
+            >
+              Sign Out
+            </a>
+          )}
+          {state === "accepted" && (
+            <a href={`/org/${organization.slug}`} class="button">
+              Go to {organization.name}
+            </a>
+          )}
+        </div>
+      )
+    }
+  </main>
 
   <Footer slot="footer" />
 </BaseLayout>

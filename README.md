@@ -217,6 +217,7 @@ docker compose run --rm seed
 </details>
 
 #todo
+- [ ] CRITICAL: make password requirments 
 - [ ] after sign-up, auto login doesn't set browser headers or session correctly
 - [ ] password rest form doesn't throw error if user doesn't exist
 - [ ] make sure /timelines and /bookings are still reachable with middleware auth

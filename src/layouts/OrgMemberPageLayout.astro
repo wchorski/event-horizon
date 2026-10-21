@@ -1,0 +1,22 @@
+---
+interface Props {
+  title?: string;
+  excerpt?: string;
+  classNames?: string;
+}
+import SiteNav from "@components/navigation/SiteNav.astro";
+import BaseLayout from "./BaseLayout.astro";
+import Footer from "@components/navigation/Footer.astro";
+import OrgHeader from "@components/navigation/OrgHeader.astro";
+const { title, excerpt } = Astro.props;
+const { organization, user, member } = Astro.locals;
+if(!organization || !user || !member) return Astro.redirect('/login')
+---
+
+<BaseLayout title={title} excerpt={excerpt}>
+  <OrgHeader organization={organization} user={user} member={member}/>
+  <main>
+    <slot />
+  </main>
+  <Footer slot={"footer"} />
+</BaseLayout>

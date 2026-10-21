@@ -1,0 +1,40 @@
+---
+import type { MemberSelect, UserSelect } from "@ty/Schema";
+
+type MemberWithUser = MemberSelect & { user: UserSelect };
+
+interface Props {
+  members: MemberWithUser[];
+}
+
+const { members } = Astro.props;
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>email</th>
+      <th>role</th>
+      <th>team</th>
+      <th>action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      members.length > 0 ? (
+        members.map(({role, user}) => (
+          <tr>
+            <td>{user.name}</td>
+            <td>{user.email}</td>
+            <td>{role}</td>
+            <td>-</td>
+            <td><button>edit</button></td>
+          </tr>
+        ))
+      ) : (
+        <p>no members assigned</p>
+      )
+    }
+  </tbody>
+</table>

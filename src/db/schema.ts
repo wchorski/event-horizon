@@ -632,7 +632,11 @@ export const Member = pgTable(
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     role: memberRoleEnum().default("member").notNull(),
-    createdAt: timestamp().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+    updatedAt: timestamp()
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
   },
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),

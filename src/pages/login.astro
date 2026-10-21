@@ -66,40 +66,6 @@ if (Astro.request.method === "POST") {
 
   state = outcome.state;
   Astro.response.status = state.status;
-  // const formData = await Astro.request.formData();
-  // // @ts-ignore
-  // const payload = Object.fromEntries(formData.entries()) as LoginCredentials;
-
-  // const result = await login({
-  //   ...payload,
-  //   callbackURL: returnToUrl ?? undefined,
-  // });
-
-  // // TODO this is just a type error. i should handle login errors, notices, messages better and put them into the types
-  // if (result.code === "EMAIL_NOT_VERIFIED") {
-  //   needsVerification = true;
-  //   verifyEmail = payload.email;
-  //   notice = `A new verification code has been sent to ${payload.email}. Follow the instructions sent to your inbox.`;
-  // } else {
-  //   error = result.error;
-  // }
-
-  // if (result.success) {
-  //   const redirectResponse = new Response(null, {
-  //     status: 302,
-  //     headers: {
-  //       Location: returnToUrl
-  //         ? returnToUrl
-  //         : `/dashboard?msg=${encodeURIComponent("Login Successful! Welcome.")}`,
-  //     },
-  //   });
-  //   for (const cookie of result.setCookies) {
-  //     redirectResponse.headers.append("set-cookie", cookie);
-  //   }
-  //   return redirectResponse;
-  // }
-
-  // error = result.error;
 }
 ---
 
@@ -140,12 +106,14 @@ if (Astro.request.method === "POST") {
       />
     </FormCard>
 
+    <p><a href="?password-reset=true" data-astro-reload>Forgot Password?</a></p>
+
     <hr />
 
     <SocialProviderLoginForm provider="github" />
     <SocialProviderLoginForm provider="microsoft" />
 
-    <Dialog modal id="dialog-password-reset" open={isReset}>
+    <Dialog modal id="dialog-password-reset" open={isReset} clearParams={["password-reset"]}>
       <PasswordResetForm email={email} />
     </Dialog>
 

@@ -7,6 +7,7 @@ interface Props extends HTMLAttributes<"dialog"> {
   title?: string;
   class?: string;
   modal?: boolean;
+  clearParams?: string[];
 }
 
 const {
@@ -15,6 +16,7 @@ const {
   class: className,
   open,
   modal = true,
+  clearParams = [],
   ...attrs
 } = Astro.props;
 ---
@@ -22,6 +24,7 @@ const {
 <dialog
   {...attrs}
   data-modal={modal}
+  data-clear-params={clearParams.join(",")}
   id={id}
   class:list={["dialog", className]}
 >
@@ -37,10 +40,12 @@ const {
 </dialog>
 
 <script is:inline define:vars={{ id, open }}>
-  console.log({ id, open });
   const dialog = document.getElementById(id);
-
   const isModal = dialog.dataset.modal === "true";
+  const clearParams = (dialog.dataset.clearParams || "")
+    .split(",")
+    .filter(Boolean);
+
   if (open) dialog.showModal();
 
   dialog.querySelector(".dialog-close")?.addEventListener("click", () => {
@@ -54,11 +59,15 @@ const {
     });
   }
 
+  dialog.addEventListener("close", () => {
+    if (!clearParams.length) return;
+    const url = new URL(window.location.href);
+    clearParams.forEach((p) => url.searchParams.delete(p));
+    history.replaceState(history.state, "", url);
+  });
+
   dialog.addEventListener("htmx:afterSwap", () => {
-    if (isModal) {
-      dialog.showModal();
-    } else {
-      dialog.show();
-    }
+    if (isModal) dialog.showModal();
+    else dialog.show();
   });
 </script>

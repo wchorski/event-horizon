@@ -20,21 +20,20 @@ const config = tableConfigs.users.required;
 const ctx = {
   crud: "users" as CrudRegistryType,
   config,
-  endpoint: "/users",
+  endpoint: "/admin/users",
   headers: Object.keys(config),
 };
 
 if (Astro.request.method === "POST") {
   try {
     const formData = await Astro.request.formData();
-    const searchQuery =
-      formData.get("query")?.toString()?.trim() ??
-      formData.get("search.users")?.toString()?.trim();
+    const searchQuery = formData.get("search")?.toString()?.trim();
+    // const searchQuery =
+    //   formData.get("query")?.toString()?.trim() ??
+    //   formData.get("search.users")?.toString()?.trim();
     const url = new URL(Astro.request.url);
     const page = Number(url.searchParams.get("page") ?? 1);
-
     // if (!searchQuery) throw new BadRequestError("search query is blank");
-
     const digitsOnly = searchQuery?.replace(/\D/g, "");
 
     if (!searchQuery) throw new BadRequestError("search query was not formed");

@@ -1,4 +1,6 @@
 ---
+import IconAdd from "@icons/add.svg";
+import IconDelete from "@icons/delete.svg";
 import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
 import TextareaField from "@components/form/TextareaField.astro";
@@ -104,10 +106,14 @@ const topLevelError =
                   options={options}
                 />
               );
-            if (type === "textarea") return <TextareaField />;
+            if (type === "textarea")
+              return (
+                <TextareaField name={key} errorId={"user-search-field-error"} />
+              );
             return (
               <InputField
-                errorId={`field-error-search-${key}`}
+                id={"user-search-field"}
+                model={crud}
                 name={key}
                 label={label}
                 value={type === "checkbox" ? undefined : resolvedValue}
@@ -161,9 +167,7 @@ const topLevelError =
       console.log({ form });
       [...form.elements].forEach((el) => {
         const input = el as
-          | HTMLInputElement
-          | HTMLSelectElement
-          | HTMLTextAreaElement;
+          HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
         if (input.type === "checkbox")
           (input as HTMLInputElement).checked = false;
         else if (input.type === "hidden") return;

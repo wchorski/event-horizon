@@ -7,6 +7,8 @@ import type {
   SearchSelectFieldSlot,
   SelectFieldSlot,
 } from "@ty/FieldConfig";
+import IconAdd from "@icons/add.svg";
+import IconDelete from "@icons/delete.svg";
 import SelectField from "@components/form/SelectField.astro";
 import TextareaField from "@components/form/TextareaField.astro";
 import InputField from "@components/form/InputField.astro";
@@ -149,14 +151,7 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
       type="submit"
       form={formId}
       class="save"
-      title={`create new ${crud}`}
-      ><img
-        class="icon"
-        src="/icons/add.svg"
-        alt="delete icon"
-        width="30"
-        height="30"
-      /></button
+      title={`create new ${crud}`}><IconAdd /></button
     >
     <button
       title="clear fields"
@@ -164,13 +159,7 @@ const anchorName = `--anchor-row-create-error-${crud}` || "--anchor-row";
       class="cancel"
       data-clear-form={formId}
     >
-      <img
-        class="icon"
-        src="/icons/delete.svg"
-        alt="delete icon"
-        width="30"
-        height="30"
-      />
+      <IconDelete />
     </button>
   </td>
   <td class="error-cell">

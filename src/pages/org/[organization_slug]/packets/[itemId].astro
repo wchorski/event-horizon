@@ -55,8 +55,6 @@ try {
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
-  console.log({pdfRes});
-
   if (!pdfRes.ok) {
     console.error("Packet fetch failed", pdfRes.status, await pdfRes.text());
     Astro.response.status = pdfRes.status === 404 ? 404 : 502;

@@ -172,6 +172,8 @@ try {
   console.log("❌ packet error; ", err);
 }
 
+let isPublishFolder = true
+
 try {
   const accessToken = await msAuthentication(
     tenantId,
@@ -201,7 +203,8 @@ try {
     const afterRoot = path.split("root:")[1] ?? "";
     const rootPath = afterRoot.replace(/^\/+/, ""); // strip a leading slash if present, no-op if absent
     const parts = rootPath ? rootPath.split("/") : [];
-
+    const working_dir = parts.at(-4)
+    if(working_dir !== 'PUBLISHED') isPublishFolder = false
     const department = parts.at(-3); // MOEITS Board
     const year = parts.at(-2);       // 2026
     const monthDay = parts.at(-1);   // 09-15
@@ -238,7 +241,7 @@ const formMethodEndpoint = outlookEvent
       
       
       <div data-layout="content">
-        {isDayFldr ? <>
+        {isDayFldr && !isPublishFolder ? <>
       
 
       <section class="flex gap-m">
@@ -394,7 +397,7 @@ const formMethodEndpoint = outlookEvent
         </form>
       </section>
       </> : null}
-      
+        <hr />
         {error && <p style="color: red;">Error: {error}</p>}
         <Breadcrumbs crumbs={crumbs} basePath={basePath} />
         {
@@ -403,8 +406,6 @@ const formMethodEndpoint = outlookEvent
           )
         }
       </div>
-    
-    <Footer />
   </OrgMemberPageLayout>
 
 

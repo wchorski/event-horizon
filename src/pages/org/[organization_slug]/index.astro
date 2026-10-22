@@ -24,6 +24,8 @@ if (!member)
     `/not-authorized?msg=${encodeURIComponent("you are not a member of this org: " + organization_slug)}`,
   );
 
+// TODO search and return all invitations. mark as 'invited' instead of 'not verified'
+
 const members = await db.query.Member.findMany({
   where: eq(Member.organizationId, organization.id),
   with: {
@@ -71,7 +73,7 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
           stroke-width="1.5"
           stroke-linecap="round"></path>
       </svg>
-      Packet Builder
+      Documents & Packet Builder
     </a>
   </p>
 

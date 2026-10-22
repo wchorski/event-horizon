@@ -123,10 +123,26 @@ try {
 
   if (!existingPacket) {
     throw new BadRequestError(
-      "This folder isn't linked to a calendar event yet. Link an event before building a packet.",
+      "This folder isn't linked to a calendar event yet. Create a calendar event before building a packet.",
     );
   }
+  const sourcePath = getFullPath(item); // uses the `item` you already fetched
 
+  const publishedSegments = mirrorToPublished(sourcePath);
+
+  // TODO should i really be fetching folder before pdf packet generation?
+  const publishedFolderId = await ensureFolderPath(
+    sharepoint_drive_id,
+    publishedSegments,
+    accessToken,
+  );
+
+  const { filename, rev } = await nextVersionedFilename(
+    sharepoint_drive_id,
+    publishedFolderId,
+    "MeetingPacket",
+    accessToken,
+  );
   const pdfBytes = await buildMergedPacket(
     sharepoint_site_id,
     sharepoint_drive_id,
@@ -137,22 +153,10 @@ try {
       packetTitle: "MEETING PACKET",
       // TODO make date look pretty?
       packetSubtitle: `${item.name}-${parentName}`,
+      rev,
     },
   );
-  const sourcePath = getFullPath(item); // uses the `item` you already fetched
-  const publishedSegments = mirrorToPublished(sourcePath);
 
-  const publishedFolderId = await ensureFolderPath(
-    sharepoint_drive_id,
-    publishedSegments,
-    accessToken,
-  );
-  const filename = await nextVersionedFilename(
-    sharepoint_drive_id,
-    publishedFolderId,
-    "MeetingPacket",
-    accessToken,
-  );
   const uploaded = await uploadPacketResumable(
     sharepoint_drive_id,
     publishedFolderId,
@@ -232,7 +236,7 @@ try {
 {
   result.kind === "success" && (
     <section class="callout success">
-      <p>Packet Created.</p>
+      <p class="callout success">Packet Created.</p>
 
       {result.webLink && (
         <p>
@@ -252,7 +256,7 @@ try {
   result.kind === "top-error" && (
     <section role="alert">
       <p>Unable to create packet.</p>
-      <pre>{result.message}</pre>
+      <p class="callout error">{result.message}</p>
     </section>
   )
 }

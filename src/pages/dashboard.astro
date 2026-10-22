@@ -16,6 +16,8 @@ const organizations = await auth.api.listOrganizations({
   headers: Astro.request.headers,
 });
 
+console.log({organizations});
+
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const msg = Astro.url.searchParams.get("msg");
 const status = Astro.url.searchParams.get("status");
@@ -47,7 +49,7 @@ const { bookings, totalPages } = await getBookingsPage({
               <li>
                 <article class="card">
                   <h3>{org.name}</h3>
-                  <img src={org.logo} width="auto" height="100" />
+                  <img src={org.logo} width="auto" height="100" class="shadow" />
                   <p>
                     <a class="btn" href={`/org/${org.slug}`}>
                       manage

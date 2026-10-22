@@ -6,6 +6,7 @@
     "paths": {
       "@components/*": ["./src/components/*"],
       "@client/*": ["./src/client/*"],
+      "@icons/*": ["./src/icons/*"],
       "@styles/*": ["./src/styles/*"],
       "@partials/*": ["./src/pages/partials/*"],
       "@lib/*": ["./src/lib/*"],

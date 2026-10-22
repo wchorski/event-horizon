@@ -1,6 +1,12 @@
 ---
 import type { DriveItem } from "@microsoft/microsoft-graph-types";
 import { buildDriveHref, type DriveCrumb } from "@lib/driveNav";
+import IconFolder from "@icons/folder-w-files.svg";
+import IconFolderOpen from "@icons/folder-open.svg";
+import IconPDF from "@icons/pdf.svg";
+import IconSharepoint from "@icons/sharepoint.svg";
+import IconEye from "@icons/eye.svg";
+import type { SvgComponent } from "astro/types";
 
 interface Props {
   items: DriveItem[];
@@ -41,14 +47,14 @@ function itemType(item: DriveItem): string {
   return "Item";
 }
 
-function itemIcon(item: DriveItem): string {
-  if (item.folder) return "📁";
-  const ext =
-    item.file?.fileExtension?.toLowerCase() ??
-    item.name?.split(".").pop()?.toLowerCase();
+function itemIcon(item: DriveItem): SvgComponent | string {
+  if (item.folder) return IconFolder;
+  const raw = item.file?.fileExtension ?? item.name?.split(".").pop() ?? "";
+  const ext = raw.toLowerCase().replace(/^\./, "");
   if (ext === "docx" || ext === "doc") return "📄";
   if (ext === "xlsx" || ext === "xls" || ext === "csv") return "📊";
-  if (ext === "pdf") return "📕";
+  if (ext === "pdf") return IconPDF;
+  console.log({ ext });
   return "📄";
 }
 
@@ -66,6 +72,7 @@ const sortedItems = [...items].sort((a, b) => {
     <thead>
       <tr>
         <th scope="col" class="col-name">Name</th>
+        <th scope="col">View</th>
         <th scope="col">Type</th>
         <th scope="col">Size</th>
         <th scope="col">Modified</th>
@@ -87,7 +94,8 @@ const sortedItems = [...items].sort((a, b) => {
         sortedItems.map((item) => {
           const isFolder = Boolean(item.folder);
           const modifiedByName = item.lastModifiedBy?.user?.displayName ?? "—";
-
+          const icon = itemIcon(item);
+          const Icon = typeof icon === "string" ? null : icon;
           // Internal drill-down link: same page, folder appended to the breadcrumb trail
           const drillDownHref = isFolder
             ? buildDriveHref(basePath, [
@@ -104,107 +112,46 @@ const sortedItems = [...items].sort((a, b) => {
             <tr class={isFolder ? "row-folder" : "row-file"}>
               <td class="col-name">
                 <span class="icon" aria-hidden="true">
-                  {itemIcon(item)}
+                  {Icon ? <Icon /> : icon}
                 </span>{" "}
                 {isFolder ? (
                   <a href={drillDownHref!} class="drill-link">
                     {item.name}
                   </a>
                 ) : (
-                  <a
-                    href={item.webUrl ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {item.name}
-                  </a>
+                  <span>{item.name}</span>
                 )}
                 {isFolder && item.folder?.childCount !== undefined && (
                   <span class="child-count">
                     ({item.folder.childCount} items)
                   </span>
                 )}
-                <a
-                  class="external-link"
-                  href={item.webUrl ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Open in SharePoint"
-                  aria-label={`Open ${item.name} in SharePoint`}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    width="14"
-                    height="14"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    <polyline points="15 3 21 3 21 9" />
-                    <line x1="10" y1="14" x2="21" y2="3" />
-                  </svg>
-                </a>
-                {item.file ? (
+              </td>
+              <td>
+                <div class="actions">
                   <a
                     class="external-link"
-                    href={`/org/${organization.slug}/packets/${item.id}`}
+                    href={item.webUrl ?? "#"}
+                    target="_blank"
                     rel="noopener noreferrer"
-                    title="View Doc in browser"
-                    aria-label={`View ${item.name} in Browser`}
+                    title="Open in SharePoint"
+                    aria-label={`Open ${item.name} in SharePoint`}
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="20"
-                      height="20"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        opacity="0.5"
-                        d="M10 22C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 18.7712 2 15"
-                        stroke="white"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        opacity="0.5"
-                        d="M22 15C22 18.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22"
-                        stroke="white"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        opacity="0.5"
-                        d="M14 2C17.7712 2 19.6569 2 20.8284 3.17157C22 4.34315 22 5.22876 22 9"
-                        stroke="white"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        opacity="0.5"
-                        d="M10 2C6.22876 2 4.34315 2 3.17157 3.17157C2 4.34315 2 5.22876 2 9"
-                        stroke="white"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        d="M5.89243 14.0598C5.29748 13.3697 5 13.0246 5 12C5 10.9754 5.29747 10.6303 5.89242 9.94021C7.08037 8.56222 9.07268 7 12 7C14.9273 7 16.9196 8.56222 18.1076 9.94021C18.7025 10.6303 19 10.9754 19 12C19 13.0246 18.7025 13.3697 18.1076 14.0598C16.9196 15.4378 14.9273 17 12 17C9.07268 17 7.08038 15.4378 5.89243 14.0598Z"
-                        stroke="white"
-                        stroke-width="1.5"
-                      />
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="2"
-                        stroke="white"
-                        stroke-width="1.5"
-                      />
-                    </svg>
+                    <IconSharepoint />
                   </a>
-                ) : null}
+                  {item.file ? (
+                    <a
+                      class="external-link"
+                      href={`/org/${organization.slug}/packets/${item.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View Doc in browser"
+                      aria-label={`View ${item.name} in Browser`}
+                    >
+                      <IconEye />
+                    </a>
+                  ) : null}
+                </div>
               </td>
               <td>{itemType(item)}</td>
               <td>{isFolder ? "—" : formatBytes(item.size)}</td>
@@ -226,7 +173,8 @@ const sortedItems = [...items].sort((a, b) => {
     border-radius: 8px;
   }
 
-  .drive-table {
+  table.drive-table {
+    background-color: var(--c-txt-bg);
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
@@ -279,9 +227,9 @@ const sortedItems = [...items].sort((a, b) => {
     text-decoration: underline;
   }
 
-  .row-file .col-name a:not(.external-link) {
+  /* .row-file .col-name a:not(.external-link) {
     color: #1a5cff;
-  }
+  } */
 
   .row-file .col-name a:not(.external-link):hover {
     text-decoration: underline;
@@ -297,6 +245,10 @@ const sortedItems = [...items].sort((a, b) => {
     margin-left: 0.1rem;
   }
 
+  .actions {
+    display: flex;
+  }
+
   .external-link {
     display: inline-flex;
     align-items: center;
@@ -308,10 +260,10 @@ const sortedItems = [...items].sort((a, b) => {
     flex-shrink: 0;
   }
 
-  .external-link:hover {
+  /* .external-link:hover {
     color: #1a5cff;
     background: #eef2ff;
-  }
+  } */
 
   .empty-row {
     text-align: center;

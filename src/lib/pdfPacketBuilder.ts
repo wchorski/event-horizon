@@ -146,11 +146,13 @@ function addDepartmentCoverPage(
   boldFont: PDFFont,
   regularFont: PDFFont,
   options: CoverPageOptions,
+  rev: number,
 ): PDFPage {
   const page = merged.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
 
   const departmentName = options.departmentName.trim();
-  const packetTitle = options.packetTitle?.trim() || "MEETING PACKET";
+  const packetTitle =
+    options.packetTitle?.trim() + ` v${rev}` || "MEETING PACKET" + ` v${rev}`;
 
   const packetSubtitle = options.packetSubtitle?.trim() || "";
 
@@ -1259,18 +1261,9 @@ async function renderFolder(
     return null;
   }
 
-  const cover = addSectionCover(
-    merged,
-    boldFont,
-    regularFont,
-    folder,
-    depth,
-  );
+  const cover = addSectionCover(merged, boldFont, regularFont, folder, depth);
 
-  pageDestinations.set(
-    folder.id,
-    cover.firstPage.ref,
-  );
+  pageDestinations.set(folder.id, cover.firstPage.ref);
 
   const outlineNode: OutlineNode = {
     title: folder.title,
@@ -1284,37 +1277,27 @@ async function renderFolder(
     }
 
     if (child.kind === "folder") {
-      const childFolderOutline =
-        await renderFolder(
-          merged,
-          child,
-          depth + 1,
-          boldFont,
-          regularFont,
-          pageDestinations,
-          false,
-        );
+      const childFolderOutline = await renderFolder(
+        merged,
+        child,
+        depth + 1,
+        boldFont,
+        regularFont,
+        pageDestinations,
+        false,
+      );
 
       if (childFolderOutline) {
-        outlineNode.children.push(
-          childFolderOutline,
-        );
+        outlineNode.children.push(childFolderOutline);
       }
 
       continue;
     }
 
-    const firstPageRef =
-      await appendPreparedFile(
-        merged,
-        child,
-      );
+    const firstPageRef = await appendPreparedFile(merged, child);
 
     if (firstPageRef) {
-      pageDestinations.set(
-        child.id,
-        firstPageRef,
-      );
+      pageDestinations.set(child.id, firstPageRef);
 
       outlineNode.children.push({
         title: child.title,
@@ -1340,21 +1323,19 @@ async function renderRootFolder(
   regularFont: PDFFont,
 ): Promise<PacketRenderResult> {
   const outlineNodes: OutlineNode[] = [];
-  const pageDestinations =
-    new Map<string, PDFRef>();
+  const pageDestinations = new Map<string, PDFRef>();
 
   for (const child of rootFolder.children) {
     if (child.kind === "folder") {
-      const sectionOutline =
-        await renderFolder(
-          merged,
-          child,
-          1,
-          boldFont,
-          regularFont,
-          pageDestinations,
-          true,
-        );
+      const sectionOutline = await renderFolder(
+        merged,
+        child,
+        1,
+        boldFont,
+        regularFont,
+        pageDestinations,
+        true,
+      );
 
       if (sectionOutline) {
         outlineNodes.push(sectionOutline);
@@ -1367,17 +1348,10 @@ async function renderRootFolder(
       continue;
     }
 
-    const firstPageRef =
-      await appendPreparedFile(
-        merged,
-        child,
-      );
+    const firstPageRef = await appendPreparedFile(merged, child);
 
     if (firstPageRef) {
-      pageDestinations.set(
-        child.id,
-        firstPageRef,
-      );
+      pageDestinations.set(child.id, firstPageRef);
 
       outlineNodes.push({
         title: child.title,
@@ -1509,6 +1483,7 @@ export interface BuildMergedPacketOptions {
   departmentName: string;
   packetTitle?: string;
   packetSubtitle?: string;
+  rev: number;
 }
 
 export async function buildMergedPacket(
@@ -1519,9 +1494,7 @@ export async function buildMergedPacket(
   options: BuildMergedPacketOptions,
 ): Promise<Uint8Array> {
   if (!options.departmentName.trim()) {
-    throw new Error(
-      "A department name is required to build the packet cover.",
-    );
+    throw new Error("A department name is required to build the packet cover.");
   }
 
   /*
@@ -1538,13 +1511,9 @@ export async function buildMergedPacket(
 
   const merged = await PDFDocument.create();
 
-  const boldFont = await merged.embedFont(
-    StandardFonts.HelveticaBold,
-  );
+  const boldFont = await merged.embedFont(StandardFonts.HelveticaBold);
 
-  const regularFont = await merged.embedFont(
-    StandardFonts.Helvetica,
-  );
+  const regularFont = await merged.embedFont(StandardFonts.Helvetica);
 
   /*
    * Page 1:
@@ -1562,36 +1531,26 @@ export async function buildMergedPacket(
       packetTitle: options.packetTitle,
       packetSubtitle: options.packetSubtitle,
     },
+    options.rev,
   );
 
   /*
    * Build the complete logical agenda, including empty nodes.
    */
-  const agendaEntries = buildAgendaEntries(
-    rootFolder,
-  );
+  const agendaEntries = buildAgendaEntries(rootFolder);
 
   /*
    * Reserve agenda pages before rendering packet content so all
    * later content receives its final page position.
    */
-  const agendaPageCount = calculateAgendaPageCount(
-    agendaEntries,
-    regularFont,
-  );
+  const agendaPageCount = calculateAgendaPageCount(agendaEntries, regularFont);
 
-  const agendaPages = reserveAgendaPages(
-    merged,
-    agendaPageCount,
-  );
+  const agendaPages = reserveAgendaPages(merged, agendaPageCount);
 
   /*
    * Render section covers and source documents.
    */
-  const {
-    outlineNodes,
-    pageDestinations,
-  } = await renderRootFolder(
+  const { outlineNodes, pageDestinations } = await renderRootFolder(
     merged,
     rootFolder,
     boldFont,
@@ -1618,23 +1577,20 @@ export async function buildMergedPacket(
    * calculateAgendaPageCount() returns at least 1.
    */
   const completeOutlineNodes: OutlineNode[] = [
-  {
-    title: "Cover Page",
-    pageRef: coverPage.ref,
-    children: [],
-  },
-  {
-    title: "Agenda",
-    pageRef: agendaPages[0].ref,
-    children: [],
-  },
-  ...outlineNodes,
-];
+    {
+      title: "Cover Page",
+      pageRef: coverPage.ref,
+      children: [],
+    },
+    {
+      title: "Agenda",
+      pageRef: agendaPages[0].ref,
+      children: [],
+    },
+    ...outlineNodes,
+  ];
 
-buildOutline(
-  merged,
-  completeOutlineNodes,
-);
+  buildOutline(merged, completeOutlineNodes);
 
   return merged.save({
     useObjectStreams: true,

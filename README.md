@@ -231,6 +231,8 @@ docker compose run --rm seed
 ## Document manager
 
 #todo
+- [ ] clearly define the route with PREP vs PUB, Department, meeting year, meeting date, Section, file
+- [ ] make a 'dropzone' in the section path for 3rd party uploads
 - [ ] make files like this viewable `Documents/PREPERATIONS/MOEITS Board/2026/10-08/1. Approval of the Minutes`
 - [ ] how to cover page and aggenda page for pdf-packet-builder?
 - [ ] Entra ID SSO (Microsoft) https://better-auth.com/docs/authentication/microsoft

@@ -38,7 +38,9 @@ const packet = await db.query.MeetingPacket.findFirst({
   ),
 });
 
-if (!packet) return Astro.redirect("/404");
+// TODO rethink a packet vs a regular file viewing
+// console.log({packet});
+// if (!packet) return Astro.redirect("/404");
 
 let errorMessage: string | undefined;
 
@@ -52,6 +54,8 @@ try {
     `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${itemId}/content`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
+
+  console.log({pdfRes});
 
   if (!pdfRes.ok) {
     console.error("Packet fetch failed", pdfRes.status, await pdfRes.text());

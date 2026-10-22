@@ -109,6 +109,10 @@ button:has(.icon),
   padding: 0.4rem 0.6rem;
 }
 
+svg.icon {
+  vertical-align: -0.125em; 
+}
+
 button.save,
 .btn.save {
   background-color: mediumseagreen;

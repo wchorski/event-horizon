@@ -4,7 +4,6 @@ import type { Event } from "@microsoft/microsoft-graph-types";
 import type { DriveItem } from "@microsoft/microsoft-graph-types";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { parseDriveCrumbs } from "@lib/driveNav";
-import BaseLayout from "@layouts/BaseLayout.astro";
 import Breadcrumbs from "@components/Breadcrumbs.astro";
 import DriveItemsTable from "@components/DriveItemsTable.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
@@ -13,17 +12,16 @@ import { isDayFolder } from "@lib/dayFolderCheck";
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
 import { IntegrationCredential, MeetingPacket, Organization } from "@db/schema";
-import Footer from "@components/navigation/Footer.astro";
 import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
 import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
-import type { OrganizationSelect } from "@ty/Schema";
-import { requireOrganizationAccess } from "@lib/auth/guards";
 import { NotFoundError } from "@lib/errors";
 import { decryptSecret } from "@lib/auth/secretBox";
 import { PLACEHOLDER_BODY } from "@lib/microsoft/outlookPacketLink";
-import OrgHeader from "@components/navigation/OrgHeader.astro";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
+import {buildDriveHref} from '@lib/driveNav'
+
+const {DOMAIN_URL} = import.meta.env
 
 const {user, organization, member} = Astro.locals;
 const displayName = user
@@ -195,6 +193,7 @@ try {
   items = data.value ?? [];
   parentFolderId = folderId;
   const firstItem = items[0];
+  // console.log({items});
 
   if (firstItem) {
     const path = firstItem.parentReference?.path;
@@ -212,11 +211,23 @@ try {
     if (department && year && monthDay) {
       isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
       if (isDayFldr) {
+
+        const crumbHref = buildDriveHref(basePath, [
+                ...crumbs,
+                {
+                  id: parentFolderId ?? null,
+                  name: firstItem.name ?? "Untitled",
+                  webUrl: firstItem.webUrl,
+                },
+              ])
+        // const params = new URLSearchParams({itemId: folderId ?? "", crumbs: "where-do-i-go"})
+        // TODO the crumb isn't exactly right becaues it includes the nested folder/file but the link takes us to the correct itemId parent
+
         calendarDraft = createCalendarDraft({
           subject: `${department} | BOT Meeting`,
           start: { dateTime: `${year}-${monthDay}T07:00`, timeZone:meetingTimeZone },
           end: { dateTime: `${year}-${monthDay}T09:00`, timeZone:meetingTimeZone },
-          body: PLACEHOLDER_BODY
+          body: PLACEHOLDER_BODY(DOMAIN_URL + crumbHref)
           
         }, meetingTimeZone);
       }

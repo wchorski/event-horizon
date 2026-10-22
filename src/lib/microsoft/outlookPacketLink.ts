@@ -4,16 +4,34 @@ import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
 
 export const PACKET_LINK_ID = "packet-link";
 
-export const PLACEHOLDER_BODY = {
-  contentType: "html",
-  content: `<p><a id="${PACKET_LINK_ID}" href="#" style="color: red;">PACKET NOT CREATED YET</a></p>`,
-} as const;
+// link to prep folder (org.slug & department & meeting date)
+
+export const PLACEHOLDER_BODY = (prepPath?: string) =>
+  ({
+    contentType: "html",
+    content:
+      `<p>
+        <a id="${PACKET_LINK_ID}" href="#" style="color: red;">PACKET NOT CREATED YET</a>
+        <br />
+  </p>` +
+      (prepPath
+        ? `<a id="${PACKET_LINK_ID}-prep" href="${prepPath}" style="color: hsl(240deg 53.03% 69.94%);">Preparation Folder</a>`
+        : ""),
+  }) as const;
 
 const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
 /** Pure function: swap (or insert) the packet link in an HTML string. */
-export function setPacketLinkInHtml(html: string, href: string, label: string): string {
+export function setPacketLinkInHtml(
+  html: string,
+  href: string,
+  label: string,
+): string {
   const root = parse(html);
   const link = root.querySelector(`#${PACKET_LINK_ID}`);
 
@@ -39,7 +57,8 @@ export async function updateEventPacketLink(opts: {
   href: string;
   label: string;
 }) {
-  const { organizationId, mailboxUserEmail, outlookEventId, href, label } = opts;
+  const { organizationId, mailboxUserEmail, outlookEventId, href, label } =
+    opts;
   const eventUrl = `/users/${mailboxUserEmail}/events/${outlookEventId}`;
 
   const current = await msGraphFetch<Pick<Event, "id" | "body">>(

@@ -7,6 +7,8 @@ import type {
 } from "@microsoft/microsoft-graph-types";
 import { PLACEHOLDER_BODY } from "./microsoft/outlookPacketLink";
 
+const { DOMAIN_URL } = import.meta.env;
+
 interface CalendarEventDraft {
   subject: string;
   body: ItemBody;
@@ -23,7 +25,7 @@ export function createCalendarDraft(
 ): CalendarEventDraft {
   return {
     subject: "Default Board Meeting",
-    body: PLACEHOLDER_BODY,
+    body: PLACEHOLDER_BODY(DOMAIN_URL),
     start: {
       dateTime: "2026-09-27T09:00:00",
       timeZone,

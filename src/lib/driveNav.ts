@@ -17,6 +17,7 @@ export function buildDriveHref(basePath: string, crumbs: DriveCrumb[]): string {
   if (last?.id) {
     params.set("itemId", last.id);
   }
+  // console.log({crumbs});
   params.set("crumbs", JSON.stringify(crumbs));
 
   return `${basePath}?${params.toString()}`;

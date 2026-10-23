@@ -43,7 +43,7 @@ const { bookings, totalPages } = await getBookingsPage({
     <secton class="grid gap-m">
       {
         organizations.length > 0 ? (
-          <ul class="unstyled flex gap-m">
+          <ul class="unstyled flex gap-m wrap">
             {organizations.map((org) => (
               <li>
                 <article class="card">

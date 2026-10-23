@@ -1,13 +1,10 @@
 ---
 // pages/admin/partials/organizations/create
 import FieldErrors from "@components/form/FieldErrors.astro";
-import { auth } from "@lib/auth";
+import TopLevelError from "@components/form/TopLevelError.astro";
 import { createOrganization } from "@lib/crud/createOrganization";
-import { ForbiddenError } from "@lib/errors";
 import { useForm } from "@lib/useForm";
 import { validate } from "@lib/validate";
-import type { OrganizationInsert, OrganizationSelect } from "@ty/Schema";
-import { z } from "astro/zod";
 
 export type OrgCreateResult = {
   kind: "ok";
@@ -52,9 +49,7 @@ const org = outcome.ok ? outcome.data : null;
       Organization created: <a href={`/org/${org.slug}`}>{org.name}</a>
     </p>
   ) : (
-    <p class="error callout" role="alert">
-      {outcome.state.error ?? "Please fix the highlighted fields."}
-    </p>
+    <TopLevelError error={outcome.state.error} status={outcome.state.status}/>
   )
 }
 <FieldErrors

@@ -1,5 +1,6 @@
 ---
 interface Props {
+  id?:string
   organizationSlug: string;
   organizationId: string;
 }
@@ -7,45 +8,33 @@ import { MEMBER_ROLES } from "@db/schema";
 import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import FormCard from "./FormCard.astro";
 
-const { organizationSlug, organizationId } = Astro.props;
+const { id = 'form--member-invite', organizationSlug, organizationId } = Astro.props;
 
 const roleOptions = MEMBER_ROLES.map((text) => ({
   label: text,
   value: text,
 })).reverse();
 
-const idPrefix = "members-form";
-const model = "member";
-// TODO target list of users instead to self populate
+// TODO target list of users instead to self populate user table
 ---
 
-<form
+<FormCard
+  {id}
   class="card"
-  id={idPrefix}
-  class="card"
-  hx-post=`/org/${organizationSlug}/partials/invite-member/${organizationId}`
-  hx-target={`#${idPrefix}-success`}
-  hx-target-error={`#${idPrefix}-error`}
-  hx-swap="innerHTML"
+  hx-post={`/org/${organizationSlug}/partials/invite-member/${organizationId}`}
+  submitText="Send Invite""
 >
   <h2>Invite a user to become a member</h2>
   <fieldset class="no-style">
     <SelectField
-      id={`${idPrefix}-role`}
+      id={`${id}-role`}
       name={"role"}
-      errorId={idPrefix + "-role"}
+      errorId={id + "-role"}
       options={roleOptions}
     />
-    <InputField
-      id={`${idPrefix}-email`}
-      name="email"
-      model={model}
-      type={"email"}
-      autocomplete="off"
-    />
+    <InputField formId={id} name="email" type={"email"} autocomplete="off" />
   </fieldset>
-  <div id={idPrefix + "-error"}></div>
-  <div id={`${idPrefix}-success`}></div>
-  <SubmitButton text="Send Invite" />
-</form>
+  
+</FormCard>

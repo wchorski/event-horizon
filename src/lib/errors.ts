@@ -124,9 +124,7 @@ export function throwErrorsForCRUD(e: unknown): never {
     }
   }
 
-  const msg = e instanceof Error ? e.message : String(e);
-
-  throw new Error(msg);
+  throw e;
 }
 
 // function isUniqueConstraintError(e: unknown): { field?: string } | null {
@@ -190,7 +188,8 @@ export function errorHandlingOnSubmit(e: unknown): {
   }
 
   const msg = e instanceof Error ? e.message : String(e);
-  return { status: 500, err: "< An unexpected error occurred ≥ -- " + msg };
+  console.log('❌ 500 ', {msg});
+  return { status: 500, err: "< An unexpected error occurred ≥ -- " };
 }
 
 const dbConstraintMessages: Record<string, string> = {
@@ -262,4 +261,17 @@ function flattenWithDottedPaths(error: ZodError): DottedFlattenedError {
   }
 
   return { formErrors, fieldErrors };
+}
+
+type PgCause = { code?: string; constraint?: string; table?: string; detail?: string };
+
+export function findDrizzlePgError(e: unknown): PgCause | undefined {
+  for (let cur: any = e, i = 0; cur && i < 5; cur = cur.cause, i++) {
+    if (cur instanceof DrizzleQueryError) return cur.cause as PgCause | undefined;
+  }
+}
+
+// "Key (slug)=(foo) already exists." -> "slug". Returns nothing for composite keys.
+export function columnFromDetail(detail?: string) {
+  return detail?.match(/^Key \((\w+)\)=/)?.[1];
 }

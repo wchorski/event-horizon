@@ -3,6 +3,7 @@
 import type { HTMLAttributes } from "astro/types";
 import type { FormState } from "@lib/form-state";
 import SubmitButton from "./SubmitButton.astro";
+import { toplevelMsgId } from "@lib/fieldIds";
 
 type HtmxMethod = "get" | "post" | "put" | "patch" | "delete";
 
@@ -28,7 +29,7 @@ const {
   ...attrs
 } = Astro.props;
 
-const msgId = `${id}-toplevel-msg`;
+const msgId = toplevelMsgId(id);
 const formSel = `#${id}`;
 const msgSel = `#${msgId}`;
 

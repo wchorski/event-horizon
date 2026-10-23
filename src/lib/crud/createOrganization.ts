@@ -5,6 +5,18 @@ import { APIError } from "better-auth/api";
 import { FormError } from "@lib/useForm";
 import type { validate } from "@lib/validate";
 import type { z } from "astro/zod";
+import { columnFromDetail, findDrizzlePgError } from "@lib/errors";
+
+const ORG_UNIQUE: Record<string, { field: string; message: string }> = {
+  organizations_name_unique: {
+    field: "name",
+    message: "An organization with this name already exists",
+  },
+  organizations_slug_unique: {
+    field: "slug",
+    message: "That slug is already in use",
+  },
+};
 
 const ORG_CREATE_ERRORS: Record<
   string,
@@ -42,6 +54,16 @@ export async function createOrganization(
       headers, // session cookies; the creator is derived from them
     });
   } catch (e) {
+    const pg = findDrizzlePgError(e);
+    if (pg?.code === "23505") {
+      const hit = ORG_UNIQUE[pg.constraint ?? ""];
+      const field = hit?.field ?? columnFromDetail(pg.detail);
+      throw new FormError(
+        hit?.message ?? "That value is already in use",
+        409,
+        field,
+      );
+    }
     if (e instanceof APIError) {
       const code = (e.body as { code?: string } | undefined)?.code;
       const known = code ? ORG_CREATE_ERRORS[code] : undefined;

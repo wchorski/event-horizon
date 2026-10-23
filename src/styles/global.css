@@ -155,6 +155,9 @@ button[aria-busy="true"] {
 .flex {
   display: flex;
 }
+.wrap {
+  flex-wrap: wrap;
+}
 .grid {
   display: grid;
 }

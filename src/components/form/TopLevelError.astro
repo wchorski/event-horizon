@@ -1,33 +1,14 @@
 ---
-// TopLevelError.partial.astro
-import type { CrudRegistryType } from "@lib/crudRegistry";
-
+// TopLevelError.astro
 interface Props {
-  id: string;
-  headers: string[];
-  crud: CrudRegistryType;
-  message: string;
-  code?: number;
+  error?: string;
+  status?: number;
 }
-const { id, headers, crud, message, code } = Astro.props;
-const topLevelTargetId = `top-level-error-${crud}-${id}`;
-const fieldLevelTargetId = (fieldName: string) =>
-  `field-error-${crud}-${id}-${fieldName}`;
+const { error, status } = Astro.props;
 ---
 
-<>
-  <span id={topLevelTargetId} class="anim-vibrate" hx-swap-oob="outerHTML">
-    {code ? `[CODE: ${code}] ` : ""}
-    {message}
-  </span>
-
-  {
-    headers.map((fieldName) => (
-      <span
-        id={fieldLevelTargetId(fieldName)}
-        hx-swap-oob="outerHTML"
-        class="field-error"
-      />
-    ))
-  }
-</>
+<div class="anim-vibrate error callout" role="alert">
+  {status && status >= 500 && <span class="error-code">[{status}]</span>}
+  <span>{error}</span>
+  <slot />
+</div>

@@ -1,0 +1,53 @@
+---
+// components/form/OrganizationCreationForm
+interface Props {
+  id?: string;
+}
+import InputField from "./InputField.astro";
+import FormCard from "./FormCard.astro";
+import { ForbiddenError } from "@lib/errors";
+
+const { id = "form--org-create-" } = Astro.props;
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
+
+// TODO also make submitting user a member of this org
+const isAdmin = Astro.locals.user?.role === "admin";
+---
+
+{
+  isAdmin ? (
+    <FormCard
+      {id}
+      submitText="Create"
+      method="post"
+      endpoint="/admin/partials/organizations/create"
+    >
+      <h2>Create New Organization</h2>
+      <InputField
+        formId={id}
+        name="name"
+        required="true"
+        placeholder="My Organization"
+      />
+
+      <InputField
+        formId={id}
+        name="slug"
+        required="true"
+        placeholder={"my-org-abbreviation (no spaces, all lowercase)"}
+      />
+
+      <InputField
+        formId={id}
+        name="logo"
+        placeholder={"https://pictures/my-logo.png"}
+      />
+    </FormCard>
+  ) : null
+}

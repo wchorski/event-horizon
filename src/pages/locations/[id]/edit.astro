@@ -3,14 +3,11 @@ interface Params {
   id: string;
 }
 import { db } from "@db/db";
-import { Event, Location } from "@db/schema";
+import { Location } from "@db/schema";
 import { eq } from "drizzle-orm";
-import BaseLayout from "@layouts/BaseLayout.astro";
 import InputField from "@components/form/InputField.astro";
-import { courseConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import { tableConfigs } from "@lib/tableConfigs";
 import type {
-  FieldConfig,
-  BaseRow,
   InputFieldSlot,
   FieldSlot,
   SearchSelectFieldSlot,
@@ -21,7 +18,6 @@ import SelectField from "@components/form/SelectField.astro";
 import TextareaField from "@components/form/TextareaField.astro";
 import { crud } from "@lib/crudRegistry";
 import PageEditorWithSidebarLayout from "@layouts/PageEditorWithSidebarLayout.astro";
-import { slugify } from "@lib/formatters";
 import SubmitButton from "@components/form/SubmitButton.astro";
 
 const { id } = Astro.params;

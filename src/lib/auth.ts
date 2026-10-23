@@ -26,6 +26,7 @@ import * as schema from "@db/schema";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, username, organization, emailOTP } from "better-auth/plugins";
+import { orgAccess, organizationRoles } from "./auth/permissions";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -120,7 +121,6 @@ export const auth = betterAuth({
   baseURL: BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
-    // TODO later enable this
     requireEmailVerification: true,
     minPasswordLength: 8,
     autoSignIn: true,
@@ -149,8 +149,10 @@ export const auth = betterAuth({
     }),
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
-      // TODO add this in later
+      ac: orgAccess,
+      roles: organizationRoles,
       requireEmailVerificationOnInvitation: true,
+      //? only allows site admin to create organizations
       allowUserToCreateOrganization: async (user) => user.role === "admin",
       async sendInvitationEmail(data) {
         // Construct the acceptance link (frontend route)
@@ -220,7 +222,8 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: [
         "github",
-        "facebook",
+        //? Facebook doesn’t always return a verified email. Leave it out of linking to avoid account takeover through an unverified email.
+        // "facebook",
         "google",
         "microsoft",
         "email-password",

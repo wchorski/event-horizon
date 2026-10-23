@@ -1,109 +1,46 @@
 ---
 // components/form/InputField.astro
 import type { HTMLAttributes } from "astro/types";
-import type {
-  FieldOption,
-  FieldSlot,
-  FieldType,
-  InputFieldType,
-} from "@ty/FieldConfig";
-import { formatPhonePrettyManual } from "@lib/formatters";
-import { toDatetimeLocalValue } from "@lib/dateAndTime";
+import type { FieldOption, InputFieldType } from "@ty/FieldConfig";
+import { fieldId, fieldErrorId } from "@lib/fieldIds";
 
-interface Props extends Omit<
-  HTMLAttributes<"input">,
-  "type" | "value" | "checked" | "name"
-> {
-  formId?: string;
-  // errorId: string;
-  id: string;
+interface Props
+  extends Omit<HTMLAttributes<"input">, "type" | "value" | "checked" | "name" | "id"> {
+  formId: string;
   name: string;
-  model: string;
   label?: string;
-  type?: InputFieldType | null;
+  type?: InputFieldType;
   value?: string | null;
-  checked?: string | boolean | null;
-  fieldError?: string | unknown | null;
-  isCreate?: boolean;
-  datalist?: FieldOption[];
-  inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
+  checked?: boolean;
+  error?: string;          // only for non-htmx / initial render
+  options?: FieldOption[]; // datalist
 }
 
-const {
-  formId,
-  id,
-  model,
-  // errorId,
-  checked,
-  name,
-  label,
-  type,
-  value,
-  fieldError,
-  isCreate,
-  datalist,
-  readonly,
-  autofocus,
-  // TODO spread this like ...rest and remove rest
-  inputAttrs,
-  ...rest
-} = Astro.props;
+const { formId, name, label, type, value, checked, error, options, ...rest } = Astro.props;
 
-if (type === "searchSelect")
-  throw new Error("InputField cannot be of type searchSelect");
-
-const prettyVal = (() => {
-  switch (true) {
-    case type === "tel":
-      return formatPhonePrettyManual(value);
-    // TODO this is converted for a second time.... lol
-    case type === "datetime-local":
-      return value ? toDatetimeLocalValue(value) : value;
-
-    default:
-      return value;
-  }
-})();
-
-const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
+const id = fieldId(formId, name);
+const errorId = fieldErrorId(formId, name);
+const listId = options ? `${id}-list` : undefined;
 ---
 
-{
-  readonly ? (
-    <code class="text" aria-readonly="true">
-      <span class="value">
-        {label ?? name}: {value}
-      </span>
-      <span id={errorId} style="display: none;">
-        {fieldError ?? ""}
-      </span>
-    </code>
-  ) : (
-    <label class="form-field">
-      <span class="text">{label ?? name}</span>
-      <input
-        {...inputAttrs}
-        {...rest}
-        autofocus={autofocus}
-        form={formId}
-        name={name}
-        type={type}
-        value={type !== "checkbox" ? prettyVal : undefined}
-        checked={checked ?? undefined}
-        list={datalist ? `datalist-${name}` : undefined}
-        aria-invalid={fieldError ? "true" : undefined}
-        aria-describedby={fieldError ? errorId : undefined}
-      />
-      <span id={errorId} class="anim-vibrate field-error">
-        {fieldError ?? ""}
-      </span>
-      {datalist ? (
-        <datalist id={`datalist-${name}`}>
-          {datalist.map((opt) => (
-            <option value={opt.value}>{opt.label}</option>
-          ))}
-        </datalist>
-      ) : null}
-    </label>
-  )
-}
+<label class="form-field" for={id}>
+  <span class="text">{label ?? name}</span>
+  <input
+    {...rest}
+    id={id}
+    form={formId}
+    name={name}
+    type={type}
+    value={type === "checkbox" ? undefined : (value ?? undefined)}
+    checked={type === "checkbox" ? checked : undefined}
+    list={listId}
+    aria-invalid={error ? "true" : undefined}
+    aria-describedby={errorId}
+  />
+  <small id={errorId} class="field-error" aria-live="polite">{error}</small>
+  {options && (
+    <datalist id={listId}>
+      {options.map((o) => <option value={o.value}>{o.label}</option>)}
+    </datalist>
+  )}
+</label>

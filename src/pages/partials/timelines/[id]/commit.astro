@@ -1,19 +1,15 @@
 ---
 // partials/timelines/:id/commit
-import { tableConfigs } from "@lib/tableConfigs";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
-  NotFoundError,
 } from "@lib/errors";
-
 import type { TimelineInsert, TimelineState } from "@ty/Schema";
 import { db } from "@db/db";
 import { Timeline } from "@db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { validate } from "@lib/validate";
 
-let timeline: TimelineState | null = null;
 let error = null;
 
 const { id } = Astro.params;

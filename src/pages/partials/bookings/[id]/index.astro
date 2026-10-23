@@ -1,16 +1,16 @@
----
+<!-- TODO use better-auth api -->
+<!-- ---
 // partials/bookings/[id].astro
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
+  ForbiddenError,
   NotFoundError,
 } from "@lib/errors";
-import { bookingConfigRequired, tableConfigs } from "@lib/tableConfigs";
+import { bookingConfigRequired } from "@lib/tableConfigs";
 import type { BookingSelect, UserSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
-
-import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
@@ -18,6 +18,7 @@ import { Booking } from "@db/schema";
 import { db } from "@db/db";
 import { eq } from "drizzle-orm";
 import { validate } from "@lib/validate";
+import type { session } from "../../../../../auth-schema";
 type ZodErrorFlattened = ReturnType<ZodError<UserSelect>["flatten"]>;
 interface Params {
   id: string | undefined;
@@ -26,7 +27,12 @@ const { id } = Astro.params;
 if (!id) throw new BadRequestError("course ID missing in request");
 let booking: BookingSelect | null | undefined = null;
 let error: string | ReturnType<ZodError["flatten"]> | null = null;
-const session = TEST_ADMIN_SESSION;
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 const locations = await crud.locations.readMany(session);
 const users = await crud.users.readMany(session);
 const config = bookingConfigRequired(locations, users);
@@ -171,4 +177,4 @@ if (error && typeof error === "object" && "fieldErrors" in error) {
       ctx={ctx}
     />
   )
-}
+} -->

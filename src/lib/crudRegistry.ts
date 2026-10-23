@@ -57,7 +57,11 @@ type CrudEntry<T = TableRow> = {
   update: UpdateFn<T>;
   delete: DeleteFn<T>;
 };
-import { DEFAULT_ROLE_ID, WP_USERNAME, WP_APP_PASSWORD } from "astro:env/server";
+import {
+  DEFAULT_ROLE_ID,
+  WP_USERNAME,
+  WP_APP_PASSWORD,
+} from "astro:env/server";
 
 export const crud = {
   // TODO how to prevent create/update users from giving themselves elevated permissions?
@@ -88,7 +92,7 @@ export const crud = {
         // const fields = await creditPolicy.writableFields(session, null);
         // const sanitized = sanitizeFields(row, fields);
         const validId = validate.id.parse(id);
-        
+
         const [row] = await db
           .select()
           .from(User)
@@ -100,7 +104,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    readMany: async (session) => {
+    readMany: async () => {
       try {
         const users = await db.select().from(User);
         // .limit(perPage)
@@ -110,7 +114,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    update: async (row, session) => {
+    update: async (row) => {
       try {
         // TODO add in auth. mutation for ticket and user maybe tricky
         // const fields = await creditPolicy.writableFields(session, null);
@@ -223,7 +227,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    readMany: async (session) => {
+    readMany: async () => {
       try {
         const events = await db.select().from(Event);
         // .limit(perPage)
@@ -363,7 +367,7 @@ export const crud = {
     },
   },
   locations: {
-    create: async (row, session) => {
+    create: async (row) => {
       try {
         const validated = validate.locationCreate.parse(row);
 
@@ -376,7 +380,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    readMany: async (session) => {
+    readMany: async () => {
       try {
         const locations = await db.select().from(Location);
         // .limit(perPage)
@@ -386,7 +390,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    read: async (id, session) => {
+    read: async (id) => {
       try {
         const validId = validate.id.parse(id);
         const [row] = await db
@@ -401,7 +405,7 @@ export const crud = {
       }
     },
 
-    update: async (row, session) => {
+    update: async (row) => {
       try {
         const validated = validate.locationUpdate.parse(row);
         const validId = validate.id.parse(row.id);
@@ -495,7 +499,7 @@ export const crud = {
         throwErrorsForCRUD(e);
       }
     },
-    read: async (id, session) => {
+    read: async (id) => {
       try {
         // TODO add in auth. mutation for ticket and user maybe tricky
         // const fields = await creditPolicy.writableFields(session, null);
@@ -522,7 +526,6 @@ export const crud = {
     },
     update: async (
       inputFields: FormFields<CourseCreditFlat> & { id: string },
-      session,
     ) => {
       try {
         // TODO add in auth. mutation for ticket and user maybe tricky

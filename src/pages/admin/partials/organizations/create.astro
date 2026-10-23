@@ -1,0 +1,64 @@
+---
+// pages/admin/partials/organizations/create
+import FieldErrors from "@components/form/FieldErrors.astro";
+import { auth } from "@lib/auth";
+import { createOrganization } from "@lib/crud/createOrganization";
+import { ForbiddenError } from "@lib/errors";
+import { useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
+import type { OrganizationInsert, OrganizationSelect } from "@ty/Schema";
+import { z } from "astro/zod";
+
+export type OrgCreateResult = {
+  kind: "ok";
+  org: {
+    name: string;
+    slug: string;
+    logo: string;
+  };
+};
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+// Is also auth checkd with auth.ts plugin `allowUserToCreateOrganization`
+if (user.role !== "admin") return new Response(null, { status: 403 });
+
+const method = Astro.request.method;
+if (method !== "POST")
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
+
+
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
+
+const formData = await Astro.request.formData();
+const validKeys = Object.keys(validate.organizationCreate.shape)
+const outcome = await useForm(formData, {
+  schema: validate.organizationCreate,
+  labels: { name: "name", slug: "slug", logo: "logo URL" },
+  successMessage: "Organization created",
+  run: (input) => createOrganization(input, Astro.request.headers),
+});
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+const org = outcome.ok ? outcome.data : null;
+---
+
+{
+  org ? (
+    <p class="callout success" role="status">
+      Organization created: <a href={`/org/${org.slug}`}>{org.name}</a>
+    </p>
+  ) : (
+    <p class="error callout" role="alert">
+      {outcome.state.error ?? "Please fix the highlighted fields."}
+    </p>
+  )
+}
+<FieldErrors
+  {formId}
+  names={validKeys}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

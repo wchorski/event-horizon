@@ -13,7 +13,8 @@ import { and, eq } from "drizzle-orm";
 const isDev = import.meta.env.DEV;
 
 const publicRoutesPrefixes = [
-  "/",
+  //! do not put route path in this list
+  // "/",
   "/api/auth",
   "/api/send",
   // TODO what should i do with `/partials/`?
@@ -107,9 +108,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const organizationSlug = pathname.startsWith("/org/") ? pathParts[1] : null;
 
-  const isPublic = publicRoutesPrefixes.some((route) =>
-    pathname.startsWith(route),
-  );
+  // route path is always public
+  const isPublic =
+    pathname === "/" ||
+    publicRoutesPrefixes.some((route) => pathname.startsWith(route));
 
   // console.log({user: context.locals.user});
 

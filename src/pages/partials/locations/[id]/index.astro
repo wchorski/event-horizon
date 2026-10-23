@@ -1,12 +1,11 @@
 ---
 // partials/users/[id].astro
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { BadRequestError, errorHandlingOnSubmit, ForbiddenError } from "@lib/errors";
 import { tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
 import type { LocationSelect } from "@ty/Schema";
 import type { ZodError } from "astro/zod";
-import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
@@ -14,6 +13,13 @@ type ZodErrorFlattened = ReturnType<ZodError<LocationSelect>["flatten"]>;
 interface Params {
   id: string | undefined;
 }
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 
 const { id } = Astro.params;
 if (!id) throw new BadRequestError("Missing required parameter: id");
@@ -27,11 +33,9 @@ const ctx = {
   headers: Object.keys(config),
 };
 
-const session = TEST_ADMIN_SESSION;
-
 if (Astro.request.method === "GET") {
   try {
-    location = await crud.locations.read(id, session);
+    location = await crud.locations.read(id);
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;
@@ -53,7 +57,7 @@ if (Astro.request.method === "PATCH") {
       id,
     };
 
-    location = await crud.locations.update(payload, session);
+    location = await crud.locations.update(payload);
   } catch (e) {
     const { err, status } = errorHandlingOnSubmit(e);
     Astro.response.status = status;

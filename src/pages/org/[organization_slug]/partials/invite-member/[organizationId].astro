@@ -28,6 +28,23 @@ try {
   if (!email || !role)
     throw new BadRequestError("[email, role, organizationId] not in formData");
 
+  // TODO make sure invite-member still works with added permissions
+  const permission = await auth.api.hasPermission({
+    headers: Astro.request.headers,
+    body: {
+      organizationId,
+      permissions: {
+        invitation: ["create"],
+      },
+    },
+  });
+
+  if (!permission.success) {
+    throw new Response("Forbidden", {
+      status: 403,
+    });
+  }
+
   const data = await auth.api.createInvitation({
     body: {
       email, // required, The email address of the user to invite.

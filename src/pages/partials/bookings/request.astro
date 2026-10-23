@@ -1,17 +1,15 @@
 ---
-// partials/bookings/request
+// pages/partials/bookings/request
 import { bookingConfigRequired } from "@lib/tableConfigs";
 import {
   BadRequestError,
   errorHandlingOnSubmit,
+  ForbiddenError,
   NotFoundError,
   UnauthorizedError,
 } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
 import type { BookingSelect } from "@ty/Schema";
-//@ts-ignore
-import type { ZodError } from "astro:schema";
-import { view } from "drizzle-orm/sqlite-core";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
@@ -19,20 +17,23 @@ import { handleResult } from "@lib/handleRenderResult";
 import { Booking, Location } from "@db/schema";
 import { db } from "@db/db";
 import { validateBookingRequest } from "@lib/validate";
-import { auth } from "@lib/auth";
 import { parseNestedFormData } from "@lib/parseFormFields";
 import { createUser } from "@lib/auth/createUser";
 
-type ZodErrorFlattened = ReturnType<ZodError<BookingSelect>["flatten"]>;
-
 export const partial = true;
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 
 let booking: BookingSelect | null | undefined = null;
 let error = null;
-const session = Astro.locals.session;
-const sessionUserId = session?.userId;
-const locations = await crud.locations.readMany({ user_id: 1, role: "idk" });
-const users = await crud.users.readMany({ user_id: 1, role: "idk" });
+const userId = user.id;
+const locations = await crud.locations.readMany();
+const users = await crud.users.readMany();
 const config = bookingConfigRequired(locations, users);
 const ctx = {
   crud: "bookings" as CrudRegistryType,
@@ -76,7 +77,7 @@ type Payload = {
 
 if (Astro.request.method === "POST") {
   try {
-    if (!sessionUserId) {
+    if (!userId) {
       throw new UnauthorizedError("Must be logged in to submit form");
     }
     const formData = await Astro.request.formData();
@@ -87,7 +88,7 @@ if (Astro.request.method === "POST") {
 
     const payload = parseNestedFormData({
       ...submitFields,
-      author_user_id: sessionUserId || "",
+      author_user_id: userId || "",
     }) as Payload;
 
     payload.end = payload.start;
@@ -101,7 +102,7 @@ if (Astro.request.method === "POST") {
         .insert(Location)
         .values({
           ...validated.location,
-          author_user_id: sessionUserId,
+          author_user_id: userId,
         })
         .returning();
 

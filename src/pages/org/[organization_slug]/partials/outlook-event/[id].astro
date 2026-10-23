@@ -1,5 +1,5 @@
 ---
-// src/pages/partials/events/outlook-event/:id
+// src/pages/org/:slug/partials/outlook-event/:id
 import type {
   Event,
   Attendee,
@@ -64,9 +64,8 @@ let result: RenderResult;
 
 try {
   // --- UPDATE ---
-  // TODO move this to /org/:slug/outlook-events
   // can use Astro.locals for {organization, member}
-  const user = Astro.locals.user;
+  const { user } = Astro.locals;
   if (!user) throw new BadRequestError("Not authenticated.");
 
   const { organization_slug } = Astro.params;

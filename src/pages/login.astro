@@ -10,7 +10,7 @@ import VerifyOneTimePassForm from "@components/form/VerifyOneTimePassForm.astro"
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { login } from "@lib/auth/login";
 import { safeReturnTo } from "@lib/auth/respond";
-import { runForm } from "@lib/form-action";
+import { useForm } from "@lib/useForm";
 import { emptyForm } from "@lib/form-state";
 import { validate } from "@lib/validate";
 import { authRedirect } from "@lib/auth/respond";
@@ -35,7 +35,7 @@ let state = emptyForm();
 
 // TODO do i need a trycatch here?
 if (Astro.request.method === "POST") {
-  const outcome = await runForm(await Astro.request.formData(), {
+  const outcome = await useForm(await Astro.request.formData(), {
     schema: validate.login,
     sensitive: ["password"],
     // labels: { first_name: "first name", last_name: "last name" },

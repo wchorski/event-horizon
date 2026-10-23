@@ -1,6 +1,6 @@
 // lib/auth/login.ts
 import { auth } from "@lib/auth";
-import { FormError } from "@lib/form-action";
+import { FormError } from "@lib/useForm";
 import type { LoginCredentials } from "@lib/validate";
 import type { AuthCookies } from "./signup";
 

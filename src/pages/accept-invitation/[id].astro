@@ -8,7 +8,7 @@ import { auth } from "@lib/auth";
 import { signup } from "@lib/auth/signup";
 import { login } from "@lib/auth/login";
 import { authRedirect } from "@lib/auth/respond";
-import { FormError, runForm } from "@lib/form-action";
+import { FormError, useForm } from "@lib/useForm";
 import { emptyForm } from "@lib/form-state";
 import { validate } from "@lib/validate";
 import BaseLayout from "@layouts/BaseLayout.astro";
@@ -103,7 +103,7 @@ if (Astro.request.method === "POST" && state === "ready") {
 
   switch (intent) {
     case "signup": {
-      const out = await runForm(form, {
+      const out = await useForm(form, {
         // email comes from the invitation, never from the client
         schema: validate.signup.omit({ email: true }),
         sensitive: ["password"],
@@ -116,7 +116,7 @@ if (Astro.request.method === "POST" && state === "ready") {
     }
 
     case "login": {
-      const out = await runForm(form, {
+      const out = await useForm(form, {
         schema: validate.login.pick({ password: true }),
         sensitive: ["password"],
         run: (input) => login({ email: inviteEmail, password: input.password }),
@@ -131,7 +131,7 @@ if (Astro.request.method === "POST" && state === "ready") {
     }
 
     case "resend": {
-      const out = await runForm(form, {
+      const out = await useForm(form, {
         successMessage: "A new code is on its way.",
         run: () =>
           auth.api.sendVerificationOTP({
@@ -147,7 +147,7 @@ if (Astro.request.method === "POST" && state === "ready") {
       if (!user?.emailVerified || user.email.toLowerCase() !== inviteEmail) {
         return new Response("Forbidden", { status: 403 });
       }
-      const out = await runForm(form, {
+      const out = await useForm(form, {
         run: async () => {
           try {
             return await auth.api.acceptInvitation({

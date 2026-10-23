@@ -27,6 +27,14 @@ import { crud } from "@lib/crudRegistry";
 import PageEditorWithSidebarLayout from "@layouts/PageEditorWithSidebarLayout.astro";
 import { slugify } from "@lib/formatters";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import { ForbiddenError } from "@lib/errors";
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 
 const { id } = Astro.params;
 if (!id) throw new Error("no id found. throw 404");

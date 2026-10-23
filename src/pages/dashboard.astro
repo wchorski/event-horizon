@@ -6,6 +6,7 @@ import MiniPaginationControls from "@components/navigation/MiniPaginationControl
 import { getBookingsPage } from "@lib/getBookingsPage";
 import { SITE_TITLE } from "astro:env/client";
 import { auth } from "@lib/auth";
+import OrganizationCreationForm from "@components/form/OrganizationCreationForm.astro";
 
 const user = Astro.locals.user;
 
@@ -39,7 +40,7 @@ const { bookings, totalPages } = await getBookingsPage({
     }
   </header>
   <div data-layout="content">
-    <secton>
+    <secton class="grid gap-m">
       {
         organizations.length > 0 ? (
           <ul class="unstyled flex gap-m">
@@ -59,6 +60,7 @@ const { bookings, totalPages } = await getBookingsPage({
           </ul>
         ) : null
       }
+      <OrganizationCreationForm />
     </secton>
     <hr />
     <section>

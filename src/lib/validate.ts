@@ -347,14 +347,16 @@ export const validate = {
 
   organization: z.object({
     id: z.uuidv7(),
-    name: z.string().min(3),
+    name: z.string().min(3).max(50),
     slug: slugSchema,
-    color: z.string().min(3).optional(),
-    color_2: z.string().min(3).optional(),
-    dedicated_db_url: z.string().optional(),
-    logo: z.string().optional(),
+    // color: z.string().min(3).optional(),
+    // color_2: z.string().min(3).optional(),
+    logo: z
+      .url()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
     // dedicated_db_url: z.url().optional(),
-    // logo: z.url().optional(),
+    // integration_api_keys
   }),
 
   get organizationCreate() {

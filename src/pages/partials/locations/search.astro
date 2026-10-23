@@ -3,11 +3,18 @@ import { db } from "@db/db";
 import { or, ilike, like } from "drizzle-orm";
 import { Location } from "@db/schema";
 import { type CrudRegistryType } from "@lib/crudRegistry";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { BadRequestError, errorHandlingOnSubmit, ForbiddenError } from "@lib/errors";
 import type { LocationSelect } from "@ty/Schema";
 import { tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
 import { handleQueryResult } from "@lib/handleQueryResult";
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 
 let locations: LocationSelect[] | null | undefined = null;
 let error = null;

@@ -1,9 +1,14 @@
 // lib/form-action.ts
 import { z, type ZodType } from "astro/zod";
 import { fail, succeed, type FormState } from "@lib/form-state";
+import { APIError } from "better-auth/api";
 
 export class FormError extends Error {
-  constructor(message: string, public status = 422, public field?: string) {
+  constructor(
+    message: string,
+    public status = 422,
+    public field?: string,
+  ) {
     super(message);
   }
 }
@@ -17,7 +22,9 @@ type Opts<S extends ZodType | undefined, T> = {
   labels?: Record<string, string>;
   sensitive?: string[]; // never echoed back into values
   successMessage?: string | ((data: T) => string);
-  run: (input: S extends ZodType ? z.output<S> : Record<string, string>) => Promise<T>;
+  run: (
+    input: S extends ZodType ? z.output<S> : Record<string, string>,
+  ) => Promise<T>;
 };
 
 function zodFailure(e: z.ZodError) {
@@ -37,19 +44,32 @@ function zodFailure(e: z.ZodError) {
 }
 
 function toFailure(e: unknown) {
+  console.log('=== toFailure');
+  
   if (e instanceof z.ZodError) return zodFailure(e);
-
+  console.log({e});
   if (e instanceof FormError) {
     return e.field
       ? { status: e.status, fieldErrors: { [e.field]: e.message } }
       : { status: e.status, error: e.message };
   }
 
+  
+  if (e instanceof APIError) {
+    console.log('better-auth error');
+    const status = Number(e.status) || 500;
+    console.error(e); // keep full detail server-side
+    return status >= 500
+      ? { status, error: "Something went wrong on our end." }
+      : { status, error: e.message };
+  }
+  console.error('do we get this far?');
+
   console.error(e);
   return { status: 500, error: "Something went wrong." };
 }
 
-export async function runForm<S extends ZodType | undefined, T>(
+export async function useForm<S extends ZodType | undefined, T>(
   formData: FormData,
   o: Opts<S, T>,
 ): Promise<ActionResult<T>> {
@@ -63,9 +83,15 @@ export async function runForm<S extends ZodType | undefined, T>(
   try {
     const input = o.schema ? o.schema.parse(entries) : entries;
     const data = await o.run(input as any);
-    const msg = typeof o.successMessage === "function" ? o.successMessage(data) : (o.successMessage ?? "");
+    const msg =
+      typeof o.successMessage === "function"
+        ? o.successMessage(data)
+        : (o.successMessage ?? "");
     return { ok: true, data, state: succeed(msg) };
   } catch (e) {
-    return { ok: false, state: fail({ ...toFailure(e), values, labels: o.labels }) };
+    return {
+      ok: false,
+      state: fail({ ...toFailure(e), values, labels: o.labels }),
+    };
   }
 }

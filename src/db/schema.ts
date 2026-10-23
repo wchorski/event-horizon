@@ -577,7 +577,7 @@ export const Organization = pgTable("organizations", {
   id: uuid()
     .primaryKey()
     .default(sql`uuidv7()`),
-  name: text().notNull(),
+  name: text().notNull().unique(),
   slug: text().notNull().unique(),
   logo: text(),
   createdAt: timestamp().notNull(),

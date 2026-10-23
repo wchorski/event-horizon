@@ -7,13 +7,17 @@ import { User, Ticket, Event, Location } from "@db/schema";
 import { eq } from "drizzle-orm";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import AdminNav from "@components/navigation/AdminNav.astro";
-import TableEditable from "@components/TableEditable.astro";
-import { crud } from "@lib/crudRegistry";
-import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import { formatPhonePrettyManual, prettyDateToLocale } from "@lib/formatters";
+import { ForbiddenError } from "@lib/errors";
 export const prerender = false; // Not needed in 'server' mode
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/404");
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 const [ticket] = await db
   .select()
   .from(Ticket)

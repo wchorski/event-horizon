@@ -2,10 +2,15 @@
 // pages/partials/bookings/article-list.astro
 import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
 import MiniPaginationControls from "@components/navigation/MiniPaginationControls.astro";
+import { ForbiddenError } from "@lib/errors";
 import { getBookingsPage } from "@lib/getBookingsPage";
 
-const user = Astro.locals.user;
+const { user } = Astro.locals;
 if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
 
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const { bookings, totalCount, totalPages } = await getBookingsPage({

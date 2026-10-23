@@ -4,7 +4,7 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import FormCard from "@components/form/FormCard.astro";
 import InputField from "@components/form/InputField.astro";
 import { signup } from "@lib/auth/signup";
-import { runForm } from "@lib/form-action";
+import { useForm } from "@lib/useForm";
 import { authRedirect } from "@lib/auth/respond";
 import { emptyForm } from "@lib/form-state";
 import { validate } from "@lib/validate";
@@ -19,7 +19,7 @@ const { user } = Astro.locals;
 let state = emptyForm(); // every request starts clean
 
 if (Astro.request.method === "POST") {
-  const outcome = await runForm(await Astro.request.formData(), {
+  const outcome = await useForm(await Astro.request.formData(), {
     schema: validate.signup,
     sensitive: ["password"],
     labels: { first_name: "first name", last_name: "last name" },

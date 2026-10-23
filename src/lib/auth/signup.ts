@@ -1,7 +1,7 @@
 // lib/auth/signup.ts
 import { auth } from "@lib/auth";
 import { slugify } from "@lib/formatters";
-import { FormError } from "@lib/form-action";
+import { FormError } from "@lib/useForm";
 import type { SignupCredentials } from "@lib/validate";
 
 export type AuthCookies = { setCookies: string[] };

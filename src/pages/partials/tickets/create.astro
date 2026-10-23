@@ -1,26 +1,28 @@
 ---
 // partials/tickets/create
-import RowView from "@components/tables/RowView.astro";
-import RowCreateForm from "@components/tables/RowCreate.astro";
 import { ticketsConfigRequired, tableConfigs } from "@lib/tableConfigs";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { BadRequestError, errorHandlingOnSubmit, ForbiddenError } from "@lib/errors";
 import { crud, type CrudRegistryType } from "@lib/crudRegistry";
-import { parseOutUndefinedFormData } from "@lib/sanatizers";
-import { TEST_ADMIN_SESSION } from "@lib/auth/session";
 import type { TicketSelect } from "@ty/Schema";
 import FieldErrors from "@components/mgmt/FieldErrors.partial.astro";
 import FormSuccess from "@components/mgmt/FormSuccess.partial.astro";
 import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
-import type { ZodError } from "astro:schema";
 import { handleResult } from "@lib/handleRenderResult";
 
 type ViewType = "table-row" | "card";
 
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
+if (user.role !== "admin")
+  throw new ForbiddenError(
+    "use better-auth api for user creation and management",
+  );
+
 
 let error = null;
 let ticket: TicketSelect | null | undefined = null;
-const users = await crud.users.readMany(TEST_ADMIN_SESSION);
-const events = await crud.events.readMany(TEST_ADMIN_SESSION);
+const users = await crud.users.readMany();
+const events = await crud.events.readMany();
 const config = ticketsConfigRequired(users, events);
 const ctx = {
   crud: "tickets" as CrudRegistryType,

@@ -217,7 +217,7 @@ try {
                 {
                   id: parentFolderId ?? null,
                   name: firstItem.name ?? "Untitled",
-                  webUrl: firstItem.webUrl,
+                  webUrl: firstItem.webUrl ?? undefined,
                 },
               ])
         // const params = new URLSearchParams({itemId: folderId ?? "", crumbs: "where-do-i-go"})
@@ -240,9 +240,9 @@ try {
 
 const formMethodEndpoint = outlookEvent
   ? {
-      "hx-patch": `/partials/events/outlook-event/${organization_slug}/${packet?.outlook_event_id}`,
+      "hx-patch": `/org/${organization.slug}/partials/outlook-event/${packet?.outlook_event_id}`,
     }
-  : { "hx-post": `/partials/events/outlook-event/${organization_slug}` };
+  : { "hx-post": `/org/${organization.slug}/partials//outlook-event` };
 ---
 
 

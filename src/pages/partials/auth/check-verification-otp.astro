@@ -2,7 +2,7 @@
 // pages/partials/auth/check-verification-otp.astro
 import { z } from "astro/zod"; // same zod copy as validate.ts
 import { auth } from "@lib/auth";
-import { FormError, runForm } from "@lib/form-action";
+import { FormError, useForm } from "@lib/useForm";
 import { authRedirect, safeReturnTo } from "@lib/auth/respond";
 
 if (Astro.request.method !== "POST") {
@@ -54,7 +54,7 @@ async function verify({ otp, email, type, password, redirectTo }: Input) {
   throw new FormError("Unsupported verification type.", 400);
 }
 
-const outcome = await runForm(await Astro.request.formData(), {
+const outcome = await useForm(await Astro.request.formData(), {
   schema,
   sensitive: ["otp", "password"],
   run: verify,

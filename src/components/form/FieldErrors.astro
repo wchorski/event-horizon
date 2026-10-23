@@ -1,0 +1,19 @@
+---
+// FieldErrors.astro
+import { fieldErrorId } from "@lib/fieldIds";
+
+interface Props {
+  formId: string;
+  names: string[];
+  errors?: Record<string, string | string[] | undefined>;
+}
+const { formId, names, errors = {} } = Astro.props;
+const first = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v) ?? "";
+const all = [...new Set([...names, ...Object.keys(errors)])];
+---
+
+{all.map((n) => (
+  <small id={fieldErrorId(formId, n)} class="field-error" aria-live="polite" hx-swap-oob="innerHTML">
+    {first(errors[n])}
+  </small>
+))}

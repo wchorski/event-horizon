@@ -1,0 +1,109 @@
+---
+// components/form/InputField.astro
+import type { HTMLAttributes } from "astro/types";
+import type {
+  FieldOption,
+  FieldSlot,
+  FieldType,
+  InputFieldType,
+} from "@ty/FieldConfig";
+import { formatPhonePrettyManual } from "@lib/formatters";
+import { toDatetimeLocalValue } from "@lib/dateAndTime";
+
+interface Props extends Omit<
+  HTMLAttributes<"input">,
+  "type" | "value" | "checked" | "name"
+> {
+  formId?: string;
+  // errorId: string;
+  id: string;
+  name: string;
+  model: string;
+  label?: string;
+  type?: InputFieldType | null;
+  value?: string | null;
+  checked?: string | boolean | null;
+  fieldError?: string | unknown | null;
+  isCreate?: boolean;
+  datalist?: FieldOption[];
+  inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
+}
+
+const {
+  formId,
+  id,
+  model,
+  // errorId,
+  checked,
+  name,
+  label,
+  type,
+  value,
+  fieldError,
+  isCreate,
+  datalist,
+  readonly,
+  autofocus,
+  // TODO spread this like ...rest and remove rest
+  inputAttrs,
+  ...rest
+} = Astro.props;
+
+if (type === "searchSelect")
+  throw new Error("InputField cannot be of type searchSelect");
+
+const prettyVal = (() => {
+  switch (true) {
+    case type === "tel":
+      return formatPhonePrettyManual(value);
+    // TODO this is converted for a second time.... lol
+    case type === "datetime-local":
+      return value ? toDatetimeLocalValue(value) : value;
+
+    default:
+      return value;
+  }
+})();
+
+const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
+---
+
+{
+  readonly ? (
+    <code class="text" aria-readonly="true">
+      <span class="value">
+        {label ?? name}: {value}
+      </span>
+      <span id={errorId} style="display: none;">
+        {fieldError ?? ""}
+      </span>
+    </code>
+  ) : (
+    <label class="form-field">
+      <span class="text">{label ?? name}</span>
+      <input
+        {...inputAttrs}
+        {...rest}
+        autofocus={autofocus}
+        form={formId}
+        name={name}
+        type={type}
+        value={type !== "checkbox" ? prettyVal : undefined}
+        checked={checked ?? undefined}
+        list={datalist ? `datalist-${name}` : undefined}
+        aria-invalid={fieldError ? "true" : undefined}
+        aria-describedby={fieldError ? errorId : undefined}
+      />
+      <span id={errorId} class="anim-vibrate field-error">
+        {fieldError ?? null}
+      </span>
+      {datalist ? (
+        <datalist id={`datalist-${name}`}>
+          {datalist.map((opt) => (
+            <option value={opt.value}>{opt.label}</option>
+          ))}
+        </datalist>
+      ) : null}
+    </label>
+  )
+}

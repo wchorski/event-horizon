@@ -12,7 +12,6 @@ const user = Astro.locals.user;
 
 if (user === null) return Astro.redirect("/login");
 if (!user) throw new Error("Must be logged in to view page");
-
 const organizations = await auth.api.listOrganizations({
   headers: Astro.request.headers,
 });
@@ -21,7 +20,8 @@ const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const msg = Astro.url.searchParams.get("msg");
 const status = Astro.url.searchParams.get("status");
 
-const { bookings, totalPages } = await getBookingsPage({
+// TODO don't fetch ALL locations. maybe use a join?
+const { bookings, locations, totalPages } = await getBookingsPage({
   author_user_id: user.id,
   page,
   perPage: 3,

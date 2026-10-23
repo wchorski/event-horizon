@@ -1,13 +1,13 @@
 ---
 // pages/org/partials/invite-member/:organizationId
 import FieldErrors from "@components/form/FieldErrors.astro";
-import FormMessage from '@components/form/FormMessasge.astro'
+import FormMessage from "@components/form/FormMessasge.astro";
 import { inviteMember } from "@lib/crud/inviteMember";
 import { useForm } from "@lib/useForm";
 import { validate } from "@lib/validate";
-import type { MemberRoles } from "@ty/Schema";
 
-if (Astro.request.method !== "POST")
+const method = Astro.request.method;
+if (method !== "POST")
   return new Response(null, { status: 405, headers: { Allow: "POST" } });
 
 const { user } = Astro.locals;
@@ -46,7 +46,11 @@ if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
       </ul>
     </>
   ) : (
-    <FormMessage kind="error" message={outcome.state.error} status={outcome.state.status} />
+    <FormMessage
+      kind="error"
+      message={outcome.state.error}
+      status={outcome.state.status}
+    />
   )
 }
 <FieldErrors

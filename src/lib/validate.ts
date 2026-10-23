@@ -353,6 +353,9 @@ export const validate = {
     email: z.email("enter a valid email address"),
     role: z.enum(MEMBER_ROLES),
   }),
+  team: z.object({
+    name: z.string().min(3).max(20),
+  }),
   organization: z.object({
     id: z.uuidv7(),
     name: z.string().min(3).max(50),

@@ -62,7 +62,7 @@ export async function getBookingsPage({
       assignments: {
         with: {
           user: true,
-          role: true,
+          // role: true,
         },
       },
       client: true,
@@ -73,6 +73,7 @@ export async function getBookingsPage({
   });
 
   // TODO don't fetch ALL locations. maybe use a join?
+  // TODO this is VERY BAD
   const locations = await db.select().from(Location);
   // .limit(perPage)
   // .offset((page - 1) * perPage);

@@ -2,7 +2,7 @@
 
 import { PERMISSIONS } from "@lib/auth/roles";
 import type {
-  RoleSelect,
+  // RoleSelect,
   BookingSelect,
   AccountInsert,
 } from "@ty/Schema";
@@ -23,7 +23,7 @@ type SeedData = {
   tickets: TicketSeedInsert[];
   users: UserSeedInsert[];
   events: EventSeedInsert[];
-  roles: RoleSelect[];
+  // roles: RoleSelect[];
   bookings: BookingSelect[];
   organizations: OrganizationSeedInsert[];
   accounts: AccountInsert[];
@@ -31,7 +31,7 @@ type SeedData = {
 };
 
 export const seedData: SeedData = {
-  roles,
+  // roles,
   locations,
   tickets,
   users,

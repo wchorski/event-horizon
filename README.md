@@ -82,7 +82,17 @@ The errors you're looking for will be in your database logs. i.e. the postgres c
 2026-10-21 17:31:01.486 UTC [281] ERROR:  invalid input value for enum member_role: "staff"
 2026-10-21 17:31:01.486 UTC [281] STATEMENT:  
 	ALTER TABLE "members" ALTER COLUMN "role" SET DATA TYPE "public"."member_role" USING "role"::"public"."member_role";
-  ```
+```
+
+> [!tip] Bad migrations will stack up. When youre confident you've figured out the migration issue, drop the recently created migrations and generate a new one.
+
+before a git commit it's easy to spot the green 'created' files. drop those
+
+```sh
+pnpm drizzle-kit drop
+pnpm db:genearate
+```
+
 
 ### Better Auth config
 

@@ -136,8 +136,8 @@ form {
 
 #submit-button {
   display: grid;
-  grid-template-columns: auto auto;
-  grid-template-areas: "label icon";
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: ". label icon";
 
   align-items: center;
   gap: 0.5rem;
@@ -145,12 +145,23 @@ form {
   & > .text,
   & > .submit-indicator {
     grid-area: label;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
   }
 
   & > .icon {
     grid-area: icon;
+    grid-column: 3;
   }
 
+  /* No icon: center the text in the entire button */
+  &:not(:has(.icon)) {
+    /* grid-template-columns: 1fr; */
+    grid-template-areas: "label";
+  }
+
+  /* Icon-only button */
   &:has(.text.hide) {
     grid-template-columns: 1fr;
     grid-template-areas: "icon";
@@ -158,23 +169,26 @@ form {
   }
 
   &:has(.text.hide) > .icon {
+    grid-column: 1;
     justify-self: center;
   }
 }
 
 .submit-indicator {
   visibility: hidden;
-  position: absolute;
+  white-space: nowrap;
 }
-/* TODO set submit button to disabled and grey out form fields. maybe i should go off of form's data-status attr? */
+
+/* Pending state */
 .htmx-request {
   background-color: var(--c-seperator);
   border-bottom-color: var(--c-secondary);
-  & .submit-indicator {
+
+  & > .submit-indicator {
     visibility: visible;
-    display: inline-block;
   }
-  & .text {
+
+  & > .text {
     visibility: hidden;
   }
 }

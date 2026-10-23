@@ -16,6 +16,9 @@ export const authClient = createAuthClient({
     organizationClient({
       ac: orgAccess,
       roles: organizationRoles,
+      teams: {
+        enabled: true,
+      },
     }),
   ],
 });

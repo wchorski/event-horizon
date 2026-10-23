@@ -14,14 +14,7 @@ import { validate } from "./validate";
 import { localDateTimeToRealDate } from "./formatters";
 import {
   createWordpressEventPost,
-  updateWordpressEventPost,
 } from "./getsetWordpressPost";
-import {
-  userCan,
-  sanitizeFields,
-  userPolicy,
-  creditPolicy,
-} from "./auth/permissions";
 import type { Session } from "./auth/session";
 import { userCreditMap } from "./tableConfigs";
 import type { FormFields } from "@ty/Form";
@@ -31,7 +24,6 @@ import type {
   LocationSelect,
   UserCreditFlat as CourseCreditFlat,
   UserSelect,
-  RoleSelect,
 } from "@ty/Schema";
 
 type CreateFn = (
@@ -589,7 +581,6 @@ type CrudRegistry = {
   courseCredits: CrudEntry<CourseCreditFlat>;
   locations: CrudEntry<LocationSelect>;
   users: CrudEntry<UserSelect>;
-  // roles: CrudEntry<RoleSelect>;
   events: CrudEntry<EventSelect>;
   tickets: CrudEntry<TicketSelect>;
   // ...

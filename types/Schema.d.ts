@@ -1,7 +1,7 @@
 import type { MOMENTS_STORE } from "@client/indexedDB";
 import {
   BookingAssignment,
-  Role,
+  // Role,
   Location,
   User,
   Event,
@@ -30,8 +30,8 @@ export const models = {
 
 export type ModelName = (typeof models)[keyof typeof models]["_"]["name"];
 
-export type RoleInsert = typeof Role.$inferInsert;
-export type RoleSelect = typeof Role.$inferSelect;
+// export type RoleInsert = typeof Role.$inferInsert;
+// export type RoleSelect = typeof Role.$inferSelect;
 export type TicketInsert = typeof Ticket.$inferInsert;
 export type TicketSelect = typeof Ticket.$inferSelect;
 export type UserInsert = typeof User.$inferInsert;
@@ -65,7 +65,7 @@ export type UserCreditSelect = {
   user: UserSelect;
 };
 export type AnyEntitySelect =
-  | RoleSelect
+  // | RoleSelect
   | TicketSelect
   | UserSelect
   | EventSelect

@@ -1,0 +1,40 @@
+---
+// components/form/CreateTeamForm
+interface Props {
+  id?: string;
+  organizationSlug: string;
+  organizationId: string;
+}
+import InputField from "@components/form/InputField.astro";
+import FormCard from "./FormCard.astro";
+
+const {
+  id = "form--create-team",
+  organizationSlug,
+  organizationId,
+} = Astro.props;
+
+// TODO target list of users instead to self populate user table
+---
+
+<FormCard
+  {id}
+  class="card"
+  method="post"
+  endpoint={`/org/${organizationSlug}/partials/teams/${organizationId}/create`}
+  submitText="Create"
+  hx-on--after-request="if (event.detail.successful) this.reset()"
+>
+  <h2>Create a new time for this organization</h2>
+  <fieldset class="no-style">
+    <InputField
+      formId={id}
+      name="name"
+      type={"text"}
+      autocomplete="off"
+      required
+    />
+  </fieldset>
+
+  <slot name="icon" slot="icon" />
+</FormCard>

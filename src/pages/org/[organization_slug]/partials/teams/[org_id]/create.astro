@@ -1,0 +1,71 @@
+---
+// pages/org/:slug/partials/teams/:org_id
+import { auth } from "@lib/auth";
+import { useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
+import FieldErrors from "@components/form/FieldErrors.astro";
+import FormMessage from "@components/form/FormMessasge.astro";
+
+const method = Astro.request.method;
+if (method !== "POST")
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
+
+const { org_id } = Astro.params;
+if (!org_id) return new Response("Bad request", { status: 400 });
+
+// TODO do i need to check headers and see if member is apart of this org + do they have permission (i.e. an 'org amdin')?
+
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
+
+const formData = await Astro.request.formData();
+const outcome = await useForm(formData, {
+  schema: validate.team,
+  labels: { name: "name", id: "id" },
+  successMessage: "Created Team => ",
+  run: async (input) => {
+    return await auth.api.createTeam({
+      body: {
+        name: input.name, // required, The name of the team.
+        organizationId: org_id, // The organization ID which the team will be created in. Defaults to the active organization.
+      },
+    });
+    // const data: {
+    //   id: string;
+    //   name: string;
+    //   organizationId: string;
+    //   createdAt: Date;
+    //   updatedAt?: Date | undefined;
+    // }
+  },
+});
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+---
+{
+  outcome.ok ? (
+    <>
+      <FormMessage kind="success" message={outcome.state.success}>
+        <strong>{outcome.data.name}</strong>
+      </FormMessage>
+      <ul hx-swap-oob="beforeend:#org-teams-list">
+        <li class="anim--fadein">
+          {outcome.data.name} <small>(new)</small>
+        </li>
+      </ul>
+    </>
+  ) : (
+    <FormMessage
+      kind="error"
+      message={outcome.state.error}
+      status={outcome.state.status}
+    />
+  )
+}
+<FieldErrors
+  {formId}
+  names={Object.keys(validate.team.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

@@ -17,17 +17,18 @@ import {
 import { relations, sql } from "drizzle-orm";
 import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
 
-export const Role = pgTable("roles", {
-  id: uuid()
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  label: text().notNull().unique(),
-  excerpt: text(),
-  permissions: text().array().notNull().default([]),
-  organization_id: uuid()
-    .notNull()
-    .references(() => Organization.id, { onDelete: "cascade" }),
-});
+//! now using better-auth admin and org plugins
+// export const Role = pgTable("roles", {
+//   id: uuid()
+//     .primaryKey()
+//     .default(sql`uuidv7()`),
+//   label: text().notNull().unique(),
+//   excerpt: text(),
+//   permissions: text().array().notNull().default([]),
+//   organization_id: uuid()
+//     .notNull()
+//     .references(() => Organization.id, { onDelete: "cascade" }),
+// });
 
 export const Location = pgTable(
   "locations",
@@ -35,7 +36,7 @@ export const Location = pgTable(
     id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    name: text().notNull().unique(),
+    name: text().notNull(),
     address: text().notNull(),
     city: text().notNull(),
     state: text().notNull(),
@@ -50,6 +51,7 @@ export const Location = pgTable(
     author_user_id: uuid()
       .notNull()
       .references(() => User.id),
+    // TODO set to `notNull()` if locations must be tied to org
     organization_id: uuid().references(() => Organization.id, {
       onDelete: "cascade",
     }),
@@ -57,48 +59,42 @@ export const Location = pgTable(
   (table) => [
     index("locations_city_idx").on(table.city),
     index("locations_state_idx").on(table.state),
+    // unique().on(table.organization_id, table.name),
+    unique().on(table.organization_id, table.name).nullsNotDistinct(),
   ],
 );
 
-export const User = pgTable(
-  "users",
-  {
-    // TODO switch to uuid when this app gets more serious and need more privacy with url
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    role_id: uuid().references(() => Role.id),
-    role: text(),
-    //? handled with `OrganizationMembership` relationship
-    // organization_id: uuid()
-    //   .notNull()
-    //   .references(() => Organization.id, { onDelete: "cascade" }),
-    username: text().notNull().unique(),
-    displayUsername: text(),
-    name: text().notNull(),
-    first_name: text(),
-    last_name: text(),
-    middle_initial: text(),
-    phone: text().unique(),
-    email: text().notNull().unique(),
-    emailVerified: boolean().default(false).notNull(),
-    address_1: text(),
-    address_2: text(),
-    city: text(),
-    state: text(),
-    zip: text(),
-    image: text(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    banned: boolean().default(false),
-    banReason: text(),
-    banExpires: timestamp(),
-  },
-  (table) => [index("users_role_id_idx").on(table.role_id)],
-);
+export const User = pgTable("users", {
+  // TODO switch to uuid when this app gets more serious and need more privacy with url
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  // role_id: uuid().references(() => Role.id),
+  role: text(),
+  username: text().notNull().unique(),
+  displayUsername: text(),
+  name: text().notNull(),
+  first_name: text(),
+  last_name: text(),
+  middle_initial: text(),
+  phone: text().unique(),
+  email: text().notNull().unique(),
+  emailVerified: boolean().default(false).notNull(),
+  address_1: text(),
+  address_2: text(),
+  city: text(),
+  state: text(),
+  zip: text(),
+  image: text(),
+  createdAt: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp()
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  banned: boolean().default(false),
+  banReason: text(),
+  banExpires: timestamp(),
+});
 
 // export const Service = pgTable("services", {
 //   id: uuid("id").primaryKey().default(sql`uuidv7()`),
@@ -155,15 +151,12 @@ export const Booking = pgTable(
       .references(() => User.id),
     client_id: uuid().references(() => User.id),
     // TODO allow booking to survive if User is deleted
-    // client_id: uuid().references(() => User.id, { onDelete: "set null" }),
+    // account_id: uuid().references(() => Account.id, { onDelete: "set null" }),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
     organization_id: uuid().references(() => Organization.id, {
       onDelete: "cascade",
     }),
-    //? Timeline now owns the FK back to Booking
-    // timeline_id: uuid().references(() => Timeline.id),
-    // service_id:
   },
   (table) => [check("end_after_start", sql`${table.end} >= ${table.start}`)],
 );
@@ -189,9 +182,9 @@ export const BookingAssignment = pgTable(
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     // role: assignmentsRoleEnum("role").notNull().default("PRIMARY"),
-    role_id: uuid()
-      .notNull()
-      .references(() => Role.id),
+    // role_id: uuid()
+    //   .notNull()
+    //   .references(() => Role.id),
 
     date_assigned: timestamp().notNull().defaultNow(),
   },
@@ -235,10 +228,10 @@ export const bookingAssignmentRelations = relations(
       fields: [BookingAssignment.user_id],
       references: [User.id],
     }),
-    role: one(Role, {
-      fields: [BookingAssignment.role_id],
-      references: [Role.id],
-    }),
+    // role: one(Role, {
+    //   fields: [BookingAssignment.role_id],
+    //   references: [Role.id],
+    // }),
   }),
 );
 
@@ -495,6 +488,7 @@ export const Session = pgTable(
       .references(() => User.id, { onDelete: "cascade" }),
     impersonatedBy: text(),
     activeOrganizationId: uuid(),
+    activeTeamId: uuid(),
   },
   (table) => [index("session_user_id_idx").on(table.userId)],
 );
@@ -618,7 +612,48 @@ export const Department = pgTable(
   },
   (table) => [unique().on(table.organization_id, table.slug)],
 );
-// TODO make the roles an enum so it's static accross all
+
+export const Team = pgTable(
+  "teams",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    name: text().notNull(),
+    memberCount: integer().default(0).notNull(),
+    organizationId: uuid()
+      .notNull()
+      .references(() => Organization.id, { onDelete: "cascade" }),
+    createdAt: timestamp().notNull(),
+    updatedAt: timestamp().$onUpdate(() => /* @__PURE__ */ new Date()),
+  },
+  (table) => [
+    index("team_organizationId_idx").on(table.organizationId),
+    unique().on(table.organizationId, table.name),
+  ],
+);
+
+export const TeamMember = pgTable(
+  "team_members",
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    teamId: uuid()
+      .notNull()
+      .references(() => Team.id, { onDelete: "cascade" }),
+    userId: uuid()
+      .notNull()
+      .references(() => User.id, { onDelete: "cascade" }),
+    membershipKey: text().unique(),
+    createdAt: timestamp(),
+  },
+  (table) => [
+    index("teamMember_teamId_idx").on(table.teamId),
+    index("teamMember_userId_idx").on(table.userId),
+  ],
+);
+
 export const Member = pgTable(
   "members",
   {
@@ -632,6 +667,8 @@ export const Member = pgTable(
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
     role: memberRoleEnum().default("member").notNull(),
+    //? Better Auth can store multiple roles as a comma-separated string ("admin,sale") and supports custom roles, and the enum will reject those inserts. It’s fine if you’ll only ever use the three built-in roles.
+    // role: text().default("member").notNull(),
     createdAt: timestamp().defaultNow().notNull(),
     updatedAt: timestamp()
       .defaultNow()
@@ -655,6 +692,7 @@ export const Invitation = pgTable(
       .references(() => Organization.id, { onDelete: "cascade" }),
     email: text().notNull(),
     role: text(),
+    teamId: uuid(),
     status: text().default("pending").notNull(),
     expiresAt: timestamp().notNull(),
     createdAt: timestamp().defaultNow().notNull(),
@@ -710,6 +748,7 @@ export const userRelations = relations(User, ({ many }) => ({
   sessions: many(Session),
   accounts: many(Account),
   passkeys: many(Passkey),
+  teamMembers: many(TeamMember),
   members: many(Member),
   invitations: many(Invitation),
 }));
@@ -736,8 +775,28 @@ export const passkeyRelations = relations(Passkey, ({ one }) => ({
 }));
 
 export const organizationRelations = relations(Organization, ({ many }) => ({
+  teams: many(Team),
   members: many(Member),
   invitations: many(Invitation),
+}));
+
+export const teamRelations = relations(Team, ({ one, many }) => ({
+  organization: one(Organization, {
+    fields: [Team.organizationId],
+    references: [Organization.id],
+  }),
+  teamMembers: many(TeamMember),
+}));
+
+export const teamMemberRelations = relations(TeamMember, ({ one }) => ({
+  team: one(Team, {
+    fields: [TeamMember.teamId],
+    references: [Team.id],
+  }),
+  user: one(User, {
+    fields: [TeamMember.userId],
+    references: [User.id],
+  }),
 }));
 
 export const memberRelations = relations(Member, ({ one }) => ({

@@ -106,6 +106,8 @@ export const auth = betterAuth({
       passkey: schema.Passkey,
       organization: schema.Organization,
       member: schema.Member,
+      team: schema.Team,
+      teamMember: schema.TeamMember,
       invitation: schema.Invitation,
     },
   }),
@@ -175,12 +177,12 @@ export const auth = betterAuth({
       // dynamicAccessControl: {
       //   enabled: true,
       // },
-      // TODO consider using this for 'department' level control
-      // teams: {
-      //   enabled: true,
-      //   maximumTeams: 10, // Optional: limit teams per organization
-      //   allowRemovingAllTeams: false, // Optional: prevent removing the last team
-      // },
+      //? 'department' level control
+      teams: {
+        enabled: true,
+        maximumTeams: 30, // Optional: limit teams per organization
+        allowRemovingAllTeams: false, // Optional: prevent removing the last team
+      },
     }),
     emailOTP({
       overrideDefaultEmailVerification: true,

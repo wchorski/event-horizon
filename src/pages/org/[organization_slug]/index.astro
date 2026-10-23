@@ -9,6 +9,8 @@ import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 import { auth } from "@lib/auth";
 import { eq } from "drizzle-orm";
 import IconPacket from "@icons/packet.svg";
+import IconAdd from "@icons/add.svg";
+import CreateTeamForm from "@components/form/CreateTeamForm.astro";
 
 const search = Astro.url.searchParams;
 const msg = search.get("msg");
@@ -27,14 +29,15 @@ if (!member)
     `/not-authorized?msg=${encodeURIComponent("you are not a member of this org: " + organization_slug)}`,
   );
 
-// TODO search and return all invitations. mark as 'invited' instead of 'not verified'
+const headers = Astro.request.headers;
 
-// const members = await db.query.Member.findMany({
-//   where: eq(Member.organizationId, organization.id),
-//   with: {
-//     user: true,
-//   },
-// });
+const teams = await auth.api.listOrganizationTeams({
+  query: {
+    organizationId: organization.id, // The organization ID which the teams are under to list. Defaults to the user's active organization.
+  },
+  // This endpoint requires session cookies.
+  headers,
+});
 
 const { members, total } = await auth.api.listMembers({
   query: {
@@ -48,7 +51,7 @@ const { members, total } = await auth.api.listMembers({
     // filterValue: "accepted", // The value to filter by.
   },
   // This endpoint requires session cookies.
-  headers: Astro.request.headers,
+  headers,
 });
 
 // console.log(JSON.stringify(members, null, 2));
@@ -58,7 +61,7 @@ const invites = await auth.api.listInvitations({
     organizationId: organization.id, // An optional ID of the organization to list invitations for. If not provided, will default to the user's active organization.
   },
   // This endpoint requires session cookies.
-  headers: Astro.request.headers,
+  headers,
 });
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
@@ -109,6 +112,28 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
         }
       </div>
     </aside>
+    <div class="flex gap-m">
+      <CreateTeamForm
+        organizationId={organization.id}
+        organizationSlug={organization.slug}
+      >
+        <IconAdd slot="icon" />
+      </CreateTeamForm>
+      <div class="card">
+        <h2>Teams</h2>
+        {
+          teams.length > 0 ? (
+            <ul id="org-teams-list">
+              {teams.map((tm) => (
+                <li>{tm.name}</li>
+              ))}
+            </ul>
+          ) : (
+            <p class="callout no-data">no teams have been created</p>
+          )
+        }
+      </div>
+    </div>
   </section>
 
   <hr />

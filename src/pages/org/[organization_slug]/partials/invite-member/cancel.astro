@@ -1,0 +1,13 @@
+---
+// https://better-auth.com/docs/plugins/organization#cancel-invitation
+import { auth } from "@lib/auth";
+
+// TODO cancel invitation
+await auth.api.cancelInvitation({
+    body: {
+        invitationId: "invitation-id", // required, The ID of the invitation to cancel.
+    },
+    // This endpoint requires session cookies.
+    headers: Astro.request.headers,
+});
+---

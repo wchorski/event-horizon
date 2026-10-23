@@ -14,6 +14,7 @@
     "db:create": "tsx src/db/create-collection.ts",
     "db:push": "npx drizzle-kit push",
     "db:generate": "drizzle-kit generate",
+    "db:drop": "drizzle-kit drop",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts --seed",

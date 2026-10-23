@@ -15,8 +15,8 @@ type Base = Omit<HTMLAttributes<"form">, "method" | "id"> & {
 
 type Props = Base &
   (
-    | { endpoint: string; method?: HtmxMethod }          // pure htmx
-    | { endpoint?: undefined; method?: "get" | "post" }  // native + boost
+    | { endpoint: string; method?: HtmxMethod } // pure htmx
+    | { endpoint?: undefined; method?: "get" | "post" } // native + boost
   );
 
 const {
@@ -61,12 +61,23 @@ const modeAttrs = endpoint
 >
   <slot />
   <div id={msgId} class="toplevel-msg">
-    {state?.error && (
-      <p class="form-error error callout" role="alert">{state.error}</p>
-    )}
-    {state?.success && (
-      <p class="form-success success callout" role="status">{state.success}</p>
-    )}
+    {
+      state?.error && (
+        <p class="form-error error callout" role="alert">
+          {state.error}
+        </p>
+      )
+    }
+    {
+      state?.success && (
+        <p class="form-success success callout" role="status">
+          {state.success}
+        </p>
+      )
+    }
   </div>
-  <SubmitButton text={submitText} size="m"/>
+  <SubmitButton text={submitText} size="m">
+    <slot name="icon" slot="icon" />
+  </SubmitButton>
+  
 </form>

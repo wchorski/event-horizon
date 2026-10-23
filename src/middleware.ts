@@ -46,8 +46,9 @@ const ROUTE_MAP: Record<string, string> = {
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const headers = context.request.headers
   const session = await auth.api.getSession({
-    headers: context.request.headers,
+    headers,
   });
 
   context.locals.user = session?.user ?? null;
@@ -132,33 +133,49 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (organizationSlug && context.locals.user) {
-    const [row] = await db
-      .select({ organization: Organization, member: Member })
-      .from(Organization)
-      .leftJoin(
-        Member,
-        and(
-          eq(Member.organizationId, Organization.id),
-          eq(Member.userId, context.locals.user.id),
-        ),
-      )
-      .where(eq(Organization.slug, organizationSlug))
-      .limit(1);
+    // const [row] = await db
+    //   .select({ organization: Organization, member: Member })
+    //   .from(Organization)
+    //   .leftJoin(
+    //     Member,
+    //     and(
+    //       eq(Member.organizationId, Organization.id),
+    //       eq(Member.userId, context.locals.user.id),
+    //     ),
+    //   )
+    //   .where(eq(Organization.slug, organizationSlug))
+    //   .limit(1);
+  
+    const member = await auth.api.getActiveMember({
+      // This endpoint requires session cookies.
+      headers,
+    });
 
-    if (!row) {
+    const data = await auth.api.getOrganization({
+      query: {
+        // organizationId: "org-id", // The organization ID to get. By default, it will use the active organization.
+        organizationSlug, // The organization slug to get.
+      },
+      // This endpoint requires session cookies.
+      headers,
+    });
+    console.log("=====> auth.api.getOrganization");
+    console.log({data});
+
+    if (!data) {
       return context.redirect(
         `/org-not-found?msg=${encodeURIComponent("No organization found for: " + organizationSlug)}`,
       );
     }
 
-    if (!row.member) {
+    if (!member || !data.member) {
       return context.redirect(
         `/not-authorized?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
       );
     }
 
-    context.locals.organization = row.organization;
-    context.locals.member = row.member;
+    context.locals.organization = data.organization;
+    context.locals.member = data.member;
   }
 
   return next();

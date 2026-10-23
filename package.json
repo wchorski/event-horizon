@@ -19,7 +19,8 @@
     "db:seed": "tsx src/db/seed.ts --seed",
     "db:seed:fix": "tsx src/db/fix-seed-data.ts",
     "db:seed:truncate": "tsx src/db/seed.ts -- --seed --truncate",
-    "start": "node ./dist/server/entry.mjs"
+    "start": "node ./dist/server/entry.mjs",
+    "chat:sync": "oikb sync"
   },
   "dependencies": {
     "@astrojs/node": "11.1.7",
@@ -27,7 +28,7 @@
     "@better-auth/passkey": "^1.6.23",
     "@js-temporal/polyfill": "^0.5.1",
     "astro": "7.3.8",
-    "better-auth": "^1.6.23",
+    "better-auth": "^1.7.12",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.10.1",

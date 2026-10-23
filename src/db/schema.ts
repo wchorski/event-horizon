@@ -550,12 +550,12 @@ export const Passkey = pgTable(
     id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-    username: text(),
+    name: text("name"),
     publicKey: text().notNull(),
     userId: uuid()
       .notNull()
       .references(() => User.id, { onDelete: "cascade" }),
-    credentialId: text().notNull(),
+    credentialID: text().notNull(),
     counter: integer().notNull(),
     deviceType: text().notNull(),
     backedUp: boolean().notNull(),
@@ -569,7 +569,7 @@ export const Passkey = pgTable(
   },
   (table) => [
     index("passkey_userId_idx").on(table.userId),
-    index("passkey_credentialID_idx").on(table.credentialId),
+    index("passkey_credentialID_idx").on(table.credentialID),
   ],
 );
 

@@ -26,7 +26,7 @@ const roleOptions = MEMBER_ROLES.map((text) => ({
   method="post"
   endpoint={`/org/${organizationSlug}/partials/invite-member/${organizationId}`}
   submitText="Send Invite"
-  hx-on::after-request="if (event.detail.successful) this.reset()"
+  hx-on--after-request="if (event.detail.successful) this.reset()"
 >
   <h2>Invite a user to become a member</h2>
   <fieldset class="no-style">

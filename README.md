@@ -175,6 +175,9 @@ SET email_verified = true
 WHERE email = 'will@tawtaw.site';
 ```
 
+## HTMX Tips
+- https://htmx.org/attributes/hx-on/
+
 </details>
 
 <details>
@@ -208,6 +211,12 @@ With the app running you can manually seed the database. This seed skips over ma
 docker compose run --rm seed
 ```
 
+## create first user 
+Useful if you get lock the keys in the car.
+```sh
+pnpm dlx auth@latest create-admin --email admin@example.com --name "Admin" --role admin
+```
+
 </details>
 
 <details>
@@ -217,11 +226,15 @@ docker compose run --rm seed
 </details>
 
 #todo
-- [ ] CRITICAL: make password requirments 
-- [ ] after sign-up, auto login doesn't set browser headers or session correctly
-- [ ] password rest form doesn't throw error if user doesn't exist
-- [ ] make sure /timelines and /bookings are still reachable with middleware auth
-- [ ] how do i enable a master admin account, and not allow any random signups (that can just add themselves to any organization)
+- [ ] impliment better-auth's teams/departments plugin 
+- [ ] org member management but only by member.role === 'admin'
+- [ ] invitations: allow admin to cancel and users to reject invitations https://better-auth.com/docs/plugins/organization
+- [x] CRITICAL: make password requirments 
+- [ ] make little ℹ️ hover/buttons next to fields that need more explaining
+- [x] after sign-up, auto login doesn't set browser headers or session correctly
+- [x] password rest form doesn't throw error if user doesn't exist
+- [x] make sure /timelines and /bookings are still reachable with middleware auth
+- [x] how do i enable a master admin account, and not allow any random signups (that can just add themselves to any organization)
 
 ## outlook calendar integration
 #todo

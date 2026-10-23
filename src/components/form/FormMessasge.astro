@@ -1,0 +1,25 @@
+---
+// FormMessage.astro
+interface Props {
+  kind: "error" | "success";
+  message?: string;
+  status?: number;
+}
+const { kind, message, status } = Astro.props;
+const isError = kind === "error";
+const text =
+  message ?? (isError ? "Please fix the highlighted fields." : "Saved");
+---
+
+<div
+  class:list={["callout", kind, isError && "anim-vibrate"]}
+  role={isError ? "alert" : "status"}
+>
+  {
+    isError && status && status >= 500 && (
+      <span class="error-code">[{status}]</span>
+    )
+  }
+  <span>{text}</span>
+  <slot />
+</div>

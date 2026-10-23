@@ -212,3 +212,17 @@ details[open] {
     transform: translateY(0);
   }
 }
+
+.anim--fadein {
+  --speed: 1.5s;
+  animation: fade-in var(--speed) ease-in forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

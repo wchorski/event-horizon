@@ -6,12 +6,15 @@ import { db } from "@db/db";
 import { IntegrationCredential, Member } from "@db/schema";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
+import { auth } from "@lib/auth";
 import { eq } from "drizzle-orm";
+import IconPacket from "@icons/packet.svg";
 
-const { organization_slug } = Astro.params;
 const search = Astro.url.searchParams;
 const msg = search.get("msg");
 const { user, organization, member } = Astro.locals;
+// TODO check if the slug matches the current organization, if not then switch active org
+const { organization_slug } = Astro.params;
 
 const returnTo = Astro.url.pathname + Astro.url.search;
 
@@ -26,11 +29,36 @@ if (!member)
 
 // TODO search and return all invitations. mark as 'invited' instead of 'not verified'
 
-const members = await db.query.Member.findMany({
-  where: eq(Member.organizationId, organization.id),
-  with: {
-    user: true,
+// const members = await db.query.Member.findMany({
+//   where: eq(Member.organizationId, organization.id),
+//   with: {
+//     user: true,
+//   },
+// });
+
+const { members, total } = await auth.api.listMembers({
+  query: {
+    organizationId: organization.id, // An optional organization ID to list members for. If not provided, will default to the user's active organization.
+    limit: 100, // The limit of members to return.
+    offset: 0, // The offset to start from.
+    sortBy: "createdAt", // The field to sort by.
+    sortDirection: "desc", // The direction to sort by.
+    // filterField: "status", // The field to filter by.
+    // filterOperator: "not_in", // The operator to filter by.
+    // filterValue: "accepted", // The value to filter by.
   },
+  // This endpoint requires session cookies.
+  headers: Astro.request.headers,
+});
+
+// console.log(JSON.stringify(members, null, 2));
+
+const invites = await auth.api.listInvitations({
+  query: {
+    organizationId: organization.id, // An optional ID of the organization to list invitations for. If not provided, will default to the user's active organization.
+  },
+  // This endpoint requires session cookies.
+  headers: Astro.request.headers,
 });
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
@@ -47,32 +75,7 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
       href=`/org/${organization.slug}/documents`
       style="font-size: 2rem;"
     >
-      <svg
-        width="3rem"
-        height="3rem"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M18 6.00002V6.75002H18.75V6.00002H18ZM15.7172 2.32614L15.6111 1.58368L15.7172 2.32614ZM4.91959 3.86865L4.81353 3.12619H4.81353L4.91959 3.86865ZM5.07107 6.75002H18V5.25002H5.07107V6.75002ZM18.75 6.00002V4.30604H17.25V6.00002H18.75ZM15.6111 1.58368L4.81353 3.12619L5.02566 4.61111L15.8232 3.0686L15.6111 1.58368ZM4.81353 3.12619C3.91638 3.25435 3.25 4.0227 3.25 4.92895H4.75C4.75 4.76917 4.86749 4.63371 5.02566 4.61111L4.81353 3.12619ZM18.75 4.30604C18.75 2.63253 17.2678 1.34701 15.6111 1.58368L15.8232 3.0686C16.5763 2.96103 17.25 3.54535 17.25 4.30604H18.75ZM5.07107 5.25002C4.89375 5.25002 4.75 5.10627 4.75 4.92895H3.25C3.25 5.9347 4.06532 6.75002 5.07107 6.75002V5.25002Z"
-          fill="currentColor"></path>
-        <path
-          d="M8 12H16"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"></path>
-        <path
-          d="M8 15.5H13.5"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"></path>
-        <path
-          d="M4 6V19C4 20.6569 5.34315 22 7 22H17C18.6569 22 20 20.6569 20 19V14M4 6V5M4 6H17C18.6569 6 20 7.34315 20 9V10"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"></path>
-      </svg>
+      <IconPacket />
       Documents & Packet Builder
     </a>
   </p>
@@ -84,11 +87,27 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
       <h2>Members</h2>
       <MemberManagementTable members={members} />
     </div>
-    <aside style="max-width: 20rem;">
+    <aside class="flex gap-m">
       <InviteMemberForm
         organizationId={organization.id}
         organizationSlug={organization.slug}
       />
+      <div class="card">
+        <h2>Invites Sent</h2>
+        {
+          invites.length > 0 ? (
+            <ul id="org-invitations-list">
+              {invites.map((inv) => (
+                <li>
+                  {inv.email}, {inv.role},{inv.status}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="callout no-data">no invitations in circulation</p>
+          )
+        }
+      </div>
     </aside>
   </section>
 

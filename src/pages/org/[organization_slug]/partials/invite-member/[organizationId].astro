@@ -1,77 +1,56 @@
 ---
 // pages/org/partials/invite-member/:organizationId
-type MemberInvitation = {
-  email: string;
-  organizationId: string;
-  role: MemberRoles;
-};
-import { auth } from "@lib/auth";
-import { BadRequestError } from "@lib/errors";
+import FieldErrors from "@components/form/FieldErrors.astro";
+import FormMessage from '@components/form/FormMessasge.astro'
+import { inviteMember } from "@lib/crud/inviteMember";
+import { useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
 import type { MemberRoles } from "@ty/Schema";
 
 if (Astro.request.method !== "POST")
-  return new Response("only POST method is allowed", { status: 405 });
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
+
+const { user } = Astro.locals;
+if (!user) return new Response(null, { status: 401 });
 
 const { organizationId } = Astro.params;
+if (!organizationId) return new Response("Bad request", { status: 400 });
 
-if (!organizationId) throw new BadRequestError("organizationId not set in url");
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
 
-let error = null;
-let success = null;
+const formData = await Astro.request.formData();
+const outcome = await useForm(formData, {
+  schema: validate.invitation,
+  labels: { email: "email", role: "role" },
+  successMessage: "Invitation sent",
+  run: (input) =>
+    inviteMember({ ...input, organizationId }, Astro.request.headers),
+});
 
-try {
-  const formData = await Astro.request.formData();
-  const payload = Object.fromEntries(formData.entries()) as MemberInvitation;
-  const { email, role } = payload;
-
-  // TODO validate with zod
-  if (!email || !role)
-    throw new BadRequestError("[email, role, organizationId] not in formData");
-
-  // TODO make sure invite-member still works with added permissions
-  const permission = await auth.api.hasPermission({
-    headers: Astro.request.headers,
-    body: {
-      organizationId,
-      permissions: {
-        invitation: ["create"],
-      },
-    },
-  });
-
-  if (!permission.success) {
-    throw new Response("Forbidden", {
-      status: 403,
-    });
-  }
-
-  const data = await auth.api.createInvitation({
-    body: {
-      email, // required, The email address of the user to invite.
-      role, // required, The role(s) to assign to the user. It can be `admin`, `member`, `owner`
-      organizationId, // The organization ID to invite the user to. Defaults to the active organization.
-      resend: true, // Resend the invitation email, if the user is already invited.
-      //   teamId: "team-id", // The team ID to invite the user to.
-    },
-    // This endpoint requires session cookies.
-    headers: Astro.request.headers,
-  });
-
-  if (!data) throw new Error("uh oh. no good. contact site developer");
-
-  success = data;
-} catch (err) {
-  console.log({ err });
-  error = String(err);
-}
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
 ---
 
 {
-  error ? (
-    <p class="callout error">an error happened {error}</p>
+  outcome.ok ? (
+    <>
+      <FormMessage kind="success" message={outcome.state.success}>
+        to <strong>{outcome.data.email}</strong>
+      </FormMessage>
+      <ul hx-swap-oob="beforeend:#org-invitations-list">
+        <li class="anim--fadein">
+          {outcome.data.email} <small>({outcome.data.role}, pending)</small>
+        </li>
+      </ul>
+    </>
   ) : (
-    <p class="callout success">
-      Invitation Sent to <pre>{success?.email}</pre>
-    </p>
+    <FormMessage kind="error" message={outcome.state.error} status={outcome.state.status} />
   )
 }
+<FieldErrors
+  {formId}
+  names={Object.keys(validate.invitation.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

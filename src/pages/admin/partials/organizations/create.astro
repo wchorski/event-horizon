@@ -1,7 +1,7 @@
 ---
 // pages/admin/partials/organizations/create
 import FieldErrors from "@components/form/FieldErrors.astro";
-import TopLevelError from "@components/form/TopLevelError.astro";
+import FormMessage from '@components/form/FormMessasge.astro'
 import { createOrganization } from "@lib/crud/createOrganization";
 import { useForm } from "@lib/useForm";
 import { validate } from "@lib/validate";
@@ -24,14 +24,13 @@ const method = Astro.request.method;
 if (method !== "POST")
   return new Response(null, { status: 405, headers: { Allow: "POST" } });
 
-
 const formId = Astro.request.headers.get("HX-Trigger");
 // avoids junk from client
 if (!formId || !/^[\w-]+$/.test(formId))
   return new Response("Bad request", { status: 400 });
 
 const formData = await Astro.request.formData();
-const validKeys = Object.keys(validate.organizationCreate.shape)
+const validKeys = Object.keys(validate.organizationCreate.shape);
 const outcome = await useForm(formData, {
   schema: validate.organizationCreate,
   labels: { name: "name", slug: "slug", logo: "logo URL" },
@@ -40,16 +39,20 @@ const outcome = await useForm(formData, {
 });
 
 if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
-const org = outcome.ok ? outcome.data : null;
+// const org = outcome.ok ? outcome.data : null;
 ---
 
 {
-  org ? (
-    <p class="callout success" role="status">
-      Organization created: <a href={`/org/${org.slug}`}>{org.name}</a>
-    </p>
+  outcome.ok ? (
+    <FormMessage kind="success" message={outcome.state.success}>
+      <a href={`/org/${outcome.data.slug}`}>{outcome.data.name}</a>
+    </FormMessage>
   ) : (
-    <TopLevelError error={outcome.state.error} status={outcome.state.status}/>
+    <FormMessage
+      kind="error"
+      message={outcome.state.error}
+      status={outcome.state.status}
+    />
   )
 }
 <FieldErrors

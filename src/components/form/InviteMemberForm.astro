@@ -1,4 +1,5 @@
 ---
+// components/form/InviteMemberform
 interface Props {
   id?:string
   organizationSlug: string;
@@ -7,7 +8,6 @@ interface Props {
 import { MEMBER_ROLES } from "@db/schema";
 import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
-import SubmitButton from "@components/form/SubmitButton.astro";
 import FormCard from "./FormCard.astro";
 
 const { id = 'form--member-invite', organizationSlug, organizationId } = Astro.props;
@@ -23,8 +23,10 @@ const roleOptions = MEMBER_ROLES.map((text) => ({
 <FormCard
   {id}
   class="card"
-  hx-post={`/org/${organizationSlug}/partials/invite-member/${organizationId}`}
-  submitText="Send Invite""
+  method="post"
+  endpoint={`/org/${organizationSlug}/partials/invite-member/${organizationId}`}
+  submitText="Send Invite"
+  hx-on::after-request="if (event.detail.successful) this.reset()"
 >
   <h2>Invite a user to become a member</h2>
   <fieldset class="no-style">
@@ -34,7 +36,7 @@ const roleOptions = MEMBER_ROLES.map((text) => ({
       errorId={id + "-role"}
       options={roleOptions}
     />
-    <InputField formId={id} name="email" type={"email"} autocomplete="off" />
+    <InputField formId={id} name="email" type={"email"} autocomplete="off" required/>
   </fieldset>
   
 </FormCard>

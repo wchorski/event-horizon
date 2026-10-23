@@ -9,13 +9,6 @@ import { ForbiddenError } from "@lib/errors";
 
 const { id = "form--org-create-" } = Astro.props;
 
-const { user } = Astro.locals;
-if (!user) return new Response(null, { status: 401 });
-if (user.role !== "admin")
-  throw new ForbiddenError(
-    "use better-auth api for user creation and management",
-  );
-
 // TODO also make submitting user a member of this org
 const isAdmin = Astro.locals.user?.role === "admin";
 ---

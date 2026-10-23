@@ -1,6 +1,10 @@
 import { z } from "astro/zod";
 import { normalizePhoneToE164Manual, slugify } from "./formatters";
-import { BOOKING_STATUSES, INTEGRATION_PROVIDERS } from "@db/schema";
+import {
+  BOOKING_STATUSES,
+  INTEGRATION_PROVIDERS,
+  MEMBER_ROLES,
+} from "@db/schema";
 import { encryptSecret } from "./auth/secretBox";
 
 const datetimeLocalToDate = z
@@ -345,6 +349,10 @@ export const validate = {
     });
   },
 
+  invitation: z.object({
+    email: z.email("enter a valid email address"),
+    role: z.enum(MEMBER_ROLES),
+  }),
   organization: z.object({
     id: z.uuidv7(),
     name: z.string().min(3).max(50),

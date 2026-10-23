@@ -45,8 +45,15 @@ declare global {
     interface Locals {
       user: typeof auth.$Infer.Session.user | null;
       session: typeof auth.$Infer.Session.session | null;
-      organization: OrganizationSelect | null;
-      member: MemberSelect | null;
+      organization: NonNullable<
+        Awaited<ReturnType<typeof auth.api.getOrganization>>
+      > | null;
+      member: NonNullable<
+        Awaited<ReturnType<typeof auth.api.listMembers>>["members"][number]
+      > | null;
+      // member: NonNullable<
+      //   Awaited<ReturnType<typeof auth.api.getActiveMember>>
+      // > | null;
     }
   }
 }

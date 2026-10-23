@@ -9,6 +9,7 @@ import {
 } from "astro:env/client";
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
+import { APIError } from "better-auth/api";
 
 const isDev = import.meta.env.DEV;
 
@@ -46,7 +47,7 @@ const ROUTE_MAP: Record<string, string> = {
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const headers = context.request.headers
+  const headers = context.request.headers;
   const session = await auth.api.getSession({
     headers,
   });
@@ -107,8 +108,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  const organizationSlug = pathname.startsWith("/org/") ? pathParts[1] : null;
-
   // route path is always public
   const isPublic =
     pathname === "/" ||
@@ -132,51 +131,104 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  const organizationSlug = pathname.startsWith("/org/") ? pathParts[1] : null;
+
+  //? this is for multi tab org managment (useful now, but may want to revert to commented code below)
   if (organizationSlug && context.locals.user) {
-    // const [row] = await db
-    //   .select({ organization: Organization, member: Member })
-    //   .from(Organization)
-    //   .leftJoin(
-    //     Member,
-    //     and(
-    //       eq(Member.organizationId, Organization.id),
-    //       eq(Member.userId, context.locals.user.id),
-    //     ),
-    //   )
-    //   .where(eq(Organization.slug, organizationSlug))
-    //   .limit(1);
-  
-    const member = await auth.api.getActiveMember({
-      // This endpoint requires session cookies.
-      headers,
-    });
+    let organization;
+    let member;
 
-    const data = await auth.api.getOrganization({
-      query: {
-        // organizationId: "org-id", // The organization ID to get. By default, it will use the active organization.
-        organizationSlug, // The organization slug to get.
-      },
-      // This endpoint requires session cookies.
-      headers,
-    });
-    console.log("=====> auth.api.getOrganization");
-    console.log({data});
+    try {
+      organization = await auth.api.getOrganization({
+        query: { organizationSlug },
+        headers,
+      });
 
-    if (!data) {
+      if (organization) {
+        const result = await auth.api.listMembers({
+          query: {
+            organizationId: organization.id,
+            filterField: "userId",
+            filterOperator: "eq",
+            filterValue: context.locals.user.id,
+            limit: 1,
+          },
+          headers,
+        });
+        member = result?.members?.[0] ?? null;
+      }
+    } catch (err) {
+      // treat API errors (not found / not permitted) like missing data
+      // Expected "no access / no such org" responses fall through to the
+      // redirects below. Anything else (DB down, bad config, bug) is a real
+      // failure and should surface as a 500, not look like a missing org.
+      const isExpected =
+        err instanceof APIError && [400, 403, 404].includes(err.statusCode);
+      if (!isExpected) throw err;
+    }
+
+    if (!organization) {
       return context.redirect(
         `/org-not-found?msg=${encodeURIComponent("No organization found for: " + organizationSlug)}`,
       );
     }
 
-    if (!member || !data.member) {
+    if (!member) {
       return context.redirect(
         `/not-authorized?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
       );
     }
 
-    context.locals.organization = data.organization;
-    context.locals.member = data.member;
+    context.locals.organization = organization;
+    context.locals.member = member;
   }
+  //? use this only if doing a dynamic active `/org/DYNAMIC` page where only one org can be active at a time
+  // if (organizationSlug && context.locals.user) {
+
+  //   const orgActivated = await auth.api.setActiveOrganization({
+  //     body: {
+  //       // organizationId: "org-id", // The organization ID to set as active. It can be null to unset the active organization.
+  //       organizationSlug, // The organization slug to set as active. It can be null to unset the active organization if organizationId is not provided.
+  //     },
+  //     // This endpoint requires session cookies.
+  //     headers,
+  //   });
+
+  //   console.log({orgActivated});
+
+  //   const member = await auth.api.getActiveMember({
+  //     // This endpoint requires session cookies.
+  //     headers,
+  //   });
+
+  //   console.log({member});
+
+  //   const org = await auth.api.getOrganization({
+  //     query: {
+  //       // organizationId: "org-id", // The organization ID to get. By default, it will use the active organization.
+  //       organizationSlug, // The organization slug to get.
+  //     },
+  //     // This endpoint requires session cookies.
+  //     headers,
+  //   });
+  //   console.log("=====> auth.api.getOrganization");
+  //   console.log({ org });
+
+  //   if (!org) {
+  //     return context.redirect(
+  //       `/org-not-found?msg=${encodeURIComponent("No organization found for: " + organizationSlug)}`,
+  //     );
+  //   }
+
+  //   if (!member || member.organizationId !== org.id) {
+  //     return context.redirect(
+  //       `/not-authorized?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
+  //     );
+  //   }
+
+  //   context.locals.organization = org;
+  //   context.locals.member = member;
+  // }
 
   return next();
 });

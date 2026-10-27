@@ -9,7 +9,7 @@ import type {
 import { fieldId, fieldErrorId } from "@lib/fieldIds";
 import InputField from "./InputField.astro";
 import FieldErrors from "./FieldErrors.astro";
-
+// TODO, find use for FieldError component, prune unused dead code, rethink InputField Component
 interface Props extends Omit<
   HTMLAttributes<"input">,
   "type" | "value" | "checked" | "name" | "id"
@@ -44,7 +44,6 @@ const {
 //   throw new Error("CheckboxMulti can only be type 'checkboxMulti'");
 
 // value={type === "checkbox" ? undefined : (value ?? undefined)}
-console.log({boxes});
 ---
 
 {

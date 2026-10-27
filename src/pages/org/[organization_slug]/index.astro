@@ -3,10 +3,10 @@ import IntegrationCredForm from "@components/form/IntegrationCredForm.astro";
 import InviteMemberForm from "@components/form/InviteMemberForm.astro";
 import MemberManagementTable from "@components/tables/MemberManagementTable.astro";
 import { db } from "@db/db";
-import { IntegrationCredential, Member, MEMBER_ROLES } from "@db/schema";
+import { IntegrationCredential, Member, MEMBER_ROLES, User } from "@db/schema";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 import { auth } from "@lib/auth";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import IconPacket from "@icons/packet.svg";
 import IconAdd from "@icons/add.svg";
 import IconEnvelope from "@icons/envelope.svg";
@@ -86,6 +86,18 @@ const rows =
       })
     : [];
 
+// TODO another query auth to worry about
+const usersVerified = await db.query.User.findMany({
+  where: inArray(
+    User.id,
+    rows.flatMap((row) => row.userId),
+  ),
+  columns: {
+    id: true,
+    emailVerified: true,
+  },
+});
+
 // group by user
 const teamsByUserId = new Map<string, { id: string; name: string }[]>();
 for (const r of rows) {
@@ -98,8 +110,15 @@ for (const r of rows) {
 
 const memberTableRows = members.map((m) => ({
   ...m,
+  user: {
+    ...m.user,
+    emailVerified: usersVerified.find((usr) => usr.id === m.user.id)
+      ?.emailVerified ?? false,
+  },
   teams: teamsByUserId.get(m.userId) ?? [],
 }));
+
+console.log(JSON.stringify({memberTableRows},null,2));
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
 const orgIntegrations = await db.query.IntegrationCredential.findMany({

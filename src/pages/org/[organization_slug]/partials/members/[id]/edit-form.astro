@@ -67,9 +67,9 @@ const orgTeamCheckboxes = teams.map((team) => ({
 <EditMemberForm
   {member}
   organizationId={organization.id}
-  hx-swap="outerHTML"
   hx-target={`#edit-member-wrap`}
   {organizationSlug}
   {orgTeamCheckboxes}
   {memberRoleOpts}
+  data-william={`#edit-member-wrap`}
 />

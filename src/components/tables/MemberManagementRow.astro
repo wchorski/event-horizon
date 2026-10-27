@@ -13,12 +13,15 @@ interface Props extends HTMLAttributes<"tr"> {
 //   user: UserSelect;
 //   teams: { id: string; name: string }[];
 // };
-export type TMemberManagementRow = Awaited<ReturnType<typeof auth.api.listMembers>>["members"][number] & {
+export type TMemberManagementRow = Awaited<
+  ReturnType<typeof auth.api.listMembers>
+>["members"][number] & {
   teams: { id: string; name: string }[];
+  user: { emailVerified: boolean };
 };
 const { row, orgSlug, class: className, ...attrs } = Astro.props;
 const { id, role, user, teams, organizationId } = row;
-const rowId = `member-row--${id}`
+const rowId = `member-row--${id}`;
 ---
 
 <tr id={rowId} class:list={[className]} {...attrs}>

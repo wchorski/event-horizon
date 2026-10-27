@@ -18,12 +18,7 @@ import InputField from "@components/form/InputField.astro";
 import Footer from "@components/navigation/Footer.astro";
 
 type State =
-  | "ready"
-  | "wrong_user"
-  | "accepted"
-  | "rejected"
-  | "canceled"
-  | "expired";
+  "ready" | "wrong_user" | "accepted" | "rejected" | "canceled" | "expired";
 type View = "signup" | "login" | "verify" | "accept";
 
 /* ---------- 1. Load ---------- */
@@ -114,7 +109,8 @@ if (Astro.request.method === "POST" && state === "ready") {
         labels: { first_name: "first name", last_name: "last name" },
         run: (input) => signup({ ...input, email: inviteEmail }),
       });
-      if (out.ok) return authRedirect(Astro.request, toVerify, out.data.setCookies);
+      if (out.ok)
+        return authRedirect(Astro.request, toVerify, out.data.setCookies);
       formState = out.state;
       break;
     }
@@ -160,13 +156,17 @@ if (Astro.request.method === "POST" && state === "ready") {
             });
           } catch (e) {
             if (e instanceof APIError) {
-              throw new FormError(e.body?.message ?? e.message, e.statusCode ?? 400);
+              throw new FormError(
+                e.body?.message ?? e.message,
+                e.statusCode ?? 400,
+              );
             }
             throw e; // runForm logs it and returns a generic 500
           }
         },
       });
-      if (out.ok) return authRedirect(Astro.request, `/org/${organization.slug}`, []);
+      if (out.ok)
+        return authRedirect(Astro.request, `/org/${organization.slug}`, []);
       formState = out.state;
       break;
     }
@@ -177,7 +177,10 @@ if (Astro.request.method === "POST" && state === "ready") {
 
 /* ---------- 5. Copy for blocked states ---------- */
 
-const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> = {
+const blocked: Record<
+  Exclude<State, "ready">,
+  { title: string; body: string }
+> = {
   wrong_user: {
     title: "Wrong account",
     body: `You're signed in as ${user?.email ?? "another account"}, but this invitation was sent to ${invite.email}. Sign out and continue with the invited email address.`,
@@ -237,7 +240,9 @@ const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> 
               method="post"
               action={`/sign-out?returnTo=${encodeURIComponent(here)}`}
             >
-              <button type="submit" class="button">Sign Out</button>
+              <button type="submit" class="button">
+                Sign Out
+              </button>
             </form>
           )}
 
@@ -249,39 +254,55 @@ const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> 
         </div>
       ) : (
         <section class="card" aria-labelledby="onboarding-title">
-          <p>Invitation for <strong>{invite.email}</strong></p>
+          <p>
+            Invitation for <strong>{invite.email}</strong>
+          </p>
 
           {view === "signup" && (
-            <FormCard id="invite-signup-form" submitText="Create account" state={formState}>
+            <FormCard
+              id="invite-signup-form"
+              submitText="Create account"
+              state={formState}
+            >
               <h2 id="onboarding-title">Create your account</h2>
               <input type="hidden" name="_intent" value="signup" />
               <InputField
-              formId={formId}
-                name="first_name" type="text"
+                formId={formId}
+                name="first_name"
+                type="text"
                 value={formState.values.first_name}
                 error={formState.fieldErrors.first_name}
               />
               <InputField
-              formId={formId}
-                name="last_name" type="text"
+                formId={formId}
+                name="last_name"
+                type="text"
                 value={formState.values.last_name}
                 error={formState.fieldErrors.last_name}
               />
               <InputField
-              formId={formId}
-                name="password" type="password" required
+                formId={formId}
+                name="password"
+                type="password"
+                required
                 error={formState.fieldErrors.password}
               />
             </FormCard>
           )}
 
           {view === "login" && (
-            <FormCard id="invite-login-form" submitText="Sign in" state={formState}>
+            <FormCard
+              id="invite-login-form"
+              submitText="Sign in"
+              state={formState}
+            >
               <h2 id="onboarding-title">Sign in to accept</h2>
               <input type="hidden" name="_intent" value="login" />
               <InputField
-              formId={formId}
-                name="password" type="password" required
+                formId={formId}
+                name="password"
+                type="password"
+                required
                 error={formState.fieldErrors.password}
               />
             </FormCard>
@@ -295,14 +316,22 @@ const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> 
                 redirectTo={here}
                 type="email-verification"
               />
-              <FormCard id="invite-resend-form" submitText="Resend code" state={formState}>
+              <FormCard
+                id="invite-resend-form"
+                submitText="Resend code"
+                state={formState}
+              >
                 <input type="hidden" name="_intent" value="resend" />
               </FormCard>
             </>
           )}
 
           {view === "accept" && (
-            <FormCard id="invite-accept-form" submitText="Join Organization" state={formState}>
+            <FormCard
+              id="invite-accept-form"
+              submitText="Join Organization"
+              state={formState}
+            >
               <h2 id="onboarding-title">Accept your invitation</h2>
               <input type="hidden" name="_intent" value="accept" />
             </FormCard>

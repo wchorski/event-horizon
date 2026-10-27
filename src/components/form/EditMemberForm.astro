@@ -26,8 +26,6 @@ const {
   ...props
 } = Astro.props;
 
-console.log({orgTeamCheckboxes});
-
 // TODO on success completely remove form
 ---
 
@@ -48,23 +46,7 @@ console.log({orgTeamCheckboxes});
     orgTeamCheckboxes.length > 0 ? (
       <fieldset>
         <legend>Teams</legend>
-        <CheckboxMulti
-            formId={id}
-            boxes={orgTeamCheckboxes}
-            name={"teamIds"}
-            
-          />
-        {/* {orgTeamCheckboxes.map((teamBox) => (
-          <CheckboxMulti
-            formId={id}
-            
-            idSuffix={teamBox.value}
-            name={"teamIds"}
-            label={teamBox.label}
-            checked={teamBox.checked}
-            value={teamBox.value}
-          />
-        ))} */}
+        <CheckboxMulti formId={id} boxes={orgTeamCheckboxes} name={"teamIds"} />
       </fieldset>
     ) : null
   }

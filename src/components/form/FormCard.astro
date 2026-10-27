@@ -26,7 +26,7 @@ const {
   endpoint,
   method = "post",
   class: className,
-  ...attrs
+  ...props
 } = Astro.props;
 
 const msgId = toplevelMsgId(id);
@@ -49,6 +49,9 @@ const modeAttrs = endpoint
       "hx-swap": "outerHTML",
       "hx-push-url": "false",
     };
+
+console.log({modeAttrs});
+console.log({props});
 ---
 
 <form
@@ -57,7 +60,7 @@ const modeAttrs = endpoint
   hx-ext="response-targets"
   hx-disabled-elt="find button[type=submit]"
   {...modeAttrs}
-  {...attrs}
+  {...props}
 >
   <slot />
   <div id={msgId} class="toplevel-msg">

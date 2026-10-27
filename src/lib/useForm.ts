@@ -1,7 +1,20 @@
-// lib/form-action.ts
+// lib/useForm.ts
 import { z, type ZodType } from "astro/zod";
-import { fail, succeed, type FormState } from "@lib/form-state";
 import { APIError } from "better-auth/api";
+import { fail, succeed, type FormState, type FormValues } from "@lib/form-state";
+
+export type RawInput = Record<string, FormDataEntryValue | FormDataEntryValue[]>;
+// What `run` receives: the parsed Zod output, or the raw object if no schema.
+type Input<S extends ZodType | undefined> = S extends ZodType ? z.output<S> : RawInput;
+
+type Opts<S extends ZodType | undefined, T> = {
+  schema?: S;
+  labels?: Record<string, string>;
+  sensitive?: string[];
+  successMessage?: string | ((data: T) => string);
+  constraints?: ConstraintMap;
+  run: (input: Input<S>) => Promise<T>;
+};
 
 import { findDrizzlePgError, columnFromDetail } from "@lib/errors";
 
@@ -23,17 +36,6 @@ export class FormError extends Error {
 export type ActionResult<T> =
   | { ok: true; data: T; state: FormState }
   | { ok: false; state: FormState };
-
-type Opts<S extends ZodType | undefined, T> = {
-  schema?: S;
-  labels?: Record<string, string>;
-  sensitive?: string[]; // never echoed back into values
-  successMessage?: string | ((data: T) => string);
-  constraints?: ConstraintMap;
-  run: (
-    input: S extends ZodType ? z.output<S> : Record<string, string>,
-  ) => Promise<T>;
-};
 
 function zodFailure(e: z.ZodError) {
   const fieldErrors: Record<string, string> = {};
@@ -103,7 +105,7 @@ function toFailure(e: unknown, constraints?: ConstraintMap) {
 
   // better-auth api
   if (e instanceof APIError) {
-    const status = Number(e.status) || 500;
+    const status = e.statusCode ?? 500;
     console.log("❌ better-auth error");
     console.error(e); // keep full detail server-side
     return status >= 500
@@ -119,22 +121,61 @@ export async function useForm<S extends ZodType | undefined, T>(
   formData: FormData,
   o: Opts<S, T>,
 ): Promise<ActionResult<T>> {
-  const entries = Object.fromEntries(
-    [...formData.entries()].filter(([k]) => !k.startsWith("_")),
-  ) as Record<string, string>;
-  const values = Object.fromEntries(
-    Object.entries(entries).filter(([k]) => !o.sensitive?.includes(k)),
-  );
+  const raw = formDataToObject(formData);
+  const values = echoValues(raw, o.sensitive);
 
   try {
-    const input = o.schema ? o.schema.parse(entries) : entries;
-    const data = await o.run(input as any);
+    const input = (o.schema ? o.schema.parse(raw) : raw) as Input<S>;
+    const data = await o.run(input);
     const msg =
       typeof o.successMessage === "function"
         ? o.successMessage(data)
         : (o.successMessage ?? "");
     return { ok: true, data, state: succeed(msg) };
   } catch (e) {
-    return { ok: false, state: fail({ ...toFailure(e, o.constraints), values, labels: o.labels }) };
+    console.log({ e });
+    return {
+      ok: false,
+      state: fail({ ...toFailure(e, o.constraints), values, labels: o.labels }),
+    };
   }
 }
+
+function formDataToObject(fd: FormData): RawInput {
+  const out: RawInput = {};
+  for (const key of new Set(fd.keys())) {
+    if (key.startsWith("_")) continue;
+    const all = fd.getAll(key);
+    out[key] = all.length > 1 ? all : all[0]; // repeated key → array
+  }
+  return out;
+}
+
+// echo-back values: strings only (never Files), arrays allowed, minus sensitive
+function echoValues(raw: RawInput, sensitive: string[] = []): FormValues {
+  const out: FormValues = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (sensitive.includes(k)) continue;
+    if (Array.isArray(v)) out[k] = v.filter((x): x is string => typeof x === "string");
+    else if (typeof v === "string") out[k] = v;
+  }
+  return out;
+}
+
+
+//? coresion handled by zod
+/** Single yes/no checkbox: absent (unchecked) → false, present → true */
+// export const checkboxBool = z.preprocess((v) => {
+//   const last = Array.isArray(v) ? v[v.length - 1] : v;
+//   return last === "on" || last === "true" || last === "1";
+// }, z.boolean());
+
+//? already natively handled by checkboxes that share the same name
+/** Radio group / select: one string, absent when nothing chosen */
+// export const checkboxRadio = <const T extends readonly [string, ...string[]]>(
+//   options: T,
+//   message = "Please choose an option",
+// ) =>
+//   z.enum(options, {
+//     error: (iss) => (iss.input === undefined ? message : undefined),
+//   });

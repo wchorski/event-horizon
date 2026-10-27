@@ -27,6 +27,7 @@ export async function inviteMember(
     return await auth.api.createInvitation({
       headers, // session cookies
       body: { ...input, role: input.role as any, resend: true },
+      // TODO add to a team from here?
     });
   } catch (e) {
     if (e instanceof APIError) {

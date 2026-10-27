@@ -48,13 +48,17 @@ export type TimelineInsert = typeof Timeline.$inferSelect;
 export type TimelineSelect = typeof Timeline.$inferSelect;
 export type OrganizationInsert = typeof Organization.$inferSelect;
 export type OrganizationSelect = typeof Organization.$inferSelect;
-export type IntegrationCredentialInsert = typeof IntegrationCredential.$inferSelect;
-export type IntegrationCredentialSelect = typeof IntegrationCredential.$inferSelect;
+export type IntegrationCredentialInsert =
+  typeof IntegrationCredential.$inferSelect;
+export type IntegrationCredentialSelect =
+  typeof IntegrationCredential.$inferSelect;
 export type DepartmentInsert = typeof Department.$inferSelect;
 export type DepartmentSelect = typeof Department.$inferSelect;
 export type MeetingPacketInsert = typeof MeetingPacket.$inferSelect;
-export type MeetingPacketDirectorySelect = typeof MeetingPacketDirectory.$inferSelect;
-export type MeetingPacketDirectoryInsert = typeof MeetingPacketDirectory.$inferSelect;
+export type MeetingPacketDirectorySelect =
+  typeof MeetingPacketDirectory.$inferSelect;
+export type MeetingPacketDirectoryInsert =
+  typeof MeetingPacketDirectory.$inferSelect;
 export type MeetingPacketSelect = typeof MeetingPacket.$inferSelect;
 export type MemberInsert = typeof Member.$inferInsert;
 export type MemberSelect = typeof Member.$inferSelect;
@@ -66,10 +70,7 @@ export type UserCreditSelect = {
 };
 export type AnyEntitySelect =
   // | RoleSelect
-  | TicketSelect
-  | UserSelect
-  | EventSelect
-  | LocationSelect;
+  TicketSelect | UserSelect | EventSelect | LocationSelect;
 
 export const schemaEntityMap = {
   roles: true,
@@ -103,7 +104,7 @@ export type UserCreditFlat = {
 
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
 export type AssignmentRoles = (typeof assignmentsRoleEnum.enumValues)[number];
-export type MemberRoles = (typeof memberRoleEnum.enumValues)[number]
+export type MemberRoles = (typeof memberRoleEnum.enumValues)[number];
 
 export type MomentStep = {
   id: number;
@@ -117,7 +118,7 @@ export type MomentStep = {
 
 export type Timeline = {
   id: string;
-  booking_uuid: string | null,
+  booking_uuid: string | null;
   summary: string | null;
   date: Date;
   date_civil: string;
@@ -224,7 +225,10 @@ export type InsertableSkill = Omit<TimelineSkill, "id"> & {
   source_id: number;
 };
 
-export type InsertableMoment = Omit<TimelineMoment, "id" | "group_id" | "skill_id"> & {
+export type InsertableMoment = Omit<
+  TimelineMoment,
+  "id" | "group_id" | "skill_id"
+> & {
   source_id: number;
   source_group_id: number;
   source_skill_id: number;
@@ -266,3 +270,18 @@ export type GoogleCalendarData = {
   synced_at?: string;
   // ...whatever fields you actually store
 } | null;
+
+export type ListMember = {
+  id: string;
+  organizationId: string;
+  role: "owner" | "admin" | "member";
+  createdAt: Date;
+  userId: string;
+  teamId?: string | undefined | undefined;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    image?: string | undefined;
+  };
+};

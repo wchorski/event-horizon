@@ -181,7 +181,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     context.locals.organization = organization;
     context.locals.member = member;
+
+    // TODO is this right to trigger here?
+    const activeOrgId = context.locals.session?.activeOrganizationId; // wherever you keep the session
+    if (activeOrgId !== organization.id) {
+      await auth.api.setActiveOrganization({
+        body: { organizationId: organization.id },
+        headers,
+        // TODO do i need this here?
+        // returnHeaders: true,
+      });
+    }
   }
+
   //? use this only if doing a dynamic active `/org/DYNAMIC` page where only one org can be active at a time
   // if (organizationSlug && context.locals.user) {
 

@@ -1,0 +1,181 @@
+---
+import FieldErrors from "@components/form/FieldErrors.astro";
+import { auth } from "@lib/auth";
+import { FormError, useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
+import FormMessage from "@components/form/FormMessasge.astro";
+import { getMemberJoinedTeams } from "@lib/crud/getMemberTeams";
+import MemberManagementRow from "@components/tables/MemberManagementRow.astro";
+import { organization } from "better-auth/plugins";
+
+const method = Astro.request.method;
+const headers = Astro.request.headers;
+const { member: sessionMember, organization: sessionOrg } = Astro.locals;
+
+const { id: memberId, organizationId } = Astro.params;
+if (method !== "PATCH")
+  return new Response(null, { status: 405, headers: { Allow: "PATCH" } });
+
+//! debug
+const session = await auth.api.getSession({ headers });
+
+if (!memberId)
+  return new Response("member.id missing from url.param", { status: 401 });
+if (!organizationId)
+  return new Response("org.id id missing from url.param", { status: 401 });
+
+if (
+  !sessionMember ||
+  sessionMember.organizationId !== organizationId ||
+  !["admin", "owner"].includes(sessionMember.role)
+)
+  return new Response(
+    "author must be apart of organization and of role 'admin' or 'owner'",
+    { status: 401 },
+  );
+
+const result = await auth.api.listMembers({
+  query: {
+    organizationId,
+    filterField: "id",
+    filterOperator: "eq",
+    filterValue: memberId,
+    limit: 1,
+  },
+  headers,
+});
+const member = result?.members?.[0] ?? null;
+
+const allOrgTeams = await auth.api.listOrganizationTeams({
+  query: { organizationId },
+  headers,
+});
+
+// console.log({ member });
+// const result2 = await auth.api.listMembers({
+//   query: {
+//     organizationId,
+//     filterField: "id",
+//     filterOperator: "eq",
+//     filterValue: sessionMember?.id,
+//     limit: 1,
+//   },
+//   headers,
+// });
+// const memberAuthFound = result2?.members?.[0] ?? null;
+// console.log({ memberAuthFound });
+
+if (!member) return new Response("member not found in db", { status: 401 });
+
+//   TODO validate if user is member as is role === 'admin'
+
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
+
+const formData = await Astro.request.formData();
+// console.log({ formData });
+// const checkedTeamIds = new Set(formData.getAll("teamIds").map(String));
+// const checkedTeamIds = formData.getAll("teamIds")
+// console.log({checkedTeamIds});
+const outcome = await useForm(formData, {
+  schema: validate.member,
+  labels: { teamIds: "teams", role: "role" },
+  successMessage: "Member Updated",
+  run: async (inputs) => {
+    const orgTeamIds = new Set(allOrgTeams.map((t) => t.id));
+    const wanted = new Set(inputs.teamIds);
+
+    if (![...wanted].every((id) => orgTeamIds.has(id)))
+      throw new FormError("Unknown team selected", 422, "teamIds");
+
+    // current memberships (direct read, since listTeamMembers needs the caller on the team)
+    const { joinedTeamIds } = await getMemberJoinedTeams(
+      organizationId,
+      member.user.id,
+      headers,
+    );
+    const currentInOrg = new Set(
+      [...joinedTeamIds].filter((id) => orgTeamIds.has(id)),
+    );
+
+    const toAdd = [...wanted].filter((id) => !currentInOrg.has(id));
+    const toRemove = [...currentInOrg].filter((id) => !wanted.has(id));
+
+    //! TODO Partial failure: Promise.all rejects on the first error but the other calls keep running
+    await Promise.all([
+      ...toAdd.map((teamId) =>
+        auth.api.addTeamMember({
+          body: { teamId, userId: member.user.id },
+          headers,
+        }),
+      ),
+      ...toRemove.map((teamId) =>
+        auth.api.removeTeamMember({
+          body: { teamId, userId: member.user.id },
+          headers,
+        }),
+      ),
+    ]);
+
+    const updatedRole = await auth.api.updateMemberRole({
+      body: { role: [inputs.role], memberId: member.id, organizationId },
+      headers,
+    });
+
+    const row = {
+      ...member,
+      role: updatedRole.role,
+      teams: allOrgTeams
+        .filter((t) => wanted.has(t.id))
+        .map((t) => ({ id: t.id, name: t.name })),
+    };
+
+    return {
+      role: inputs.role,
+      added: toAdd.length,
+      removed: toRemove.length,
+      row,
+    };
+  },
+});
+
+console.log(JSON.stringify({ outcome }, null, 2));
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+---
+
+{
+  outcome.ok ? (
+    <>
+      <FormMessage kind="success" message={outcome.state.success}>
+        <dl class="kv">
+          <dd>role</dd>
+          <dt>{outcome.data.role}</dt>
+          <dd>teams joined</dd>
+          <dt>{outcome.data.added}</dt>
+          <dd>teams removed</dd>
+          <dt>{outcome.data.removed}</dt>
+        </dl>
+      </FormMessage>
+      <MemberManagementRow
+        hx-swap-oob={"true"}
+        class="anim--fadein updated"
+        row={outcome.data.row}
+        orgSlug={outcome.data.row.organizationId}
+      />
+    </>
+  ) : (
+    <FormMessage
+      kind="error"
+      message={outcome.state.error}
+      status={outcome.state.status}
+    />
+  )
+}
+<FieldErrors
+  {formId}
+  names={Object.keys(validate.member.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

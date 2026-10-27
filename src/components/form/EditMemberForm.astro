@@ -1,0 +1,77 @@
+---
+// components/form/InviteMemberform
+interface Props {
+  id?: string;
+  member: ListMember;
+  organizationSlug: string;
+  organizationId: string;
+  orgTeamCheckboxes?: { label: string; value: string; checked: boolean }[];
+  memberRoleOpts?: { label: string; value: string }[];
+}
+import InputField from "@components/form/InputField.astro";
+import SelectField from "@components/form/SelectField.astro";
+import FormCard from "./FormCard.astro";
+import type { ListMember } from "@ty/Schema";
+
+const {
+  id = "form--member-edit",
+  organizationSlug,
+  organizationId,
+  member,
+  orgTeamCheckboxes = [],
+  memberRoleOpts = [],
+} = Astro.props;
+
+// TODO target list of users instead to self populate user table
+---
+
+<FormCard
+  {id}
+  class="card"
+  method="patch"
+  endpoint={`/org/${organizationSlug}/partials/members/${member.id}/${organizationId}`}
+  submitText="Update"
+  hx-on--after-request="if (event.detail.successful) this.reset()"
+>
+  <header>
+    <h2>Edit Member</h2>
+    <span class="sub-text">{member.user.email}</span>
+  </header>
+  {
+    orgTeamCheckboxes.length > 0 ? (
+      <fieldset>
+        <legend>Teams</legend>
+        {orgTeamCheckboxes.map((teamBox) => (
+          <InputField
+            formId={id}
+            type={"checkbox"}
+            idSuffix={teamBox.value}
+            name={'teamIds'}
+            label={teamBox.label}
+            checked={teamBox.checked}
+            value={teamBox.value}
+          />
+        ))}
+      </fieldset>
+    ) : null
+  }
+  <fieldset class="no-style">
+    {
+      memberRoleOpts.length > 0 ? (
+        <SelectField
+          id={`${id}-role`}
+          name={"role"}
+          errorId={id + "-role"}
+          options={memberRoleOpts}
+          value={member.role}
+        >
+          <option slot="first-option" value={undefined}>
+            -- select role --
+          </option>
+        </SelectField>
+      ) : null
+    }
+  </fieldset>
+
+  <slot name="icon" slot="icon" />
+</FormCard>

@@ -3,20 +3,27 @@ import IntegrationCredForm from "@components/form/IntegrationCredForm.astro";
 import InviteMemberForm from "@components/form/InviteMemberForm.astro";
 import MemberManagementTable from "@components/tables/MemberManagementTable.astro";
 import { db } from "@db/db";
-import { IntegrationCredential, Member } from "@db/schema";
-import CommonPageLayout from "@layouts/CommonPageLayout.astro";
+import { IntegrationCredential, Member, MEMBER_ROLES } from "@db/schema";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 import { auth } from "@lib/auth";
 import { eq } from "drizzle-orm";
 import IconPacket from "@icons/packet.svg";
 import IconAdd from "@icons/add.svg";
+import IconEnvelope from "@icons/envelope.svg";
 import CreateTeamForm from "@components/form/CreateTeamForm.astro";
+import Dialog from "@components/Dialog.astro";
+import EditMemberForm from "@components/form/EditMemberForm.astro";
 
-const search = Astro.url.searchParams;
-const msg = search.get("msg");
+const params = Astro.url.searchParams;
+const msg = params.get("msg");
+const { organization_slug } = Astro.params;
+const editMemberId = params.get("edit-member-id");
 const { user, organization, member } = Astro.locals;
 // TODO check if the slug matches the current organization, if not then switch active org
-const { organization_slug } = Astro.params;
+const memberRoleOptions = MEMBER_ROLES.map((text) => ({
+  label: text,
+  value: text,
+})).reverse();
 
 const returnTo = Astro.url.pathname + Astro.url.search;
 
@@ -31,17 +38,11 @@ if (!member)
 
 const headers = Astro.request.headers;
 
-const teams = await auth.api.listOrganizationTeams({
-  query: {
-    organizationId: organization.id, // The organization ID which the teams are under to list. Defaults to the user's active organization.
-  },
-  // This endpoint requires session cookies.
-  headers,
-});
-
-const { members, total } = await auth.api.listMembers({
+// TODO am i doing too many queries?
+const { members, total: memberTotal } = await auth.api.listMembers({
   query: {
     organizationId: organization.id, // An optional organization ID to list members for. If not provided, will default to the user's active organization.
+    // TODO paginate
     limit: 100, // The limit of members to return.
     offset: 0, // The offset to start from.
     sortBy: "createdAt", // The field to sort by.
@@ -54,8 +55,6 @@ const { members, total } = await auth.api.listMembers({
   headers,
 });
 
-// console.log(JSON.stringify(members, null, 2));
-
 const invites = await auth.api.listInvitations({
   query: {
     organizationId: organization.id, // An optional ID of the organization to list invitations for. If not provided, will default to the user's active organization.
@@ -63,6 +62,44 @@ const invites = await auth.api.listInvitations({
   // This endpoint requires session cookies.
   headers,
 });
+
+const ctx = await auth.$context;
+
+const teams = await auth.api.listOrganizationTeams({
+  query: { organizationId: organization.id },
+  headers,
+});
+const teamById = new Map(teams.map((t) => [t.id, t]));
+
+const userIds = members.map((m) => m.userId);
+
+// TODO how should i auth permission this?
+const rows =
+  teamById.size && userIds.length
+    ? await ctx.adapter.findMany<{ teamId: string; userId: string }>({
+        model: "teamMember",
+        where: [
+          { field: "teamId", operator: "in", value: [...teamById.keys()] },
+          { field: "userId", operator: "in", value: userIds },
+        ],
+        limit: 10_000, // adapters apply a default limit, so set one explicitly
+      })
+    : [];
+
+// group by user
+const teamsByUserId = new Map<string, { id: string; name: string }[]>();
+for (const r of rows) {
+  const team = teamById.get(r.teamId);
+  if (!team) continue;
+  const list = teamsByUserId.get(r.userId) ?? [];
+  list.push({ id: team.id, name: team.name });
+  teamsByUserId.set(r.userId, list);
+}
+
+const memberTableRows = members.map((m) => ({
+  ...m,
+  teams: teamsByUserId.get(m.userId) ?? [],
+}));
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
 const orgIntegrations = await db.query.IntegrationCredential.findMany({
@@ -87,29 +124,36 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
 
   <section class="grid gap-m">
     <div>
-      <h2>Members</h2>
-      <MemberManagementTable members={members} />
+      <h2>Members ({memberTotal})</h2>
+      <MemberManagementTable rows={memberTableRows} orgSlug={organization_slug} />
     </div>
-    <aside class="flex gap-m">
-      <InviteMemberForm
-        organizationId={organization.id}
-        organizationSlug={organization.slug}
-      />
-      <div class="card">
-        <h2>Invites Sent</h2>
-        {
-          invites.length > 0 ? (
-            <ul id="org-invitations-list">
-              {invites.map((inv) => (
-                <li>
-                  {inv.email}, {inv.role},{inv.status}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="callout no-data">no invitations in circulation</p>
-          )
-        }
+    <aside class="grid gap-m">
+      <div id="edit-member-wrap" class="card">
+        <h2>Edit Member</h2>
+      </div>
+      <div class="flex gap-m">
+        <InviteMemberForm
+          organizationId={organization.id}
+          organizationSlug={organization.slug}
+        >
+          <IconEnvelope slot={"icon"} />
+        </InviteMemberForm>
+        <div class="card">
+          <h2>Invites Sent</h2>
+          {
+            invites.length > 0 ? (
+              <ul id="org-invitations-list">
+                {invites.map((inv) => (
+                  <li>
+                    {inv.email}, {inv.role},{inv.status}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="callout no-data">no invitations in circulation</p>
+            )
+          }
+        </div>
       </div>
     </aside>
     <div class="flex gap-m">
@@ -162,3 +206,12 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
     </div>
   </details>
 </OrgMemberPageLayout>
+
+<!-- <Dialog
+  modal
+  id="dialog-member-edit"
+  open={editMemberId}
+  clearParams={["edit-member-id"]}
+>
+  <EditMemberForm memberId={editMemberId}  />
+</Dialog> -->

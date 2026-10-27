@@ -35,6 +35,10 @@ if (!id) {
 }
 
 const user = Astro.locals.user;
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
 
 const invitation = await db.query.Invitation.findFirst({
   where: eq(Invitation.id, id),
@@ -252,18 +256,21 @@ const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> 
               <h2 id="onboarding-title">Create your account</h2>
               <input type="hidden" name="_intent" value="signup" />
               <InputField
-                name="first_name" type="text" id="first_name" model="accounts"
+              formId={formId}
+                name="first_name" type="text"
                 value={formState.values.first_name}
-                fieldError={formState.fieldErrors.first_name}
+                error={formState.fieldErrors.first_name}
               />
               <InputField
-                name="last_name" type="text" id="last_name" model="accounts"
+              formId={formId}
+                name="last_name" type="text"
                 value={formState.values.last_name}
-                fieldError={formState.fieldErrors.last_name}
+                error={formState.fieldErrors.last_name}
               />
               <InputField
-                name="password" type="password" id="password" model="accounts" required
-                fieldError={formState.fieldErrors.password}
+              formId={formId}
+                name="password" type="password" required
+                error={formState.fieldErrors.password}
               />
             </FormCard>
           )}
@@ -273,8 +280,9 @@ const blocked: Record<Exclude<State, "ready">, { title: string; body: string }> 
               <h2 id="onboarding-title">Sign in to accept</h2>
               <input type="hidden" name="_intent" value="login" />
               <InputField
-                name="password" type="password" id="password" model="accounts" required
-                fieldError={formState.fieldErrors.password}
+              formId={formId}
+                name="password" type="password" required
+                error={formState.fieldErrors.password}
               />
             </FormCard>
           )}

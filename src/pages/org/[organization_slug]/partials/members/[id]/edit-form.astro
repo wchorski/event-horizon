@@ -1,0 +1,69 @@
+---
+import EditMemberForm from "@components/form/EditMemberForm.astro";
+import { MEMBER_ROLES } from "@db/schema";
+import { auth } from "@lib/auth";
+import { getMemberJoinedTeams } from "@lib/crud/getMemberTeams";
+
+const method = Astro.request.method;
+if (method !== "GET")
+  return new Response(null, { status: 405, headers: { Allow: "GET" } });
+
+const headers = Astro.request.headers;
+const { organization_slug: organizationSlug, id: userId } = Astro.params;
+
+if (!userId)
+  return new Response("member.id missing from url.param", { status: 401 });
+if (!organizationSlug)
+  return new Response("org.slug id missing from url.param", { status: 401 });
+
+const organization = await auth.api.getOrganization({
+  query: { organizationSlug },
+  headers,
+});
+if (!organization)
+  return new Response("organization not found in db", { status: 401 });
+
+const result = await auth.api.listMembers({
+  query: {
+    organizationId: organization.id,
+    filterField: "userId",
+    filterOperator: "eq",
+    filterValue: userId,
+    limit: 1,
+  },
+  headers,
+});
+const member = result?.members?.[0] ?? null;
+
+if (!member) return new Response("member not found in db", { status: 401 });
+
+// await auth.api.removeTeamMember({
+//   body: { teamId: "old-team-id", userId: "user-id" },
+//   headers,
+// });
+
+
+const { teams, joinedTeamIds } = await getMemberJoinedTeams(
+  organization.id,
+  member.user.id,
+  headers,
+);
+
+const memberRoleOpts = MEMBER_ROLES.map((text) => ({
+  label: text,
+  value: text,
+})).reverse();
+const orgTeamCheckboxes = teams.map((team) => ({
+  label: team.name,
+  value: team.id,
+  checked: joinedTeamIds.has(team.id),
+}));
+---
+
+<EditMemberForm
+  {member}
+  organizationId={organization.id}
+  {organizationSlug}
+  {orgTeamCheckboxes}
+  {memberRoleOpts}
+/>

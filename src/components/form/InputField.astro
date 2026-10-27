@@ -4,23 +4,34 @@ import type { HTMLAttributes } from "astro/types";
 import type { FieldOption, InputFieldType } from "@ty/FieldConfig";
 import { fieldId, fieldErrorId } from "@lib/fieldIds";
 
-interface Props
-  extends Omit<HTMLAttributes<"input">, "type" | "value" | "checked" | "name" | "id"> {
+interface Props extends Omit<
+  HTMLAttributes<"input">,
+  "type" | "value" | "checked" | "name" | "id"
+> {
   formId: string;
   name: string;
   label?: string;
   type?: InputFieldType;
   value?: string | null;
   checked?: boolean;
-  error?: string;          // only for non-htmx / initial render
+  idSuffix?: string; 
+  error?: string; // only for non-htmx / initial render
   options?: FieldOption[]; // datalist
 }
 
-const { formId, name, label, type, value, checked, error, options, ...rest } = Astro.props;
 
-const id = fieldId(formId, name);
-const errorId = fieldErrorId(formId, name);
+const { formId, idSuffix, name, label, type, value, checked, error, options, ...rest } =
+Astro.props;
+
+const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
+const errorId = fieldErrorId(formId, idSuffix ? `${name}-${idSuffix}` : name);
 const listId = options ? `${id}-list` : undefined;
+if (type === "searchSelect")
+  throw new Error(
+    "InputField cannot be of type 'searchSelect', use the SearchSelect component",
+  );
+
+  // value={type === "checkbox" ? undefined : (value ?? undefined)}
 ---
 
 <label class="form-field" for={id}>
@@ -31,16 +42,20 @@ const listId = options ? `${id}-list` : undefined;
     form={formId}
     name={name}
     type={type}
-    value={type === "checkbox" ? undefined : (value ?? undefined)}
+    value={value ?? undefined}
     checked={type === "checkbox" ? checked : undefined}
     list={listId}
     aria-invalid={error ? "true" : undefined}
     aria-describedby={errorId}
   />
   <small id={errorId} class="field-error" aria-live="polite">{error}</small>
-  {options && (
-    <datalist id={listId}>
-      {options.map((o) => <option value={o.value}>{o.label}</option>)}
-    </datalist>
-  )}
+  {
+    options && (
+      <datalist id={listId}>
+        {options.map((o) => (
+          <option value={o.value}>{o.label}</option>
+        ))}
+      </datalist>
+    )
+  }
 </label>

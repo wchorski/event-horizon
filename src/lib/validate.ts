@@ -1,11 +1,11 @@
-import { z } from "astro/zod";
-import { normalizePhoneToE164Manual, slugify } from "./formatters";
+import { z, type ZodType } from "astro/zod";
+import { normalizePhoneToE164Manual, slugify } from "@lib/formatters";
 import {
   BOOKING_STATUSES,
   INTEGRATION_PROVIDERS,
   MEMBER_ROLES,
 } from "@db/schema";
-import { encryptSecret } from "./auth/secretBox";
+import { encryptSecret } from "@lib/auth/secretBox";
 
 const datetimeLocalToDate = z
   .string()
@@ -121,6 +121,11 @@ const passwordVerification = z
   .refine((pw) => !commonPasswords.has(pw.toLowerCase()), {
     message: "This password is too common",
   });
+
+//? form needs this helper to know how to handle multiple checkboxes with the same name
+export const checkboxMulti = <T extends ZodType>(item: T) =>
+  z.preprocess((v) => (v == null || v === "" ? [] : [v].flat()), z.array(item));
+
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
@@ -352,6 +357,16 @@ export const validate = {
   invitation: z.object({
     email: z.email("enter a valid email address"),
     role: z.enum(MEMBER_ROLES),
+  }),
+  member: z.object({
+    teamIds: checkboxMulti(z.string().min(1)),
+    // teamIds: z.array(z.string().min(1)).default([]),
+    // teamIds: z.preprocess(
+    //   (v) => (v === undefined ? [] : Array.isArray(v) ? v : [v]),
+    //   z.array(z.string().min(1)),
+    // ),
+    role: z.enum(MEMBER_ROLES),
+    notify: z.stringbool().default(false),
   }),
   team: z.object({
     name: z.string().min(3).max(20),

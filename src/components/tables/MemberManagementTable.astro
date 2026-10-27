@@ -1,13 +1,14 @@
 ---
 import type { MemberSelect, UserSelect } from "@ty/Schema";
-
-type MemberWithUser = MemberSelect & { user: UserSelect };
+import type { TMemberManagementRow } from "./MemberManagementRow.astro";
+import MemberManagementRow from "./MemberManagementRow.astro";
 
 interface Props {
-  members: MemberWithUser[];
+  rows: TMemberManagementRow[];
+  orgSlug: string;
 }
 
-const { members } = Astro.props;
+const { rows, orgSlug } = Astro.props;
 ---
 
 <table>
@@ -22,31 +23,8 @@ const { members } = Astro.props;
   </thead>
   <tbody>
     {
-      members.length > 0 ? (
-        members.map(({ role, user }) => (
-          <tr>
-            <td>{user.first_name} {user.last_name}</td>
-            <td>
-              {user.email}
-              {!user.emailVerified && (
-                <>
-                  <br />
-                  <span
-                    style="color: red;"
-                    data-verified={user.emailVerified}
-                  >
-                    email not verified
-                  </span>
-                </>
-              )}
-            </td>
-            <td>{role}</td>
-            <td>-</td>
-            <td>
-              <button disabled>edit</button>
-            </td>
-          </tr>
-        ))
+      rows.length > 0 ? (
+        rows.map((row) => <MemberManagementRow {row} {orgSlug} />)
       ) : (
         <p>no members assigned</p>
       )

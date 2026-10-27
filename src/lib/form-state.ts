@@ -1,22 +1,36 @@
-// lib/form-state.ts
+// Echoed-back raw input for re-rendering the form after a failed submit.
+// Strings only (never File); repeated keys (multi checkbox) become string[].
+export type FormValues = Record<string, string | string[]>;
+
 export type FormState = {
   status: number;
   error?: string;
   success?: string;
   fieldErrors: Record<string, string>;
-  values: Record<string, string>;
+  values: FormValues;
 };
 
-export const emptyForm = (): FormState => ({ status: 200, fieldErrors: {}, values: {} });
+export const emptyForm = (): FormState => ({
+  status: 200,
+  fieldErrors: {},
+  values: {},
+});
 
-export function fail(opts: {
+type FailOpts = {
   status?: number;
   error?: string;
   fieldErrors?: Record<string, string>;
-  values?: Record<string, string>;
+  values?: FormValues;
   labels?: Record<string, string>;
-}): FormState {
-  const { status = 422, error, fieldErrors = {}, values = {}, labels = {} } = opts;
+};
+
+export function fail({
+  status = 422,
+  error,
+  fieldErrors = {},
+  values = {},
+  labels = {},
+}: FailOpts): FormState {
   const names = Object.keys(fieldErrors).map((n) => labels[n] ?? n);
 
   return {
@@ -39,3 +53,7 @@ export const succeed = (success: string): FormState => ({
   fieldErrors: {},
   values: {},
 });
+
+/** Read an echoed value as a list, whether it's a string, string[], or absent. */
+export const valuesAsList = (v: FormValues[string] | undefined): string[] =>
+  v === undefined ? [] : [v].flat();

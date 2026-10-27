@@ -1,0 +1,62 @@
+---
+// components/tables/MembershipManagemntRow
+import type { auth } from "@lib/auth";
+import type { MemberSelect, UserSelect } from "@ty/Schema";
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"tr"> {
+  row: TMemberManagementRow;
+  orgSlug: string;
+}
+
+// export type TMemberManagementRow = MemberSelect & {
+//   user: UserSelect;
+//   teams: { id: string; name: string }[];
+// };
+export type TMemberManagementRow = Awaited<ReturnType<typeof auth.api.listMembers>>["members"][number] & {
+  teams: { id: string; name: string }[];
+};
+const { row, orgSlug, class: className, ...attrs } = Astro.props;
+const { id, role, user, teams, organizationId } = row;
+---
+
+<tr id={`member-row--${id}`} class:list={[className]} {...attrs}>
+  <td>
+    {user.name}
+  </td>
+  <td>
+    {user.email}
+    {
+      !user.emailVerified && (
+        <>
+          <br />
+          <span style="color: red;" data-verified={user.emailVerified}>
+            email not verified
+          </span>
+        </>
+      )
+    }
+  </td>
+  <td>{role}</td>
+  <td>
+    {
+      teams.length > 0 ? (
+        <ul>
+          {teams?.map((team) => (
+            <li class="team-name chip">{team.name}</li>
+          ))}
+        </ul>
+      ) : (
+        <span class="no-data">no team assigned</span>
+      )
+    }
+  </td>
+  <td>
+    <button
+      hx-get={`/org/${orgSlug}/partials/members/${encodeURIComponent(user.id)}/edit-form`}
+      hx-target={"#edit-member-wrap"}
+    >
+      edit
+    </button>
+  </td>
+</tr>

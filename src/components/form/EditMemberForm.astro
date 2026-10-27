@@ -1,17 +1,20 @@
 ---
 // components/form/InviteMemberform
-interface Props {
+interface Props extends Omit<HTMLAttributes<"form">, "method"> {
   id?: string;
   member: ListMember;
   organizationSlug: string;
   organizationId: string;
-  orgTeamCheckboxes?: { label: string; value: string; checked: boolean }[];
+  orgTeamCheckboxes?: CheckboxField[];
   memberRoleOpts?: { label: string; value: string }[];
 }
 import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
 import FormCard from "./FormCard.astro";
 import type { ListMember } from "@ty/Schema";
+import type { HTMLAttributes } from "astro/types";
+import CheckboxMulti from "./CheckboxMulti.astro";
+import type { CheckboxField } from "@ty/FieldConfig";
 
 const {
   id = "form--member-edit",
@@ -20,9 +23,12 @@ const {
   member,
   orgTeamCheckboxes = [],
   memberRoleOpts = [],
+  ...props
 } = Astro.props;
 
-// TODO target list of users instead to self populate user table
+console.log({orgTeamCheckboxes});
+
+// TODO on success completely remove form
 ---
 
 <FormCard
@@ -32,6 +38,7 @@ const {
   endpoint={`/org/${organizationSlug}/partials/members/${member.id}/${organizationId}`}
   submitText="Update"
   hx-on--after-request="if (event.detail.successful) this.reset()"
+  {...props}
 >
   <header>
     <h2>Edit Member</h2>
@@ -41,17 +48,23 @@ const {
     orgTeamCheckboxes.length > 0 ? (
       <fieldset>
         <legend>Teams</legend>
-        {orgTeamCheckboxes.map((teamBox) => (
-          <InputField
+        <CheckboxMulti
             formId={id}
-            type={"checkbox"}
+            boxes={orgTeamCheckboxes}
+            name={"teamIds"}
+            
+          />
+        {/* {orgTeamCheckboxes.map((teamBox) => (
+          <CheckboxMulti
+            formId={id}
+            
             idSuffix={teamBox.value}
-            name={'teamIds'}
+            name={"teamIds"}
             label={teamBox.label}
             checked={teamBox.checked}
             value={teamBox.value}
           />
-        ))}
+        ))} */}
       </fieldset>
     ) : null
   }
@@ -59,9 +72,9 @@ const {
     {
       memberRoleOpts.length > 0 ? (
         <SelectField
+          formId={id}
           id={`${id}-role`}
           name={"role"}
-          errorId={id + "-role"}
           options={memberRoleOpts}
           value={member.role}
         >
@@ -71,6 +84,8 @@ const {
         </SelectField>
       ) : null
     }
+
+    <InputField formId={id} type={"checkbox"} name="notify" checked={false} />
   </fieldset>
 
   <slot name="icon" slot="icon" />

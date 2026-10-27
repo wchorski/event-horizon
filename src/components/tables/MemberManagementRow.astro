@@ -18,9 +18,10 @@ export type TMemberManagementRow = Awaited<ReturnType<typeof auth.api.listMember
 };
 const { row, orgSlug, class: className, ...attrs } = Astro.props;
 const { id, role, user, teams, organizationId } = row;
+const rowId = `member-row--${id}`
 ---
 
-<tr id={`member-row--${id}`} class:list={[className]} {...attrs}>
+<tr id={rowId} class:list={[className]} {...attrs}>
   <td>
     {user.name}
   </td>

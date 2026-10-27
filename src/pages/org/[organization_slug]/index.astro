@@ -122,90 +122,92 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
 
   <hr />
 
-  <section class="grid gap-m">
+  <section class="flex gap-m table-wrap">
     <div>
       <h2>Members ({memberTotal})</h2>
-      <MemberManagementTable rows={memberTableRows} orgSlug={organization_slug} />
-    </div>
-    <aside class="grid gap-m">
-      <div id="edit-member-wrap" class="card">
-        <h2>Edit Member</h2>
-      </div>
-      <div class="flex gap-m">
-        <InviteMemberForm
-          organizationId={organization.id}
-          organizationSlug={organization.slug}
-        >
-          <IconEnvelope slot={"icon"} />
-        </InviteMemberForm>
-        <div class="card">
-          <h2>Invites Sent</h2>
-          {
-            invites.length > 0 ? (
-              <ul id="org-invitations-list">
-                {invites.map((inv) => (
-                  <li>
-                    {inv.email}, {inv.role},{inv.status}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p class="callout no-data">no invitations in circulation</p>
-            )
-          }
-        </div>
-      </div>
-    </aside>
-    <div class="flex gap-m">
-      <CreateTeamForm
-        organizationId={organization.id}
-        organizationSlug={organization.slug}
-      >
-        <IconAdd slot="icon" />
-      </CreateTeamForm>
-      <div class="card">
-        <h2>Teams</h2>
-        {
-          teams.length > 0 ? (
-            <ul id="org-teams-list">
-              {teams.map((tm) => (
-                <li>{tm.name}</li>
-              ))}
-            </ul>
-          ) : (
-            <p class="callout no-data">no teams have been created</p>
-          )
-        }
-      </div>
-    </div>
-  </section>
-
-  <hr />
-
-  <details>
-    <summary>Integrations</summary>
-    <p class="callout">This is for developers only</p>
-    <ul>
-      {
-        orgIntegrations.length > 0 ? (
-          orgIntegrations.map((integ) => (
-            <li>
-              {integ.provider} | expires: {integ.expiresAt}
-            </li>
-          ))
-        ) : (
-          <li>no integrations set</li>
-        )
-      }
-    </ul>
-    <div style="max-width: 30rem;">
-      <IntegrationCredForm
-        organizationId={organization.id}
-        organizationSlug={organization.slug}
+      <MemberManagementTable
+        rows={memberTableRows}
+        orgSlug={organization.slug}
       />
     </div>
-  </details>
+    <aside class="grid gap-m">
+      <div id="edit-member-wrap"></div>
+    </aside>
+  </section>
+  <hr />
+  <div class="flex gap-m">
+    <InviteMemberForm
+      organizationId={organization.id}
+      organizationSlug={organization.slug}
+    >
+      <IconEnvelope slot={"icon"} />
+    </InviteMemberForm>
+    <div class="card">
+      <h2>Invites Sent</h2>
+      {
+        invites.length > 0 ? (
+          <ul id="org-invitations-list">
+            {invites.map((inv) => (
+              <li>
+                {inv.email}, {inv.role},{inv.status}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="callout no-data">no invitations in circulation</p>
+        )
+      }
+    </div>
+  </div>
 </OrgMemberPageLayout>
+<div class="flex gap-m">
+  <CreateTeamForm
+    organizationId={organization.id}
+    organizationSlug={organization.slug}
+  >
+    <IconAdd slot="icon" />
+  </CreateTeamForm>
+  <div class="card">
+    <h2>Teams</h2>
+    {
+      teams.length > 0 ? (
+        <ul id="org-teams-list">
+          {teams.map((tm) => (
+            <li>{tm.name}</li>
+          ))}
+        </ul>
+      ) : (
+        <p class="callout no-data">no teams have been created</p>
+      )
+    }
+  </div>
+</div>
+
+<hr />
+
+<details>
+  <summary>Integrations</summary>
+  <p class="callout">This is for developers only</p>
+  <ul>
+    {
+      orgIntegrations.length > 0 ? (
+        orgIntegrations.map((integ) => (
+          <li>
+            {integ.provider} | expires: {integ.expiresAt}
+          </li>
+        ))
+      ) : (
+        <li>no integrations set</li>
+      )
+    }
+  </ul>
+  <div style="max-width: 30rem;">
+    <IntegrationCredForm
+      organizationId={organization.id}
+      organizationSlug={organization.slug}
+    />
+  </div>
+</details>
 
 <!-- <Dialog
   modal
@@ -215,3 +217,10 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
 >
   <EditMemberForm memberId={editMemberId}  />
 </Dialog> -->
+<style>
+  .table-wrap {
+    & div:first-child {
+      flex: 1;
+    }
+  }
+</style>

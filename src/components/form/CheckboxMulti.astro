@@ -1,0 +1,68 @@
+---
+// components/form/InputField.astro
+import type { HTMLAttributes } from "astro/types";
+import type {
+  CheckboxField,
+  FieldOption,
+  InputFieldType,
+} from "@ty/FieldConfig";
+import { fieldId, fieldErrorId } from "@lib/fieldIds";
+import InputField from "./InputField.astro";
+import FieldErrors from "./FieldErrors.astro";
+
+interface Props extends Omit<
+  HTMLAttributes<"input">,
+  "type" | "value" | "checked" | "name" | "id"
+> {
+  formId: string;
+  name: string;
+  // label?: string;
+  // type: "checkboxMulti";
+  // value?: string | null;
+  // checked?: boolean;
+  // idSuffix?: string;
+  error?: string; // only for non-htmx / initial render
+  boxes: CheckboxField[];
+}
+
+const {
+  formId,
+  // idSuffix,
+  boxes,
+  name,
+  // label,
+  // type,
+  // value,
+  // checked,
+  error,
+  ...rest
+} = Astro.props;
+
+// const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
+// const errorId = fieldErrorId(formId, idSuffix ? `${name}-${idSuffix}` : name);
+// if (type !== "checkboxMulti")
+//   throw new Error("CheckboxMulti can only be type 'checkboxMulti'");
+
+// value={type === "checkbox" ? undefined : (value ?? undefined)}
+console.log({boxes});
+---
+
+{
+  boxes.length > 0
+    ? boxes.map((box) => (
+        <InputField
+          {formId}
+          type={'checkboxMulti'}
+          {name}
+          idSuffix={box.value}
+          label={box.label}
+          checked={box.checked}
+          value={box.value}
+          {...rest}
+        />
+      ))
+    : null
+}
+<small id={fieldErrorId(formId, name)} class="field-error" aria-live="polite"
+></small>
+<!-- <FieldErrors {formId} names={[name]} errors={[error]} /> -->

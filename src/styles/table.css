@@ -109,15 +109,28 @@ table tbody tr:hover {
   background-color: rgba(139, 139, 69, 0.046) !important;
 }
 
-table tr.new-row {
-  outline: dashed 3px rgba(0, 0, 255, 0.102);
-  position: relative;
-  td:first-child::before {
-    color: mediumslateblue;
-    content: "✸";
-    position: absolute;
-    left: 1%;
-    bottom: 50%;
+table {
+  & tr.new-row {
+    outline: dashed 3px rgba(0, 0, 255, 0.102);
+    position: relative;
+    td:first-child::before {
+      color: mediumslateblue;
+      content: "✸";
+      position: absolute;
+      left: 1%;
+      bottom: 50%;
+    }
+  }
+  & tr.updated {
+    outline: dashed 3px rgba(30, 255, 0, 0.102);
+    position: relative;
+    td:first-child::before {
+      color: rgb(104, 238, 113);
+      content: "⤴";
+      position: absolute;
+      left: 0;
+      bottom: 20%;
+    }
   }
 }
 
@@ -155,11 +168,9 @@ data[value="null"]::before {
 }
 
 table.timeline-schedule {
-
   table-layout: fixed;
   width: 100%;
 
-  
   & col {
     width: 100%;
   }
@@ -223,7 +234,6 @@ table.timeline-schedule {
     & > button.drag-handle {
       padding: 0;
     }
-    
   }
   /* & td[data-field-name="start-end"] {
     max-width: 5rem;

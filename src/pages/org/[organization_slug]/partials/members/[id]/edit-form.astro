@@ -8,6 +8,11 @@ const method = Astro.request.method;
 if (method !== "GET")
   return new Response(null, { status: 405, headers: { Allow: "GET" } });
 
+// const formId = Astro.request.headers.get("HX-Trigger");
+// // avoids junk from client
+// if (!formId || !/^[\w-]+$/.test(formId))
+//   return new Response("Bad request", { status: 400 });
+
 const headers = Astro.request.headers;
 const { organization_slug: organizationSlug, id: userId } = Astro.params;
 
@@ -42,7 +47,6 @@ if (!member) return new Response("member not found in db", { status: 401 });
 //   headers,
 // });
 
-
 const { teams, joinedTeamIds } = await getMemberJoinedTeams(
   organization.id,
   member.user.id,
@@ -63,6 +67,8 @@ const orgTeamCheckboxes = teams.map((team) => ({
 <EditMemberForm
   {member}
   organizationId={organization.id}
+  hx-swap="outerHTML"
+  hx-target={`#edit-member-wrap`}
   {organizationSlug}
   {orgTeamCheckboxes}
   {memberRoleOpts}

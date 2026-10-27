@@ -14,14 +14,23 @@ interface Props extends Omit<
   type?: InputFieldType;
   value?: string | null;
   checked?: boolean;
-  idSuffix?: string; 
+  idSuffix?: string;
   error?: string; // only for non-htmx / initial render
   options?: FieldOption[]; // datalist
 }
 
-
-const { formId, idSuffix, name, label, type, value, checked, error, options, ...rest } =
-Astro.props;
+const {
+  formId,
+  idSuffix,
+  name,
+  label,
+  type,
+  value,
+  checked,
+  error,
+  options,
+  ...rest
+} = Astro.props;
 
 const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
 const errorId = fieldErrorId(formId, idSuffix ? `${name}-${idSuffix}` : name);
@@ -31,7 +40,7 @@ if (type === "searchSelect")
     "InputField cannot be of type 'searchSelect', use the SearchSelect component",
   );
 
-  // value={type === "checkbox" ? undefined : (value ?? undefined)}
+// value={type === "checkbox" ? undefined : (value ?? undefined)}
 ---
 
 <label class="form-field" for={id}>
@@ -41,14 +50,20 @@ if (type === "searchSelect")
     id={id}
     form={formId}
     name={name}
-    type={type}
+    type={type === "checkboxMulti" ? "checkbox" : type}
     value={value ?? undefined}
-    checked={type === "checkbox" ? checked : undefined}
+    checked={type?.startsWith("checkbox") ? checked : undefined}
     list={listId}
     aria-invalid={error ? "true" : undefined}
     aria-describedby={errorId}
   />
-  <small id={errorId} class="field-error" aria-live="polite">{error}</small>
+  {
+    type !== "checkboxMulti" ? (
+      <small id={errorId} class="field-error" aria-live="polite">
+        {error}
+      </small>
+    ) : null
+  }
   {
     options && (
       <datalist id={listId}>

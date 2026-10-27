@@ -1,5 +1,6 @@
 ---
 // components/form/SelectField
+import { fieldErrorId } from "@lib/fieldIds";
 import type { FieldOption, FieldSlot, SelectFieldType } from "@ty/FieldConfig";
 import type { HTMLAttributes } from "astro/types";
 
@@ -7,8 +8,8 @@ interface Props extends Omit<
   HTMLAttributes<"select">,
   "type" | "value" | "checked" | "name"
 > {
-  formId?: string;
-  errorId: string;
+  formId: string;
+  // errorId: string;
   name: string;
   label?: string;
   value?: string | number;
@@ -18,7 +19,7 @@ interface Props extends Omit<
 }
 const {
   formId,
-  errorId,
+  // errorId,
   name,
   label,
   value,
@@ -27,6 +28,8 @@ const {
   autofocus,
   ...inputAttrs
 } = Astro.props;
+
+const errorId = fieldErrorId(formId, name);
 ---
 
 <label class="form-field">

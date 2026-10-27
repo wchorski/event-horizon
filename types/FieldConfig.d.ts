@@ -31,9 +31,16 @@ export type InputFieldSlot = BaseFieldSlot &
     datalist?: FieldOption[];
   };
 
+export type CheckboxField = { label: string; value: string; checked: boolean };
+
 export type CheckboxFieldSlot = BaseFieldSlot &
   BaseInputAttrs & {
     type: "checkbox";
+    checked?: boolean;
+  };
+export type CheckboxMultiFieldSlot = BaseFieldSlot &
+  BaseInputAttrs & {
+    type: "checkboxMulti";
     checked?: boolean;
   };
 
@@ -67,6 +74,7 @@ export type SearchSelectFieldSlot = BaseFieldSlot &
 
 export type FieldSlot =
   | InputFieldSlot
+  | CheckboxMultiFieldSlot
   | SelectFieldSlot
   | TextareaFieldSlot
   | SearchSelectFieldSlot;

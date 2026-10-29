@@ -50,8 +50,7 @@ const modeAttrs = endpoint
       "hx-push-url": "false",
     };
 
-console.log({modeAttrs});
-console.log({props});
+const attrs = { ...modeAttrs, ...props };
 ---
 
 <form
@@ -59,8 +58,7 @@ console.log({props});
   class:list={["card", className]}
   hx-ext="response-targets"
   hx-disabled-elt="find button[type=submit]"
-  {...modeAttrs}
-  {...props}
+  {...attrs}
 >
   <slot />
   <div id={msgId} class="toplevel-msg">
@@ -82,5 +80,4 @@ console.log({props});
   <SubmitButton text={submitText} size="m">
     <slot name="icon" slot="icon" />
   </SubmitButton>
-  
 </form>

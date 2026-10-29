@@ -70,7 +70,6 @@ const teams = await auth.api.listOrganizationTeams({
   headers,
 });
 const teamById = new Map(teams.map((t) => [t.id, t]));
-
 const userIds = members.map((m) => m.userId);
 
 // TODO how should i auth permission this?
@@ -90,7 +89,7 @@ const rows =
 const usersVerified = await db.query.User.findMany({
   where: inArray(
     User.id,
-    rows.flatMap((row) => row.userId),
+    userIds,
   ),
   columns: {
     id: true,
@@ -112,13 +111,11 @@ const memberTableRows = members.map((m) => ({
   ...m,
   user: {
     ...m.user,
-    emailVerified: usersVerified.find((usr) => usr.id === m.user.id)
-      ?.emailVerified ?? false,
+    emailVerified:
+      usersVerified.find((usr) => usr.id === m.user.id)?.emailVerified ?? false,
   },
   teams: teamsByUserId.get(m.userId) ?? [],
 }));
-
-console.log(JSON.stringify({memberTableRows},null,2));
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
 const orgIntegrations = await db.query.IntegrationCredential.findMany({
@@ -165,12 +162,28 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
       <h2>Invites Sent</h2>
       {
         invites.length > 0 ? (
-          <ul id="org-invitations-list">
-            {invites.map((inv) => (
-              <li>
-                {inv.email}, {inv.role},{inv.status}
-              </li>
-            ))}
+          <ul id="org-invitations-list" class="unstyled grid gap-s">
+            {invites
+              .filter((inv) => !["accepted", "canceled"].includes(inv.status))
+              .map((inv) => (
+                <li
+                  id={`org-invite-${inv.id}`}
+                  class="flex gap-s"
+                  style="align-items: center;"
+                >
+                  <span class="email">{inv.email}</span>
+                  <span class="role">{inv.role}</span>
+                  <span class="status" data-status={inv.status}>
+                    {inv.status}
+                  </span>
+                  <button
+                    hx-delete={`/org/${organization.slug}/partials/invite-member/cancel/${inv.id}`}
+                    hx-swap="outerHTML"
+                  >
+                    cancel
+                  </button>
+                </li>
+              ))}
           </ul>
         ) : (
           <p class="callout no-data">no invitations in circulation</p>
@@ -178,55 +191,55 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
       }
     </div>
   </div>
-</OrgMemberPageLayout>
-<div class="flex gap-m">
-  <CreateTeamForm
-    organizationId={organization.id}
-    organizationSlug={organization.slug}
-  >
-    <IconAdd slot="icon" />
-  </CreateTeamForm>
-  <div class="card">
-    <h2>Teams</h2>
-    {
-      teams.length > 0 ? (
-        <ul id="org-teams-list">
-          {teams.map((tm) => (
-            <li>{tm.name}</li>
-          ))}
-        </ul>
-      ) : (
-        <p class="callout no-data">no teams have been created</p>
-      )
-    }
-  </div>
-</div>
-
-<hr />
-
-<details>
-  <summary>Integrations</summary>
-  <p class="callout">This is for developers only</p>
-  <ul>
-    {
-      orgIntegrations.length > 0 ? (
-        orgIntegrations.map((integ) => (
-          <li>
-            {integ.provider} | expires: {integ.expiresAt}
-          </li>
-        ))
-      ) : (
-        <li>no integrations set</li>
-      )
-    }
-  </ul>
-  <div style="max-width: 30rem;">
-    <IntegrationCredForm
+  <div class="flex gap-m">
+    <CreateTeamForm
       organizationId={organization.id}
       organizationSlug={organization.slug}
-    />
+    >
+      <IconAdd slot="icon" />
+    </CreateTeamForm>
+    <div class="card">
+      <h2>Teams</h2>
+      {
+        teams.length > 0 ? (
+          <ul id="org-teams-list">
+            {teams.map((tm) => (
+              <li>{tm.name}</li>
+            ))}
+          </ul>
+        ) : (
+          <p class="callout no-data">no teams have been created</p>
+        )
+      }
+    </div>
   </div>
-</details>
+
+  <hr />
+
+  <details>
+    <summary>Integrations</summary>
+    <p class="callout">This is for developers only</p>
+    <ul>
+      {
+        orgIntegrations.length > 0 ? (
+          orgIntegrations.map((integ) => (
+            <li>
+              {integ.provider} | expires: {integ.expiresAt}
+            </li>
+          ))
+        ) : (
+          <li>no integrations set</li>
+        )
+      }
+    </ul>
+    <div style="max-width: 30rem;">
+      <IntegrationCredForm
+        organizationId={organization.id}
+        organizationSlug={organization.slug}
+      />
+    </div>
+  </details>
+</OrgMemberPageLayout>
 
 <!-- <Dialog
   modal

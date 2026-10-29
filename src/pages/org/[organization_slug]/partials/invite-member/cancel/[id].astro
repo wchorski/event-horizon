@@ -1,0 +1,43 @@
+---
+// https://better-auth.com/docs/plugins/organization#cancel-invitation
+import { auth } from "@lib/auth";
+import { string } from "astro:schema";
+type Invite = {
+  organizationId: string;
+  email: string;
+  role: string;
+  teamId: string | null;
+  status: string;
+  expiresAt: Date;
+  createdAt: Date;
+  inviterId: string;
+  id: string;
+};
+const method = Astro.request.method;
+if (method !== "DELETE")
+  return new Response(null, { status: 405, headers: { Allow: "DELETE" } });
+
+const headers = Astro.request.headers;
+const { id } = Astro.params;
+
+if (!id) return new Response("invite.id is missing", { status: 401 });
+
+// TODO cancel invitation
+const canceled = await auth.api.cancelInvitation({
+  body: {
+    invitationId: id, // required, The ID of the invitation to cancel.
+  },
+  // This endpoint requires session cookies.
+  headers,
+});
+---
+
+{
+  canceled ? (
+    <li id={`org-invite-${canceled.id}`} hx-swap-oob="outerHTML" class="danger">
+      <span class="danger">{canceled.status}</span> [{canceled.email} | {canceled.role}]
+    </li>
+  ) : (
+    <p class="error">refresh page and try again</p>
+  )
+}

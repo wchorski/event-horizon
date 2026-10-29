@@ -68,6 +68,19 @@
   --c-disabled: gray;
 }
 
+.error:not(:empty) {
+  background-color: color-mix(in srgb, var(--c-error), transparent 80%);
+  border: solid red 3px;
+  border-left-style: dashed;
+
+  &::before {
+    content: "⚠ ";
+  }
+}
+.warning {
+  border-color: orange;
+}
+
 .status {
   /* default fallback */
   --status-color: #999;
@@ -324,4 +337,8 @@ dialog {
       border-left-width: 2px;
     }
   }
+}
+
+.no-data {
+  color: var(--c-seperator);
 }

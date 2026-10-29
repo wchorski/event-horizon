@@ -1,7 +1,7 @@
 ---
 // components/form/InviteMemberform
 interface Props {
-  id?:string
+  id?: string;
   organizationSlug: string;
   organizationId: string;
 }
@@ -10,7 +10,11 @@ import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
 import FormCard from "./FormCard.astro";
 
-const { id = 'form--member-invite', organizationSlug, organizationId } = Astro.props;
+const {
+  id = "form--member-invite",
+  organizationSlug,
+  organizationId,
+} = Astro.props;
 
 const roleOptions = MEMBER_ROLES.map((text) => ({
   label: text,
@@ -30,14 +34,15 @@ const roleOptions = MEMBER_ROLES.map((text) => ({
 >
   <h2>Invite a user to become a member</h2>
   <fieldset class="no-style">
-    <SelectField
-      id={`${id}-role`}
-      name={"role"}
-      errorId={id + "-role"}
-      options={roleOptions}
-    />
-    <InputField formId={id} name="email" type={"email"} autocomplete="off" required/>
+    <SelectField name={"role"} formId={id} options={roleOptions} />
+    <InputField
+      formId={id}
+      name="email"
+      type={"email"}
+      autocomplete="off"
+      required
+    />  
   </fieldset>
-  
+
   <slot name="icon" slot="icon" />
 </FormCard>

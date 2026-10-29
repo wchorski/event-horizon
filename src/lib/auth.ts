@@ -23,7 +23,7 @@ import transporter, {
 import { passkey } from "@better-auth/passkey";
 import { db } from "@db/db";
 import * as schema from "@db/schema";
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, username, organization, emailOTP } from "better-auth/plugins";
 import { orgAccess, organizationRoles } from "./auth/permissions";
@@ -160,17 +160,28 @@ export const auth = betterAuth({
         // Construct the acceptance link (frontend route)
         const inviteLink = `${BETTER_AUTH_URL}/accept-invitation/${data.id}`;
 
-        // Send the email
-        await transporter.sendMail(
-          invitationEmailTemplate({
-            email: data.email,
-            inviterName: data.inviter.user.name || "A user",
-            inviterEmail: data.inviter.user.email,
-            organizationName: data.organization.name,
-            inviteLink,
-            role: data.role,
-          }),
+        console.log(
+          "🐸 if no internet access or failture to connect to smtp server throw error. should i put this catch inside the whole transporter?",
         );
+        // Send the email
+        await transporter
+          .sendMail(
+            invitationEmailTemplate({
+              email: data.email,
+              inviterName: data.inviter.user.name || "A user",
+              inviterEmail: data.inviter.user.email,
+              organizationName: data.organization.name,
+              inviteLink,
+              role: data.role,
+            }),
+          )
+          .catch((err) => {
+            console.log("❌ sending mail invitation failed: ", err);
+            throw new APIError("INTERNAL_SERVER_ERROR", {
+              message:
+                "We couldn't send the email. Please wait a few minutes and try resending it again.",
+            });
+          });
       },
       // TODO dynamic roles and access control - https://better-auth.com/docs/plugins/organization#enabling-dynamic-access-control
       // ac, // Must be defined in order for dynamic access control to work

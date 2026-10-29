@@ -1,4 +1,5 @@
 ---
+// layouts/BaseLayout
 interface Props {
   title?: string;
   excerpt?: string;
@@ -62,5 +63,13 @@ const {
     <slot name="footer" />
     <DialogConfirm />
     <AccountAuthSelect />
+    <div
+      id="network-error"
+      role="alert"
+      hidden
+      class="network-error callout error"
+    >
+      You appear to be offline. Check your connection and try again.
+    </div>
   </body>
 </html>

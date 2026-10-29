@@ -75,9 +75,9 @@ h1 {
 }
 
 .status {
-  border-left-width: 8px;
+  border-left-width: 4px;
   border-left-style: solid;
-  padding: var(--size-xs) var(--size-s);
+  padding-inline: var(--size-xs);
 }
 
 .card h2 {
@@ -110,7 +110,7 @@ button:has(.icon),
 }
 
 svg.icon {
-  vertical-align: -0.125em; 
+  vertical-align: -0.125em;
 }
 
 button.save,
@@ -207,18 +207,6 @@ hr {
   border-width: 3px;
   border-color: var(--c-seperator);
   padding: 1rem;
-}
-.error:not(:empty) {
-  background-color: rgba(var(--c-error), 0.192);
-  border: solid red 3px;
-  border-left-style: dashed;
-
-  &::before {
-    content: "⚠ ";
-  }
-}
-.warning {
-  border-color: orange;
 }
 
 /* ANIMATION */
@@ -496,4 +484,10 @@ button.drag-handle:active {
 }
 .max-w-s {
   max-width: 500px;
+}
+
+#network-error {
+  position: fixed;
+  bottom: 2%;
+  right: 2%;
 }

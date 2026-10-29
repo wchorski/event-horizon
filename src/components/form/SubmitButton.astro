@@ -2,14 +2,14 @@
 // components/form/SubmitButton
 import type { HTMLAttributes } from "astro/types";
 interface Props extends HTMLAttributes<"button"> {
-  id?: string;
+  formId?: string;
   text?: string;
   indicatorText?: string;
   hideText?: boolean;
   size?: "s" | "m" | "l";
 }
 const {
-  id = "submit-button",
+  formId = "submit-button",
   text = "Submit",
   indicatorText = "Submitting...",
   hideText = false,
@@ -21,19 +21,25 @@ const {
 type Style = HTMLAttributes<"span">["style"];
 
 const style = {
-  ...(size ? { padding: `var(--size-${size})`, fontSize: `calc(1rem + (var(--size-m) * 0.3))` } : {}),
+  ...(size
+    ? {
+        padding: `var(--size-${size})`,
+        fontSize: `calc(1rem + (var(--size-m) * 0.3))`,
+      }
+    : {}),
 };
+const id = formId ? `${formId}--submit-button` : null;
 ---
 
 <button
   type="submit"
   title={hideText ? text : ""}
-  id={id}
   class:list={[className]}
+  {id}
   {style}
   {...attrs}
 >
   <span class:list={["text", hideText ? "hide" : ""]}>{text}</span>
-  <span class="submit-indicator">{indicatorText}</span>
+  <span class="submit-indicator htmx-indicator">{indicatorText}</span>
   <slot name="icon" slot="icon" />
 </button>

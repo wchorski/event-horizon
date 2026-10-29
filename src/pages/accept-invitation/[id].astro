@@ -30,10 +30,6 @@ if (!id) {
 }
 
 const user = Astro.locals.user;
-const formId = Astro.request.headers.get("HX-Trigger");
-// avoids junk from client
-if (!formId || !/^[\w-]+$/.test(formId))
-  return new Response("Bad request", { status: 400 });
 
 const invitation = await db.query.Invitation.findFirst({
   where: eq(Invitation.id, id),
@@ -202,6 +198,8 @@ const blocked: Record<
     body: `This invitation expired on ${invite.expiresAt.toLocaleDateString("en-US", { dateStyle: "long" })}. Ask ${organization.name} to send a new one.`,
   },
 };
+
+const formId = 'invite-signup-form'
 ---
 
 <BaseLayout>
@@ -260,7 +258,7 @@ const blocked: Record<
 
           {view === "signup" && (
             <FormCard
-              id="invite-signup-form"
+              id={formId}
               submitText="Create account"
               state={formState}
             >
@@ -270,14 +268,12 @@ const blocked: Record<
                 formId={formId}
                 name="first_name"
                 type="text"
-                value={formState.values.first_name}
                 error={formState.fieldErrors.first_name}
               />
               <InputField
                 formId={formId}
                 name="last_name"
                 type="text"
-                value={formState.values.last_name}
                 error={formState.fieldErrors.last_name}
               />
               <InputField

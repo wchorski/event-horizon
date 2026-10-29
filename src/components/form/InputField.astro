@@ -29,7 +29,7 @@ const {
   checked,
   error,
   options,
-  ...rest
+  ...props
 } = Astro.props;
 
 const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
@@ -46,7 +46,6 @@ if (type === "searchSelect")
 <label class="form-field" for={id}>
   <span class="text">{label ?? name}</span>
   <input
-    {...rest}
     id={id}
     form={formId}
     name={name}
@@ -56,6 +55,7 @@ if (type === "searchSelect")
     list={listId}
     aria-invalid={error ? "true" : undefined}
     aria-describedby={errorId}
+    {...props}
   />
   {
     type !== "checkboxMulti" ? (

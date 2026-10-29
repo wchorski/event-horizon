@@ -20,6 +20,9 @@ const transporter = nodemailer.createTransport({
   host: SITE_MAIL_HOST,
   port: smtpPort,
   secure: smtpPort === 465, // true for 465, false for other ports
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 15_000,
   auth: {
     user: SITE_MAIL_AUTH_USER,
     pass: SITE_MAIL_AUTH_PASS,

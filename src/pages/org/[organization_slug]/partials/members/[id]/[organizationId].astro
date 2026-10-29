@@ -1,4 +1,5 @@
 ---
+// pages/org/:slug/partials/members/:id/:organizationId
 import FieldErrors from "@components/form/FieldErrors.astro";
 import { auth } from "@lib/auth";
 import { FormError, useForm } from "@lib/useForm";
@@ -6,7 +7,9 @@ import { validate } from "@lib/validate";
 import FormMessage from "@components/form/FormMessasge.astro";
 import { getMemberJoinedTeams } from "@lib/crud/getMemberTeams";
 import MemberManagementRow from "@components/tables/MemberManagementRow.astro";
-import { organization } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
+import { db } from "@db/db";
+import { User } from "@db/schema";
 
 const method = Astro.request.method;
 const headers = Astro.request.headers;
@@ -55,22 +58,28 @@ const allOrgTeams = await auth.api.listOrganizationTeams({
   headers,
 });
 
-// console.log({ member });
-// const result2 = await auth.api.listMembers({
-//   query: {
-//     organizationId,
-//     filterField: "id",
-//     filterOperator: "eq",
-//     filterValue: sessionMember?.id,
-//     limit: 1,
-//   },
-//   headers,
-// });
-// const memberAuthFound = result2?.members?.[0] ?? null;
-// console.log({ memberAuthFound });
-
 if (!member) return new Response("member not found in db", { status: 401 });
 
+const matchedUser = await db.query.User.findFirst({
+  where: eq(User.id, member.user.id),
+  columns: {
+    id: true,
+    emailVerified: true,
+  },
+});
+
+if (!matchedUser || !matchedUser.emailVerified)
+  return new Response(
+    "User email is not verified. member was not matched with user.",
+    { status: 401 },
+  );
+const memberWVerified = {
+  ...member,
+  user: {
+    ...member.user,
+    emailVerified: matchedUser.emailVerified,
+  },
+};
 //   TODO validate if user is member as is role === 'admin'
 
 const formId = Astro.request.headers.get("HX-Trigger");
@@ -129,7 +138,7 @@ const outcome = await useForm(formData, {
     });
 
     const row = {
-      ...member,
+      ...memberWVerified,
       role: updatedRole.role,
       teams: allOrgTeams
         .filter((t) => wanted.has(t.id))
@@ -153,7 +162,7 @@ if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
 {
   outcome.ok ? (
     <>
-      <div>thats all folks</div>
+      <div id="edit-member-wrap" hx-swap-oob="innerHTML" />
       {/* <FormMessage kind="success" message={outcome.state.success}>
         <dl class="kv">
           <dd>role</dd>

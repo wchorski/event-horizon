@@ -86,10 +86,15 @@ button[type="submit"].success {
     transform: translateX(0);
   }
 }
-
+form.htmx-request button[type="submit"],
 button.htmx-request {
   anchor-name: --submit-button;
   position: relative;
+  background-color: red !important;
+
+  & .text {
+    visibility: hidden;
+  }
 
   &::after {
     content: "";

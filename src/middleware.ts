@@ -133,6 +133,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const organizationSlug = pathname.startsWith("/org/") ? pathParts[1] : null;
 
+  // TODO make sure user isn't banned
   //? this is for multi tab org managment (useful now, but may want to revert to commented code below)
   if (organizationSlug && context.locals.user) {
     let organization;
@@ -142,7 +143,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       organization = await auth.api.getOrganization({
         query: { organizationSlug },
         headers,
-      });
+      })
+      // .catch(err => console.log({err}));
 
       if (organization) {
         const result = await auth.api.listMembers({
@@ -175,7 +177,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     if (!member) {
       return context.redirect(
-        `/not-authorized?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
+        `/dashboard?msg=${encodeURIComponent("User is not a member of organization: " + organizationSlug)}`,
       );
     }
 

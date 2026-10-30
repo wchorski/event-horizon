@@ -3,13 +3,22 @@
 import BaseLayout from "@layouts/BaseLayout.astro";
 
 const params = Astro.url.searchParams;
-const slug = params.get('slug')
+const slug = params.get("slug");
+const msg = params.get("msg");
 ---
 
 <BaseLayout>
+  {
+    slug ? (
+      <p>
+        The Organization <strong>"{slug}"</strong> is not registered to this
+        site.
+      </p>
+    ) : null
+  }
+  {msg ? <p>{msg}</p> : null}
   <p>
-    The Organization <strong>"{slug}"</strong> is not registered to this site. Please contact <a
-      href="mailto:Will@TawTaw.site">Will@TawTaw.site</a
-    > to get an account setup
+    Please contact{" "}
+    <a href="mailto:Will@TawTaw.site">Will@TawTaw.site</a> for help with an account.
   </p>
 </BaseLayout>

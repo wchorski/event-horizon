@@ -194,7 +194,7 @@ try {
         mailboxUserEmail: mailbox_user_email,
         outlookEventId: updatedPacket.outlook_event_id,
         // Pick one (see note below):
-        href: `${Astro.url.origin}/org/${organization.slug}/packets/${uploaded.id}`,
+        href: `${Astro.url.origin}/org/${organization.slug}/items/${uploaded.id}`,
         // href: uploaded.webUrl,
         label: filename,
       });

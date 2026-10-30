@@ -151,6 +151,27 @@ export const auth = betterAuth({
     }),
     username({ minUsernameLength: 3, maxUsernameLength: 30 }),
     organization({
+      schema: {
+        organization: {
+          additionalFields: {
+            color: { type: "string", required: false },
+            color_2: { type: "string", required: false },
+            mailbox_user_email: { type: "string", required: false },
+            sharepoint_site_url: { type: "string", required: false },
+            sharepoint_site_id: { type: "string", required: false },
+            sharepoint_drive_id: { type: "string", required: false },
+            sharepoint_library_name: { type: "string", required: false },
+
+            // sensitive: keep out of API responses and client input
+            dedicated_db_url: {
+              type: "string",
+              required: false,
+              input: false,
+              returned: false,
+            },
+          },
+        },
+      },
       ac: orgAccess,
       roles: organizationRoles,
       requireEmailVerificationOnInvitation: true,

@@ -20,10 +20,13 @@ import { decryptSecret } from "@lib/auth/secretBox";
 import { PLACEHOLDER_BODY } from "@lib/microsoft/outlookPacketLink";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 import {buildDriveHref} from '@lib/driveNav'
+import { auth } from "@lib/auth";
 
 const {DOMAIN_URL} = import.meta.env
 
 const {user, organization, member} = Astro.locals;
+// TODO authorize who is allowed to see documents?
+// TODO check permissions comparied to teams to see what 'department' folders they are allowed to see
 const displayName = user
   ? (user.name ? `${user.name} <${user.email}>` : user.username ?? user.email)
   : "anonymous";
@@ -38,13 +41,6 @@ if (!user) {
 const { organization_slug } = Astro.params;
 if (!organization_slug) throw new Error("no slug set");
 
-// TODO can get rid? check happens in middleware
-// const { organization, member } =
-//   await requireOrganizationAccess(
-//     user.id,
-//     organization_slug
-//   );
-
 if(!organization) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
 
 if(!member) return Astro.redirect(
@@ -52,14 +48,10 @@ if(!member) return Astro.redirect(
     encodeURIComponent('You are not authorized to view this page. Ask to become a member of: ' + organization?.name)
   }`)
 
-// const { tenantId, clientId, MS_SECRET_VALUE, MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
-//   MS_SHAREPOINT_MOEDOCS_SITE_ID,
-//   MS_MAILBOX_USER_EMAIL, } = import.meta.env;
 
 
 const {sharepoint_site_url, sharepoint_drive_id, sharepoint_site_id, mailbox_user_email} = organization
-
-if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) throw new Error('organization sharepoint env is not setup correctly')
+if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) return new Response("sharepoint columns not setup correctly on Organization", { status: 401 }); 
 // const sharepoint_site_id =
 //   MS_SHAREPOINT_MOEDOCS_SITE_ID;
 // const sharepoint_drive_id =

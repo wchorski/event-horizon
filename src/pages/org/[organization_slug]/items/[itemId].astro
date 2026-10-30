@@ -1,0 +1,134 @@
+---
+// pages/org/:organization_slug/packets/:itemId
+// TODO move this to an /api route instead of partial
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { db } from "@db/db";
+import { MeetingPacket } from "@db/schema";
+import { and, eq } from "drizzle-orm";
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { getMsCredentials } from "@lib/auth/msCredentials";
+
+const { itemId } = Astro.params;
+if (!itemId) return Astro.redirect("/404?msg=Item Id not set");
+
+const { user, organization, member } = Astro.locals;
+
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+// TODO is this enough authentication to stop non members from viewing organization files?
+if (!user)
+  return Astro.redirect(
+    `/login?msg=${"Must Be logged in to view this document"}&returnTo=${encodeURIComponent(returnTo)}`,
+  );
+if (!organization)
+  return Astro.redirect(
+    `/404?msg=${"You are not appart of this organization, or this organization has not been setup"}`,
+  );
+if (!member)
+  return Astro.redirect(
+    `/not-authorized?msg=${encodeURIComponent(`you are not a member of this organization: ${organization.name}`)}`,
+  );
+
+const { sharepoint_drive_id, sharepoint_site_id } = organization;
+
+// Only serve files that were actually published as packets for this drive
+// const packet = await db.query.MeetingPacket.findFirst({
+//   where: and(
+//     eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id!),
+//     eq(MeetingPacket.published_file_id, itemId),
+//   ),
+// });
+
+// TODO rethink a packet vs a regular file viewing
+// console.log({packet});
+// if (!packet) return Astro.redirect("/404");
+
+let errorMessage: string | undefined;
+
+try {
+  const { tenantId, clientId, clientSecret } = await getMsCredentials(organization.id);
+  const token = await msAuthentication(tenantId, clientId, clientSecret);
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  const base = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${itemId}`;
+
+  // 1. Metadata: name, mime type, and parent path (for authorization)
+  const metaRes = await fetch(
+    `${base}?$select=name,file,folder,parentReference`,
+    { headers: authHeaders },
+  );
+  if (!metaRes.ok) {
+    Astro.response.status = metaRes.status === 404 ? 404 : 502;
+    errorMessage = "Unable to load file.";
+    throw new Error(`Metadata fetch failed: ${metaRes.status}`);
+  }
+  const meta = await metaRes.json();
+
+  if (!meta.file) {
+    // it's a folder
+    Astro.response.status = 400;
+    errorMessage = "Not a file.";
+    throw new Error("Item is not a file");
+  }
+
+  // TODO: check meta.parentReference.path against allowed folders here
+
+  // 2. Decide whether conversion is needed
+  const CONVERT_TO_PDF = new Set([
+    "doc", "docx", "odt", "rtf",
+    "xls", "xlsx", "ods", "csv",
+    "ppt", "pptx", "pps", "ppsx", "odp",
+  ]);
+  const ext = meta.name.split(".").pop()?.toLowerCase() ?? "";
+  const convert = CONVERT_TO_PDF.has(ext);
+
+  // 3. Fetch content, converting only when needed
+  const fileRes = await fetch(
+    `${base}/content${convert ? "?format=pdf" : ""}`,
+    { headers: authHeaders },
+  );
+
+  if (!fileRes.ok) {
+    console.error("File fetch failed", fileRes.status, await fileRes.text());
+    Astro.response.status = fileRes.status === 404 ? 404 : 502;
+    errorMessage = "Unable to load file.";
+  } else {
+    const INLINE_SAFE = new Set([
+      "application/pdf", "image/png", "image/jpeg", "image/gif",
+      "image/webp", "text/plain", "video/mp4", "audio/mpeg",
+    ]);
+
+    // Trust our own decision for converted files; otherwise use upstream type
+    const type = convert
+      ? "application/pdf"
+      : (fileRes.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ??
+        "application/octet-stream");
+
+    const inline = INLINE_SAFE.has(type);
+
+    // Use the metadata name, swapping the extension if converted
+    const downloadName = convert
+      ? meta.name.replace(/\.[^.]+$/, ".pdf")
+      : meta.name;
+
+    const headers = new Headers({
+      "Content-Type": inline ? type : "application/octet-stream",
+      "Content-Disposition": inline
+        ? `inline; filename*=UTF-8''${encodeURIComponent(downloadName)}`
+        : `attachment; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+
+    return new Response(fileRes.body, { headers });
+  }
+} catch (err) {
+  console.error({ err });
+  if (!Astro.response.status || Astro.response.status < 400) Astro.response.status = 500;
+  errorMessage ??= "Unable to load file.";
+}
+---
+
+<BaseLayout>
+  <h1>{errorMessage ?? `Packet ${itemId}`}</h1>
+</BaseLayout>

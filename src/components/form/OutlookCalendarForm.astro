@@ -1,0 +1,112 @@
+---
+import type { CalendarEventDraft } from "@lib/calendarFactory";
+import InputField from "@components/form/InputField.astro";
+import SubmitButton from "@components/form/SubmitButton.astro";
+interface Props {
+  outlookEvent: any;
+  calendarDraft: CalendarEventDraft;
+  packet: any;
+  organizationSlug: string;
+  parentFolderId: string|null;
+}
+const { outlookEvent, calendarDraft, organizationSlug, packet, parentFolderId } = Astro.props;
+
+const formMethodEndpoint = outlookEvent
+  ? {
+      "hx-patch": `/org/${organizationSlug}/partials/outlook-event/${packet?.outlook_event_id}`,
+    }
+  : { "hx-post": `/org/${organizationSlug}/partials/outlook-event` };
+
+const formId = "form--outlook-calendar-event";
+// TODO use the FormCard.astro component
+---
+
+<form
+  class="card"
+  {...formMethodEndpoint}
+  hx-swap="innerHTML"
+  hx-target="#outlook-event-result"
+  hx-target-error="#outlook-calendar-error"
+>
+  <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
+  <fieldset class="no-style">
+    <InputField
+      name="subject"
+      id="calendar.subject"
+      type="text"
+      {formId}
+      value={calendarDraft.subject}
+    />
+    <InputField
+      name="start.dateTime"
+      label={"Start"}
+      id="calendar.start.dateTime"
+      type="datetime-local"
+      {formId}
+      value={calendarDraft.start.dateTime}
+    />
+    <InputField
+      name="end.dateTime"
+      label={"End"}
+      id="calendar.end.dateTime"
+      type="datetime-local"
+      {formId}
+      value={calendarDraft.end.dateTime}
+    />  
+
+    <!-- fixed values the user doesn't edit, but still need to reach the server -->
+    <input
+      type="hidden"
+      name="start.timeZone"
+      value={calendarDraft.start.timeZone}
+    />
+    <input
+      type="hidden"
+      name="end.timeZone"
+      value={calendarDraft.end.timeZone}
+    />
+    <input
+      type="hidden"
+      name="body.contentType"
+      value={calendarDraft.body.contentType}
+    />
+    <input
+      type="hidden"
+      name="body.content"
+      value={calendarDraft.body.content}
+    />
+    <input
+      type="hidden"
+      name="location.displayName"
+      value={calendarDraft.location.displayName}
+    />
+    <input
+      type="hidden"
+      name="transactionId"
+      value={calendarDraft.transactionId}
+    />
+
+    <input type="hidden" name="folderId" value={parentFolderId} />
+
+    {
+      calendarDraft.attendees.map((a, i) => (
+        <>
+          <input
+            type="hidden"
+            name={`attendees[${i}].emailAddress.address`}
+            value={a.emailAddress?.address ?? ""}
+          />
+          <input
+            type="hidden"
+            name={`attendees[${i}].emailAddress.name`}
+            value={a.emailAddress?.name ?? ""}
+          />
+          <input type="hidden" name={`attendees[${i}].type`} value={a.type} />
+        </>
+      ))
+    }
+  </fieldset>
+  <div id="outlook-event-result"></div>
+  <div id="outlook-calendar-error"></div>
+  <SubmitButton />
+</form>

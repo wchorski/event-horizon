@@ -10,6 +10,7 @@ import {
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
+import type { SessionOrganization, SessionTeam } from "./env";
 
 const isDev = import.meta.env.DEV;
 
@@ -136,14 +137,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // TODO make sure user isn't banned
   //? this is for multi tab org managment (useful now, but may want to revert to commented code below)
   if (organizationSlug && context.locals.user) {
-    let organization;
+    let organization:SessionOrganization|null = null;
     let member;
+    let teams:SessionTeam[]|null = null;
 
     try {
       organization = await auth.api.getOrganization({
         query: { organizationSlug },
         headers,
-      })
+      });
       // .catch(err => console.log({err}));
 
       if (organization) {
@@ -158,7 +160,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
           headers,
         });
         member = result?.members?.[0] ?? null;
+
+        const userTeams = await auth.api.listUserTeams({
+          headers, // session of the user
+        });
+  
+        teams = userTeams.filter((tm) => tm.organizationId === organization?.id);
       }
+
     } catch (err) {
       // treat API errors (not found / not permitted) like missing data
       // Expected "no access / no such org" responses fall through to the
@@ -183,6 +192,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     context.locals.organization = organization;
     context.locals.member = member;
+    context.locals.teams = teams;
 
     // TODO is this right to trigger here?
     const activeOrgId = context.locals.session?.activeOrganizationId; // wherever you keep the session

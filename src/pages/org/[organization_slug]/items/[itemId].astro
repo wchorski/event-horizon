@@ -1,5 +1,5 @@
 ---
-// pages/org/:organization_slug/packets/:itemId
+// pages/org/:organization_slug/items/:itemId
 // TODO move this to an /api route instead of partial
 import BaseLayout from "@layouts/BaseLayout.astro";
 import { db } from "@db/db";
@@ -7,11 +7,12 @@ import { MeetingPacket } from "@db/schema";
 import { and, eq } from "drizzle-orm";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { getMsCredentials } from "@lib/auth/msCredentials";
+import { getPathParts } from "@lib/filterDriveItems";
 
 const { itemId } = Astro.params;
 if (!itemId) return Astro.redirect("/404?msg=Item Id not set");
 
-const { user, organization, member } = Astro.locals;
+const { user, organization, member, teams } = Astro.locals;
 
 const returnTo = Astro.url.pathname + Astro.url.search;
 
@@ -31,22 +32,12 @@ if (!member)
 
 const { sharepoint_drive_id, sharepoint_site_id } = organization;
 
-// Only serve files that were actually published as packets for this drive
-// const packet = await db.query.MeetingPacket.findFirst({
-//   where: and(
-//     eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id!),
-//     eq(MeetingPacket.published_file_id, itemId),
-//   ),
-// });
-
-// TODO rethink a packet vs a regular file viewing
-// console.log({packet});
-// if (!packet) return Astro.redirect("/404");
-
 let errorMessage: string | undefined;
 
 try {
-  const { tenantId, clientId, clientSecret } = await getMsCredentials(organization.id);
+  const { tenantId, clientId, clientSecret } = await getMsCredentials(
+    organization.id,
+  );
   const token = await msAuthentication(tenantId, clientId, clientSecret);
   const authHeaders = { Authorization: `Bearer ${token}` };
 
@@ -70,14 +61,61 @@ try {
     errorMessage = "Not a file.";
     throw new Error("Item is not a file");
   }
+  //? meta output example
+  //   {
+  //   '@odata.context': 'https://graph.microsoft.com/v1.0/$metadata#Collection(driveItem)/$entity',
+  //   '@odata.etag': '"{42E47499-21BB-4024-9D00-A74FE3343EC9},1"',
+  //   name: 'Presentation-1.pdf',
+  //   parentReference: {
+  //     driveType: 'documentLibrary',
+  //     driveId: 'b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4',
+  //     id: '01I3CT5Y4GQIBSH6PMI5F2KUMN3OASYAF6',
+  //     name: '09-15',
+  //     path: '/drives/b!lsJ8_YTQBEaUGr3HDmGV5DxzCqKSH29MhBV0aSI-5wjanyzd4OQnQKS3XpK0w3l4/root:/PREPERATIONS/MOEITS Board/2026/09-15',
+  //     siteId: 'fd7cc296-d084-4604-941a-bdc70e6195e4'
+  //   },
+  //   file: {
+  //     fileExtension: '.pdf',
+  //     hashes: { quickXorHash: '5QMd8c0oT7pnHHHdCE6eCPcfhGM=' },
+  //     irmEffectivelyEnabled: false,
+  //     irmEnabled: false,
+  //     mimeType: 'application/pdf'
+  //   }
+  // }
 
-  // TODO: check meta.parentReference.path against allowed folders here
+  // todo check teamname against path
+  const isOrgAdmin = ["owner", "admin"].includes(member.role);
+  const teamNames = new Set(teams?.map((t) => t.name) ?? []);
+  const DEPT_PARENTS = ["PREPERATIONS", "PUBLISHED"];
+  const path = meta.parentReference?.path;
+  if (!path) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  const parts = getPathParts(path);
+  const anchor = parts.findIndex((p) => DEPT_PARENTS.includes(p));
+  // const workingDir = anchor >= 0 ? parts[anchor] : null;
+  const department = anchor >= 0 ? (parts[anchor + 1] ?? null) : null;
+
+  // 1. Hard gate: user is deep inside a department they don't belong to
+  if (department && !isOrgAdmin && !teamNames.has(department)) {
+    return new Response("Forbidden", { status: 403 });
+  }
 
   // 2. Decide whether conversion is needed
   const CONVERT_TO_PDF = new Set([
-    "doc", "docx", "odt", "rtf",
-    "xls", "xlsx", "ods", "csv",
-    "ppt", "pptx", "pps", "ppsx", "odp",
+    "doc",
+    "docx",
+    "odt",
+    "rtf",
+    "xls",
+    "xlsx",
+    "ods",
+    "csv",
+    "ppt",
+    "pptx",
+    "pps",
+    "ppsx",
+    "odp",
   ]);
   const ext = meta.name.split(".").pop()?.toLowerCase() ?? "";
   const convert = CONVERT_TO_PDF.has(ext);
@@ -94,15 +132,24 @@ try {
     errorMessage = "Unable to load file.";
   } else {
     const INLINE_SAFE = new Set([
-      "application/pdf", "image/png", "image/jpeg", "image/gif",
-      "image/webp", "text/plain", "video/mp4", "audio/mpeg",
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "text/plain",
+      "video/mp4",
+      "audio/mpeg",
     ]);
 
     // Trust our own decision for converted files; otherwise use upstream type
     const type = convert
       ? "application/pdf"
-      : (fileRes.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ??
-        "application/octet-stream");
+      : (fileRes.headers
+          .get("content-type")
+          ?.split(";")[0]
+          .trim()
+          .toLowerCase() ?? "application/octet-stream");
 
     const inline = INLINE_SAFE.has(type);
 
@@ -124,7 +171,8 @@ try {
   }
 } catch (err) {
   console.error({ err });
-  if (!Astro.response.status || Astro.response.status < 400) Astro.response.status = 500;
+  if (!Astro.response.status || Astro.response.status < 400)
+    Astro.response.status = 500;
   errorMessage ??= "Unable to load file.";
 }
 ---

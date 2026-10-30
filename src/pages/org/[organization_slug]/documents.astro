@@ -14,44 +14,65 @@ import { and, eq } from "drizzle-orm";
 import { IntegrationCredential, MeetingPacket, Organization } from "@db/schema";
 import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
-import { createCalendarDraft, outlookTimeZoneHeader, resolveMeetingTimeZone } from "@lib/calendarFactory";
+import {
+  createCalendarDraft,
+  outlookTimeZoneHeader,
+  resolveMeetingTimeZone,
+} from "@lib/calendarFactory";
 import { NotFoundError } from "@lib/errors";
 import { decryptSecret } from "@lib/auth/secretBox";
 import { PLACEHOLDER_BODY } from "@lib/microsoft/outlookPacketLink";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
-import {buildDriveHref} from '@lib/driveNav'
+import { buildDriveHref } from "@lib/driveNav";
 import { auth } from "@lib/auth";
+import OutlookCalendarForm from "@components/form/OutlookCalendarForm.astro";
+import { filterDriveItemsByTeam } from "@lib/filterDriveItems";
 
-const {DOMAIN_URL} = import.meta.env
+const { DOMAIN_URL } = import.meta.env;
 
-const {user, organization, member} = Astro.locals;
+const { user, organization, member, teams } = Astro.locals;
 // TODO authorize who is allowed to see documents?
 // TODO check permissions comparied to teams to see what 'department' folders they are allowed to see
 const displayName = user
-  ? (user.name ? `${user.name} <${user.email}>` : user.username ?? user.email)
+  ? user.name
+    ? `${user.name} <${user.email}>`
+    : (user.username ?? user.email)
   : "anonymous";
 
-  const returnTo = Astro.url.pathname + Astro.url.search
+const returnTo = Astro.url.pathname + Astro.url.search;
 
 // do i need this if it's handled in middleware?
 if (!user) {
-  return Astro.redirect(`/login?msg=Must be logged into your account&${encodeURIComponent(returnTo)}`);
+  return Astro.redirect(
+    `/login?msg=Must be logged into your account&${encodeURIComponent(returnTo)}`,
+  );
 }
 
 const { organization_slug } = Astro.params;
 if (!organization_slug) throw new Error("no slug set");
 
-if(!organization) return Astro.redirect(`/org-not-found?slug=${organization_slug}`)
+if (!organization)
+  return Astro.redirect(`/org-not-found?slug=${organization_slug}`);
 
-if(!member) return Astro.redirect(
-  `/not-authorized?msg=${
-    encodeURIComponent('You are not authorized to view this page. Ask to become a member of: ' + organization?.name)
-  }`)
+if (!member)
+  return Astro.redirect(
+    `/not-authorized?msg=${encodeURIComponent(
+      "You are not authorized to view this page. Ask to become a member of: " +
+        organization?.name,
+    )}`,
+  );
 
-
-
-const {sharepoint_site_url, sharepoint_drive_id, sharepoint_site_id, mailbox_user_email} = organization
-if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) return new Response("sharepoint columns not setup correctly on Organization", { status: 401 }); 
+const {
+  sharepoint_site_url,
+  sharepoint_drive_id,
+  sharepoint_site_id,
+  mailbox_user_email,
+} = organization;
+if (!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email)
+  return new Response(
+    "sharepoint columns not setup correctly on Organization",
+    { status: 401 },
+  );
 // const sharepoint_site_id =
 //   MS_SHAREPOINT_MOEDOCS_SITE_ID;
 // const sharepoint_drive_id =
@@ -59,16 +80,26 @@ if(!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email) return ne
 // const mailbox_user_email = MS_MAILBOX_USER_EMAIL
 
 // TODO don't hardcode this when supporting future integrations (or native?)
-const integrationCredential = await db.query.IntegrationCredential.findFirst({where: and(eq(IntegrationCredential.organizationId, organization.id), eq(IntegrationCredential.provider, 'microsoft'))})
-if(!integrationCredential){
-  const msg = `❌ ${'microsoft'} integration is not setup for ${organization.name}`
-  Astro.redirect(`/org/${organization.slug}?msg=${encodeURIComponent(msg)}`)
-  throw new NotFoundError(msg)
+const integrationCredential = await db.query.IntegrationCredential.findFirst({
+  where: and(
+    eq(IntegrationCredential.organizationId, organization.id),
+    eq(IntegrationCredential.provider, "microsoft"),
+  ),
+});
+if (!integrationCredential) {
+  const msg = `❌ ${"microsoft"} integration is not setup for ${organization.name}`;
+  Astro.redirect(`/org/${organization.slug}?msg=${encodeURIComponent(msg)}`);
+  throw new NotFoundError(msg);
 }
 
-const {tenantId, clientId, secretAuthTag, secretCiphertext, secretIv} = integrationCredential
+const { tenantId, clientId, secretAuthTag, secretCiphertext, secretIv } =
+  integrationCredential;
 
-const integrationSecret = decryptSecret(secretCiphertext, secretIv, secretAuthTag)
+const integrationSecret = decryptSecret(
+  secretCiphertext,
+  secretIv,
+  secretAuthTag,
+);
 
 // This page's own path — used to build "back to this folder" links
 const basePath = `/org/${organization_slug}/documents/`;
@@ -79,7 +110,9 @@ let isDayFldr = false;
 
 // Current folder comes from the URL; no itemId means "at the root"
 const folderId = Astro.url.searchParams.get("itemId");
+const msg = Astro.url.searchParams.get("msg");
 const crumbs = parseDriveCrumbs(Astro.url.searchParams.get("crumbs"));
+// TODO stop non-team members from accessing wrong paths by crumbs[0].name
 
 const url = folderId
   ? `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}/children`
@@ -110,24 +143,27 @@ try {
 
   if (packet?.outlook_event_id) {
     try {
-
       outlookEvent = await msGraphFetch<Event>(
         organization.id,
         `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
         { method: "GET", headers: outlookTimeZoneHeader(meetingTimeZone) },
       );
 
-      
-
       if (outlookEvent) {
         calendarDraft = createCalendarDraft(
           {
             subject: outlookEvent.subject ?? calendarDraft.subject,
             start: outlookEvent.start?.dateTime
-              ? { dateTime: outlookEvent.start.dateTime, timeZone: meetingTimeZone }
+              ? {
+                  dateTime: outlookEvent.start.dateTime,
+                  timeZone: meetingTimeZone,
+                }
               : calendarDraft.start,
             end: outlookEvent.end?.dateTime
-              ? { dateTime: outlookEvent.end.dateTime, timeZone: meetingTimeZone }
+              ? {
+                  dateTime: outlookEvent.end.dateTime,
+                  timeZone: meetingTimeZone,
+                }
               : calendarDraft.end,
             location: outlookEvent.location ?? calendarDraft.location,
             body: outlookEvent.body ?? calendarDraft.body,
@@ -162,7 +198,7 @@ try {
   console.log("❌ packet error; ", err);
 }
 
-let isPublishFolder = true
+let isPublishFolder = false;
 
 try {
   const accessToken = await msAuthentication(
@@ -180,86 +216,139 @@ try {
     const text = await res.text();
     throw new Error(`Request failed: ${res.status} ${res.statusText}\n${text}`);
   }
+  const DEPT_PARENTS = ["PREPERATIONS", "PUBLISHED"];
+  const isOrgAdmin = ["owner", "admin"].includes(member.role);
+  const teamNames = new Set(teams?.map((t) => t.name) ?? []);
 
   const data: DriveChildrenResponse = await res.json();
-  items = data.value ?? [];
+  const rawItems = data.value ?? [];
+
+  // Parse the path from UNFILTERED items
+  const rawPath = rawItems[0]?.parentReference?.path ?? "";
+  const afterRoot = rawPath.split("root:")[1] ?? "";
+  const parts = afterRoot.split("/").filter(Boolean).map(decodeURIComponent);
+
+  const anchor = parts.findIndex((p) => DEPT_PARENTS.includes(p));
+  const workingDir = anchor >= 0 ? parts[anchor] : null;
+  const department = anchor >= 0 ? (parts[anchor + 1] ?? null) : null;
+  const year = anchor >= 0 ? (parts[anchor + 2] ?? null) : null;
+  const monthDay = anchor >= 0 ? (parts[anchor + 3] ?? null) : null;
+
+  // 1. Hard gate: user is deep inside a department they don't belong to
+  if (department && !isOrgAdmin && !teamNames.has(department)) {
+    return Astro.redirect(
+      `/org/${organization.slug}/documents?msg=${encodeURIComponent(
+        `You must be added to department [${department}] to view these folders`,
+      )}`,
+    );
+  }
+
+  // 2. Soft filter: listing PUBLISHED/PREPERATIONS itself, hide other departments
+  const atDepartmentLevel = anchor >= 0 && parts.length === anchor + 1;
+  items =
+    !isOrgAdmin && atDepartmentLevel
+      ? rawItems.filter((it) => teamNames.has(it.name ?? ""))
+      : rawItems;
+
+  if (rawItems.length > 0) isPublishFolder = workingDir === "PUBLISHED";
   parentFolderId = folderId;
-  const firstItem = items[0];
-  // console.log({items});
+  // const data: DriveChildrenResponse = await res.json();
+  // // console.log(JSON.stringify({ preItems: data.value }, null, 2));
+  // // items = data.value ?? [];
+  // items = !["owner", "admin"].includes(member.role)
+  //   ? filterDriveItemsByTeam(teams, data.value ?? [])
+  //   : (data.value ?? []);
+  // parentFolderId = folderId;
+  // const firstItem = items[0];
 
-  if (firstItem) {
-    const path = firstItem.parentReference?.path;
-    if (!path) throw new Error("path does not exist");
+  // if (firstItem) {
+  //   const path = firstItem.parentReference?.path;
+  //   if (!path) throw new Error("path does not exist");
 
-    const afterRoot = path.split("root:")[1] ?? "";
-    const rootPath = afterRoot.replace(/^\/+/, ""); // strip a leading slash if present, no-op if absent
-    const parts = rootPath ? rootPath.split("/") : [];
-    const working_dir = parts.at(-4)
-    if(working_dir !== 'PUBLISHED') isPublishFolder = false
-    const department = parts.at(-3); // MOEITS Board
-    const year = parts.at(-2);       // 2026
-    const monthDay = parts.at(-1);   // 09-15
+  //   const afterRoot = path.split("root:")[1] ?? "";
+  //   const rootPath = afterRoot.replace(/^\/+/, ""); // strip a leading slash if present, no-op if absent
+  //   const parts = rootPath ? rootPath.split("/") : [];
+  //   const working_dir = parts.at(-4);
+  //   if (working_dir !== "PUBLISHED") isPublishFolder = false;
+  //   // TODO not sure if this works the way i think it should
+  //   const department = parts.at(-3); // MOEITS Board
+  //   const year = parts.at(-2); // 2026
+  //   const monthDay = parts.at(-1); // 09-15
 
-    if (department && year && monthDay) {
-      isDayFldr = isDayFolder([{ name: year }, { name: monthDay }]);
-      if (isDayFldr) {
+  //   // const isOrgAdmin = ["owner", "admin"].includes(member.role);
+  //   // const teamNames = new Set(teams?.map((t) => t.name) ?? []);
 
-        const crumbHref = buildDriveHref(basePath, [
-                ...crumbs,
-                {
-                  id: parentFolderId ?? null,
-                  name: firstItem.name ?? "Untitled",
-                  webUrl: firstItem.webUrl ?? undefined,
-                },
-              ])
-        // const params = new URLSearchParams({itemId: folderId ?? "", crumbs: "where-do-i-go"})
-        // TODO the crumb isn't exactly right becaues it includes the nested folder/file but the link takes us to the correct itemId parent
+  //   // if (department && !isOrgAdmin && !teamNames.has(department)) {
+  //   //   return Astro.redirect(
+  //   //     `/org/${organization.slug}/documents?msg=${encodeURIComponent(`You must be added to department [${department}] to view these folders`)}`,
+  //   //   );
+  //   // }
+  const isDayFldr =
+    anchor >= 0 &&
+    parts.length === anchor + 4 &&
+    isDayFolder([{ name: year! }, { name: monthDay! }]);
 
-        calendarDraft = createCalendarDraft({
-          subject: `${department} | BOT Meeting`,
-          start: { dateTime: `${year}-${monthDay}T07:00`, timeZone:meetingTimeZone },
-          end: { dateTime: `${year}-${monthDay}T09:00`, timeZone:meetingTimeZone },
-          body: PLACEHOLDER_BODY(DOMAIN_URL + crumbHref)
-          
-        }, meetingTimeZone);
-      }
-    }
+  if (isDayFldr) {
+    const crumbHref = buildDriveHref(basePath, [
+      ...crumbs,
+      {
+        id: parentFolderId ?? null,
+        name: monthDay!,
+        webUrl: undefined,
+      },
+    ]);
+    // const params = new URLSearchParams({itemId: folderId ?? "", crumbs: "where-do-i-go"})
+    // TODO the crumb isn't exactly right becaues it includes the nested folder/file but the link takes us to the correct itemId parent
+
+    calendarDraft = createCalendarDraft(
+      {
+        subject: `${department} | BOT Meeting`,
+        start: {
+          dateTime: `${year}-${monthDay}T07:00`,
+          timeZone: meetingTimeZone,
+        },
+        end: {
+          dateTime: `${year}-${monthDay}T09:00`,
+          timeZone: meetingTimeZone,
+        },
+        body: PLACEHOLDER_BODY(DOMAIN_URL + crumbHref),
+      },
+      meetingTimeZone,
+    );
   }
 } catch (err) {
   console.error(err);
   error = err instanceof Error ? err.message : String(err);
 }
-
-const formMethodEndpoint = outlookEvent
-  ? {
-      "hx-patch": `/org/${organization.slug}/partials/outlook-event/${packet?.outlook_event_id}`,
-    }
-  : { "hx-post": `/org/${organization.slug}/partials//outlook-event` };
 ---
 
-
-
-  <OrgMemberPageLayout title={organization.name + " | Documents"}>
-    
-      
-      
-      <div data-layout="content">
-        {isDayFldr && !isPublishFolder ? <>
-      
-
-      <section class="flex gap-m">
-        
-          {
-            packet?.outlook_event_id && outlookEvent ? (
+<OrgMemberPageLayout title={organization.name + " | Documents"}>
+  <div data-layout="content">
+    {msg ? <p class="callout warning">{msg}</p> : null}
+    {
+      isDayFldr && !isPublishFolder ? (
+        <>
+          <section class="flex gap-m">
+            {packet?.outlook_event_id && outlookEvent ? (
               <div class="card">
                 <h2>Event:</h2>
                 <dl class="kv">
                   <dd>Subject</dd>
                   <dt>{outlookEvent.subject}</dt>
                   <dd>Start</dd>
-                  <dt>{outlookEvent.start?.dateTime ? prettyDateToLocale(new Date(outlookEvent.start.dateTime)) : "—"}</dt>
+                  <dt>
+                    {outlookEvent.start?.dateTime
+                      ? prettyDateToLocale(
+                          new Date(outlookEvent.start.dateTime),
+                        )
+                      : "—"}
+                  </dt>
                   <dd>End</dd>
-                  <dt>{outlookEvent.end?.dateTime ? prettyDateToLocale(new Date(outlookEvent.end.dateTime)) : "—"}</dt>
+                  <dt>
+                    {outlookEvent.end?.dateTime
+                      ? prettyDateToLocale(new Date(outlookEvent.end.dateTime))
+                      : "—"}
+                  </dt>
                   <dd>location</dd>
                   <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
                   {/* <dd>onlineMeeting</dd>
@@ -275,140 +364,53 @@ const formMethodEndpoint = outlookEvent
                   outlook link
                 </a>
               </div>
-            ) : null
-          }
-  
-          <form
-            class="card"
-            {...formMethodEndpoint}
-            hx-swap="innerHTML"
-            hx-target="#outlook-event-result"
-            hx-target-error="#outlook-calendar-error"
-          >
-            <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
-            <fieldset class="no-style">
-              <InputField
-                name="subject"
-                id="calendar.subject"
-                type="text"
-                model="event"
-                value={calendarDraft.subject}
-              />
-              <InputField
-                name="start.dateTime"
-                label={'Start'}
-                id="calendar.start.dateTime"
-                type="datetime-local"
-                model="event"
-                value={calendarDraft.start.dateTime}
-              />
-              <InputField
-                name="end.dateTime"
-                label={'End'}
-                id="calendar.end.dateTime"
-                type="datetime-local"
-                model="event"
-                value={calendarDraft.end.dateTime}
-              />
-  
-              <!-- fixed values the user doesn't edit, but still need to reach the server -->
-              <input
-                type="hidden"
-                name="start.timeZone"
-                value={calendarDraft.start.timeZone}
-              />
-              <input
-                type="hidden"
-                name="end.timeZone"
-                value={calendarDraft.end.timeZone}
-              />
-              <input
-                type="hidden"
-                name="body.contentType"
-                value={calendarDraft.body.contentType}
-              />
-              <input
-                type="hidden"
-                name="body.content"
-                value={calendarDraft.body.content}
-              />
-              <input
-                type="hidden"
-                name="location.displayName"
-                value={calendarDraft.location.displayName}
-              />
-              <input
-                type="hidden"
-                name="transactionId"
-                value={calendarDraft.transactionId}
-              />
-  
+            ) : null}
+
+            <OutlookCalendarForm
+              outlookEvent={outlookEvent}
+              calendarDraft={calendarDraft}
+              packet={packet}
+              organizationSlug={organization.slug}
+              parentFolderId={parentFolderId}
+            />
+
+            {/* TODO make this flippable card with edit on the back */}
+            <form
+              class="card"
+              hx-post={`/org/${organization.slug}/partials/pdf-packet-builder`}
+              hx-swap="outerHTML"
+              hx-target="this"
+              hx-target-error="#pdf-packet-builder-error"
+            >
+              <h2>PDF Packet Builder</h2>
               <input type="hidden" name="folderId" value={parentFolderId} />
-     
-  
-              {
-                calendarDraft.attendees.map((a, i) => (
-                  <>
-                    <input
-                      type="hidden"
-                      name={`attendees[${i}].emailAddress.address`}
-                      value={a.emailAddress?.address ?? ""}
-                    />
-                    <input
-                      type="hidden"
-                      name={`attendees[${i}].emailAddress.name`}
-                      value={a.emailAddress?.name ?? ""}
-                    />
-                    <input
-                      type="hidden"
-                      name={`attendees[${i}].type`}
-                      value={a.type}
-                    />
-                  </>
-                ))
-              }
-            </fieldset>
-            <div id="outlook-event-result"></div>
-            <div id="outlook-calendar-error"></div>
-            <SubmitButton />
-          </form>
-  
-        
-  
-        <form
-          class="card"
-          hx-post={`/org/${organization.slug}/partials/pdf-packet-builder`}
-          hx-swap="outerHTML"
-          hx-target="this"
-          hx-target-error="#pdf-packet-builder-error"
-        >
-          <h2>PDF Packet Builder</h2>
-          <input type="hidden" name="folderId" value={parentFolderId} />
-  
-          <div id="pdf-packet-builder-error"></div>
-          {
-            packet?.published_file_url ? (
-              <p>
-                view published packet {" "}
-                <a href={packet.published_file_url} target="_blank">
-                  {packet.published_file_url.split('/')[packet.published_file_url.split('/').length - 1]}
-                </a>
-              </p>
-            ) : null
-          }
-          <SubmitButton text="Generate New Packet" />
-        </form>
-      </section>
-      </> : null}
-        <hr />
-        {error && <p style="color: red;">Error: {error}</p>}
-        <Breadcrumbs crumbs={crumbs} basePath={basePath} />
-        {
-          !error && (
-            <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
-          )
-        }
-      </div>
-  </OrgMemberPageLayout>
 
-
+              <div id="pdf-packet-builder-error" />
+              {packet?.published_file_url ? (
+                <p>
+                  view published packet{" "}
+                  <a href={packet.published_file_url} target="_blank">
+                    {
+                      packet.published_file_url.split("/")[
+                        packet.published_file_url.split("/").length - 1
+                      ]
+                    }
+                  </a>
+                </p>
+              ) : null}
+              <SubmitButton text="Generate New Packet" />
+            </form>
+          </section>
+        </>
+      ) : null
+    }
+    <hr />
+    {error && <p style="color: red;">Error: {error}</p>}
+    <Breadcrumbs crumbs={crumbs} basePath={basePath} />
+    {
+      !error && (
+        <DriveItemsTable items={items} crumbs={crumbs} basePath={basePath} />
+      )
+    }
+  </div>
+</OrgMemberPageLayout>

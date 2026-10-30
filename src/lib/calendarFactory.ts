@@ -9,7 +9,7 @@ import { PLACEHOLDER_BODY } from "./microsoft/outlookPacketLink";
 
 const { DOMAIN_URL } = import.meta.env;
 
-interface CalendarEventDraft {
+export interface CalendarEventDraft {
   subject: string;
   body: ItemBody;
   start: DateTimeTimeZone;

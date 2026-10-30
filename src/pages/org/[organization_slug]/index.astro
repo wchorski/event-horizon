@@ -87,10 +87,7 @@ const rows =
 
 // TODO another query auth to worry about
 const usersVerified = await db.query.User.findMany({
-  where: inArray(
-    User.id,
-    userIds,
-  ),
+  where: inArray(User.id, userIds),
   columns: {
     id: true,
     emailVerified: true,
@@ -191,6 +188,7 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
       }
     </div>
   </div>
+  <hr />
   <div class="flex gap-m">
     <CreateTeamForm
       organizationId={organization.id}
@@ -204,7 +202,16 @@ const orgIntegrations = await db.query.IntegrationCredential.findMany({
         teams.length > 0 ? (
           <ul id="org-teams-list">
             {teams.map((tm) => (
-              <li>{tm.name}</li>
+              <li id={`org-team-${tm.id}`} class="flex gap-s">
+                <span class="nam">{tm.name}</span>
+                <button
+                  class="danger critical"
+                  hx-delete={`/org/${organization.slug}/partials/teams/${tm.id}?organizationId=${organization.id}`}
+                  hx-swap="outerHTML"
+                >
+                  remove
+                </button>
+              </li>
             ))}
           </ul>
         ) : (

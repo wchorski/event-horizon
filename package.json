@@ -1,7 +1,7 @@
 {
   "name": "event-horizon",
   "type": "module",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "organization updates: invitation and onboarding flows",
   "scripts": {
     "dev": "astro dev",

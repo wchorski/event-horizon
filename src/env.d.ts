@@ -39,18 +39,29 @@ interface ImportMeta {
 /// <reference path="../.astro/types.d.ts" />
 import type { auth } from "../src/lib/auth";
 import type { OrganizationSelect, MemberSelect } from "@ty/Schema";
+export type SessionUser = typeof auth.$Infer.Session.user;
+export type SessionOrganization = Awaited<
+  ReturnType<typeof auth.api.getOrganization>
+>;
+export type SessionMember = Awaited<
+  ReturnType<typeof auth.api.listMembers>
+>["members"][number];
+export type SessionTeam = {
+ id: string;
+ name: string;
+ organizationId: string;
+ createdAt: Date;
+ updatedAt?: Date | undefined;
+}
 
 declare global {
   namespace App {
     interface Locals {
       user: typeof auth.$Infer.Session.user | null;
       session: typeof auth.$Infer.Session.session | null;
-      organization: NonNullable<
-        Awaited<ReturnType<typeof auth.api.getOrganization>>
-      > | null;
-      member: NonNullable<
-        Awaited<ReturnType<typeof auth.api.listMembers>>["members"][number]
-      > | null;
+      organization: NonNullable<SessionOrganization> | null;
+      member: NonNullable<SessionMember> | null;
+      teams: NonNullable<SessionTeam[]> | null;
       // member: NonNullable<
       //   Awaited<ReturnType<typeof auth.api.getActiveMember>>
       // > | null;

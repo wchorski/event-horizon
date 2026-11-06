@@ -201,6 +201,10 @@ export const validate = {
     zip: z.string().min(5, "Invalid ZIP code").max(5, "Invalid ZIP code"),
   }),
 
+  packetBuild: z.object({
+    folderId: z.string().regex(/^[\w!-]+$/, "Invalid folder id"),
+  }),
+
   get userCreate() {
     return this.user.omit({ id: true });
   },

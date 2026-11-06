@@ -1,11 +1,22 @@
 // lib/useForm.ts
 import { z, type ZodType } from "astro/zod";
 import { APIError } from "better-auth/api";
-import { fail, succeed, type FormState, type FormValues } from "@lib/form-state";
+import {
+  fail,
+  succeed,
+  type FormState,
+  type FormValues,
+} from "@lib/form-state";
 
-export type RawInput = Record<string, FormDataEntryValue | FormDataEntryValue[]>;
+export type RawInput = Record<
+  string,
+  FormDataEntryValue | FormDataEntryValue[]
+>;
+export type FormSource = FormData | RawInput;
 // What `run` receives: the parsed Zod output, or the raw object if no schema.
-type Input<S extends ZodType | undefined> = S extends ZodType ? z.output<S> : RawInput;
+type Input<S extends ZodType | undefined> = S extends ZodType
+  ? z.output<S>
+  : RawInput;
 
 type Opts<S extends ZodType | undefined, T> = {
   schema?: S;
@@ -16,7 +27,7 @@ type Opts<S extends ZodType | undefined, T> = {
   run: (input: Input<S>) => Promise<T>;
 };
 
-import { findDrizzlePgError, columnFromDetail } from "@lib/errors";
+import { findDrizzlePgError, columnFromDetail, BadRequestError, errorHandlingOnSubmit, ForbiddenError, NotFoundError } from "@lib/errors";
 
 type ConstraintMap = Record<
   string,
@@ -60,6 +71,18 @@ function toFailure(e: unknown, constraints?: ConstraintMap) {
     return e.field
       ? { status: e.status, fieldErrors: { [e.field]: e.message } }
       : { status: e.status, error: e.message };
+  }
+
+  if (
+    e instanceof BadRequestError ||
+    e instanceof NotFoundError ||
+    e instanceof ForbiddenError
+  ) {
+    const { err, status } = errorHandlingOnSubmit(e);
+    return {
+      status,
+      error: typeof err === "string" ? err : JSON.stringify(err),
+    };
   }
 
   const pg = findDrizzlePgError(e);
@@ -117,11 +140,21 @@ function toFailure(e: unknown, constraints?: ConstraintMap) {
   return { status: 500, error: "Something went wrong." };
 }
 
+// Same "_" prefix rule for both sources, so behavior is identical
+function toRaw(source: FormSource): RawInput {
+  if (source instanceof FormData) return formDataToObject(source);
+  const out: RawInput = {};
+  for (const [k, v] of Object.entries(source)) {
+    if (!k.startsWith("_")) out[k] = v;
+  }
+  return out;
+}
+
 export async function useForm<S extends ZodType | undefined, T>(
-  formData: FormData,
+  source: FormSource,
   o: Opts<S, T>,
 ): Promise<ActionResult<T>> {
-  const raw = formDataToObject(formData);
+  const raw = toRaw(source);
   const values = echoValues(raw, o.sensitive);
 
   try {
@@ -156,12 +189,12 @@ function echoValues(raw: RawInput, sensitive: string[] = []): FormValues {
   const out: FormValues = {};
   for (const [k, v] of Object.entries(raw)) {
     if (sensitive.includes(k)) continue;
-    if (Array.isArray(v)) out[k] = v.filter((x): x is string => typeof x === "string");
+    if (Array.isArray(v))
+      out[k] = v.filter((x): x is string => typeof x === "string");
     else if (typeof v === "string") out[k] = v;
   }
   return out;
 }
-
 
 //? coresion handled by zod
 /** Single yes/no checkbox: absent (unchecked) → false, present → true */

@@ -18,7 +18,7 @@ import { Booking, Location } from "@db/schema";
 import { db } from "@db/db";
 import { validateBookingRequest } from "@lib/validate";
 import { parseNestedFormData } from "@lib/parseFormFields";
-import { createUser } from "@lib/auth/createUser";
+// import { createUser } from "@lib/auth/createUser";
 
 export const partial = true;
 
@@ -113,13 +113,14 @@ if (Astro.request.method === "POST") {
       locationId = newLocation.id;
     }
 
-    if (!clientId && validated.user) {
-      const userResult = await createUser(validated.user);
+    //! TODO prob shouldn't be allowing everybody to create users
+    // if (!clientId && validated.user) {
+    //   const userResult = await createUser(validated.user);
 
-      if (!userResult.success)
-        throw new Error(`User Create Error: ${userResult.error}`);
-      clientId = userResult.user.id;
-    }
+    //   if (!userResult.success)
+    //     throw new Error(`User Create Error: ${userResult.error}`);
+    //   clientId = userResult.user.id;
+    // }
 
     const [result] = await db
       .insert(Booking)

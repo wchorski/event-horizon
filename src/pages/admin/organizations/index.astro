@@ -7,7 +7,15 @@ import PaginationNav from "@components/navigation/PaginationNav.astro";
 import TableMenu from "@components/tables/TableMenu.astro";
 import { getOrganizations } from "@lib/dbQueries/getOrganizations";
 const { SITE_TITLE } = import.meta.env;
+const { user } = Astro.locals;
 const params = Astro.url.searchParams;
+
+const returnTo = Astro.url.pathname + Astro.url.search;
+
+if (!user || user.role !== "admin")
+  return Astro.redirect(
+    `/login?msg=Must be logged into your account&${encodeURIComponent(returnTo)}`,
+  );
 
 const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
 const DEFAULT_PER_PAGE = 25;
@@ -27,8 +35,11 @@ if (rawPerPage !== null) {
   }
 }
 
-// TODO get organizations
-const result = await getOrganizations({ page, perPage: perPageParam });
+const result = await getOrganizations({
+  page,
+  perPage: perPageParam,
+  userRole: user.role,
+});
 
 if ("redirect" in result) {
   return Astro.redirect("/admin/organizations");
@@ -58,9 +69,9 @@ const pageTitle = page === 1 ? "Organizations" : `Organizations - Page ${page}`;
         placeholder={"Search by name, email, or phone..."}
       />
       <OrganizationsEditableTable organizations={organizations} />
-       <ul>
-         {organizations.map(org => (<li>{org.name}</li>))}
-       </ul>
+      <ul>
+        {organizations.map((org) => <li>{org.name}</li>)}
+      </ul>
       {
         organizations ? (
           <PaginationNav

@@ -1,0 +1,81 @@
+---
+// pages/org/[organization_slug]/partials/pdf-packet-builder/[folderId].astro
+import FormMessage from "@components/form/FormMessage.astro";
+import { auth } from "@lib/auth";
+import { createMeetingPacket } from "@lib/crud/createPacket";
+import { BadRequestError, ForbiddenError } from "@lib/errors";
+import { useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
+
+if (Astro.request.method !== "POST") {
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
+}
+
+// Build the input server-side from the route param. No formData() needed.
+const input = { folderId: Astro.params.folderId ?? "" };
+
+const outcome = await useForm(input, {
+  schema: validate.packetBuild,
+  labels: { folderId: "folder" },
+  successMessage: "Packet created.",
+  run: async ({ folderId }) => {
+    const { organization, member } = Astro.locals;
+    if (!organization || !member) {
+      throw new ForbiddenError("You are not authorized for this organization.");
+    }
+    // Authorize first, inside run, so a ForbiddenError renders in the form
+    const { success: canPublishPackets } = await auth.api.hasPermission({
+      headers: Astro.request.headers,
+      body: {
+        organizationId: organization.id, // be explicit rather than relying on the "active" org
+        permissions: { packet: ["publish"] },
+      },
+    });
+
+    if (!canPublishPackets)
+      throw new ForbiddenError("not allowed to publish packets");
+
+    return createMeetingPacket({
+      organization,
+      folderId,
+      origin: Astro.url.origin,
+    });
+  },
+});
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+
+// folderId has no visible field, so a validation failure would otherwise
+// show nothing. Fall back to its field error as the top-level message.
+const errorMessage = outcome.ok
+  ? ""
+  : (outcome.state.error ??
+    outcome.state.fieldErrors?.folderId ??
+    "Something went wrong.");
+---
+
+{
+  outcome.ok ? (
+    <FormMessage kind="success" message={outcome.state.success}>
+      {outcome.data.webLink && (
+        <p>
+          View published packet{" "}
+          <a href={outcome.data.webLink} target="_blank" rel="noopener">
+            {outcome.data.filename}
+          </a>
+        </p>
+      )}
+      {outcome.data.calendarWarning && (
+        <p role="status" class="callout">
+          {outcome.data.calendarWarning}
+        </p>
+      )}
+    </FormMessage>
+  ) : (
+    <FormMessage
+      kind="error"
+      message={errorMessage}
+      status={outcome.state.status}
+    />
+  )
+}

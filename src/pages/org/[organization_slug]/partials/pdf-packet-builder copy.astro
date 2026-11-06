@@ -1,0 +1,274 @@
+<!-- ---
+// pages/org/:organization_slug/partials/pdf-packet-builder
+import { IntegrationCredential, MeetingPacket } from "@db/schema";
+import { db } from "@db/db";
+import { msAuthentication } from "@lib/auth/msAuthentication";
+import { isDayFolder } from "@lib/dayFolderCheck";
+import {
+  BadRequestError,
+  errorHandlingOnSubmit,
+  ForbiddenError,
+  NotFoundError,
+} from "@lib/errors";
+import { buildMergedPacket } from "@lib/pdfPacketBuilder";
+import {
+  ensureFolderPath,
+  getFullPath,
+  mirrorToPublished,
+  nextVersionedFilename,
+  uploadPacketResumable,
+} from "@lib/publishPacket";
+import { and, eq } from "drizzle-orm";
+import { decryptSecret } from "@lib/auth/secretBox";
+import { updateEventPacketLink } from "@lib/microsoft/outlookPacketLink";
+import { auth } from "@lib/auth";
+
+type RenderResult =
+  | { kind: "redirect"; url: string; setCookies: string[] }
+  | {
+      kind: "success";
+      pdfId: string;
+      webLink?: string;
+      calendarWarning?: string;
+    }
+  | { kind: "top-error"; message: string };
+// const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+
+if (Astro.request.method !== "POST") {
+  throw new BadRequestError(
+    `Unsupported method for this route: ${Astro.request.method}`,
+  );
+}
+
+const headers = Astro.request.headers;
+let result: RenderResult;
+
+const { organization, member } = Astro.locals;
+if (!organization || !member) {
+  Astro.response.status = 403;
+  throw new BadRequestError("You are not authorized for this organization.");
+}
+
+const { sharepoint_site_id, sharepoint_drive_id } = organization;
+if (!sharepoint_site_id || !sharepoint_drive_id)
+  throw new BadRequestError("organization is missing ms site or drive ids.");
+
+try {
+  const { success: canPublishPackets } = await auth.api.hasPermission({
+    headers,
+    body: {
+      organizationId: organization.id, // be explicit rather than relying on the "active" org
+      permissions: { packet: ["publish"] },
+    },
+  });
+  if (!canPublishPackets)
+    throw new ForbiddenError("You don't have permission to publish packets.");
+
+  const formData = await Astro.request.formData();
+  const submitFields = Object.fromEntries(
+    [...formData.entries()].filter(([key]) => !key.startsWith("_")),
+  );
+  const { folderId, packetId } = submitFields;
+  // console.log({ folderId });
+  if (!folderId) throw new Error("folder Id must be set");
+
+  const integrationCredential = await db.query.IntegrationCredential.findFirst({
+    where: and(
+      eq(IntegrationCredential.organizationId, organization.id),
+      eq(IntegrationCredential.provider, "microsoft"),
+    ),
+  });
+
+  if (!integrationCredential)
+    throw new NotFoundError(
+      `❌ ${"microsoft"} integration is not setup for ${organization.name} `,
+    );
+
+  const { tenantId, clientId, secretAuthTag, secretCiphertext, secretIv } =
+    integrationCredential;
+
+  const integrationSecret = decryptSecret(
+    secretCiphertext,
+    secretIv,
+    secretAuthTag,
+  );
+
+  const accessToken = await msAuthentication(
+    tenantId,
+    clientId,
+    integrationSecret,
+  );
+
+  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}?$select=name,parentReference`;
+
+  // TODO use msGraphFetch()
+  const res = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new BadRequestError(`Could not load folder: ${res.status} ${text}`);
+  }
+
+  const item = await res.json();
+  // console.log({ item });
+
+  // item.parentReference.path looks like ".../root:/PREPERATIONS/MOEITS Board/2026"
+  const parentSegments = item.parentReference.path.split("/");
+  const parentName = parentSegments[parentSegments.length - 1];
+  const departmentName = parentSegments[parentSegments.length - 2];
+
+  if (!isDayFolder([{ name: parentName }, { name: item.name }])) {
+    throw new BadRequestError("Events can only be linked to day folders.");
+  }
+
+  const existingPacket = await db.query.MeetingPacket.findFirst({
+    where: and(
+      eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
+      eq(MeetingPacket.sharepoint_folder_id, folderId as string),
+    ),
+  });
+
+  if (!existingPacket) {
+    throw new BadRequestError(
+      "This folder isn't linked to a calendar event yet. Create a calendar event before building a packet.",
+    );
+  }
+  const sourcePath = getFullPath(item); // uses the `item` you already fetched
+
+  const publishedSegments = mirrorToPublished(sourcePath);
+
+  // TODO should i really be fetching folder before pdf packet generation?
+  const publishedFolderId = await ensureFolderPath(
+    sharepoint_drive_id,
+    publishedSegments,
+    accessToken,
+  );
+
+  const { filename, rev } = await nextVersionedFilename(
+    sharepoint_drive_id,
+    publishedFolderId,
+    "MeetingPacket",
+    accessToken,
+  );
+  const pdfBytes = await buildMergedPacket(
+    sharepoint_site_id,
+    sharepoint_drive_id,
+    folderId as string,
+    accessToken,
+    {
+      departmentName: departmentName,
+      packetTitle: "MEETING PACKET",
+      // TODO make date look pretty?
+      packetSubtitle: `${item.name}-${parentName}`,
+      rev,
+    },
+  );
+
+  const uploaded = await uploadPacketResumable(
+    sharepoint_drive_id,
+    publishedFolderId,
+    filename,
+    pdfBytes,
+    accessToken,
+  );
+
+  const [updatedPacket] = await db
+    .update(MeetingPacket)
+    .set({
+      published_file_id: uploaded.id,
+      published_file_url: uploaded.webUrl,
+      publishedAt: new Date(),
+      status: "PUBLISHED",
+    })
+    .where(eq(MeetingPacket.id, existingPacket.id))
+    .returning();
+
+  // Point the calendar event at the newly published packet.
+  // Non-fatal: the PDF is already published, so a failure here becomes a warning.
+  let calendarWarning: string | undefined;
+  const { mailbox_user_email } = organization;
+
+  if (!updatedPacket.outlook_event_id) {
+    calendarWarning =
+      "Packet published, but no calendar event is linked to it.";
+  } else if (!mailbox_user_email) {
+    calendarWarning =
+      "Packet published, but the organization has no mailbox configured.";
+  } else {
+    try {
+      await updateEventPacketLink({
+        organizationId: organization.id,
+        mailboxUserEmail: mailbox_user_email,
+        outlookEventId: updatedPacket.outlook_event_id,
+        // Pick one (see note below):
+        href: `${Astro.url.origin}/org/${organization.slug}/items/${uploaded.id}`,
+        // href: uploaded.webUrl,
+        label: filename,
+      });
+    } catch (e) {
+      console.error("Packet published but calendar link update failed:", e);
+      calendarWarning =
+        "Packet was published, but the calendar event link couldn't be updated.";
+    }
+  }
+
+  result = {
+    kind: "success",
+    pdfId: uploaded.id,
+    webLink: uploaded.webUrl,
+    calendarWarning,
+  };
+
+  //? if sending pdf directly back to client
+  //   return new Response(pdfBytes, {
+  //      headers: {
+  //        "Content-Type": "application/pdf",
+  //        "Content-Disposition": `attachment; filename="packet-${folderId}.pdf"`,
+  //      },
+  //    });
+} catch (error) {
+  console.error("Unable to create Outlook event:", error);
+
+  const { err, status } = errorHandlingOnSubmit(error);
+
+  Astro.response.status = status;
+
+  result = {
+    kind: "top-error",
+    message: typeof err === "string" ? err : JSON.stringify(err),
+  };
+}
+---
+
+{
+  result.kind === "success" && (
+    <section class="callout success">
+      <p class="callout success">Packet Created.</p>
+
+      {result.webLink && (
+        <p>
+          Open PDF in Browser{" "}
+          <a href={result.webLink} target="_blank">
+            {result.webLink.split("/")[result.webLink.split("/").length - 1]}
+          </a>
+        </p>
+      )}
+
+      {result.calendarWarning && <p role="status">{result.calendarWarning}</p>}
+    </section>
+  )
+}
+
+{
+  result.kind === "top-error" && (
+    <section role="alert">
+      <p>Unable to create packet.</p>
+      <p class="callout error">{result.message}</p>
+    </section>
+  )
+} -->

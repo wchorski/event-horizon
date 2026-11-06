@@ -5,7 +5,7 @@ import {
   inferOrgAdditionalFields,
   organizationClient,
 } from "better-auth/client/plugins";
-import { orgAccess, organizationRoles } from "./permissions";
+import { orgAccess, organizationRoles } from "./accessControl";
 import type { auth } from "@lib/auth";
 const { DOMAIN_URL } = import.meta.env;
 export const authClient = createAuthClient({

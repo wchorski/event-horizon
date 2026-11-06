@@ -1,64 +1,39 @@
----
-// pages/org/:organization_slug/partials/pdf-packet-builder
-import { IntegrationCredential, MeetingPacket } from "@db/schema";
+// lib/crud/createPacket.ts
 import { db } from "@db/db";
+import { IntegrationCredential, MeetingPacket } from "@db/schema";
 import { msAuthentication } from "@lib/auth/msAuthentication";
+import { decryptSecret } from "@lib/auth/secretBox";
 import { isDayFolder } from "@lib/dayFolderCheck";
-import {
-  BadRequestError,
-  errorHandlingOnSubmit,
-  NotFoundError,
-} from "@lib/errors";
+import { NotFoundError, BadRequestError } from "@lib/errors";
+import { updateEventPacketLink } from "@lib/microsoft/outlookPacketLink";
 import { buildMergedPacket } from "@lib/pdfPacketBuilder";
 import {
-  ensureFolderPath,
   getFullPath,
   mirrorToPublished,
+  ensureFolderPath,
   nextVersionedFilename,
   uploadPacketResumable,
 } from "@lib/publishPacket";
+// import type { organization } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
-import { decryptSecret } from "@lib/auth/secretBox";
-import { updateEventPacketLink } from "@lib/microsoft/outlookPacketLink";
+import type { SessionOrganization } from "../../env";
 
-// const { TENANT_ID, MS_CLIENT_ID, MS_SECRET_VALUE } = import.meta.env;
+type Props = {
+  organization: NonNullable<SessionOrganization>;
+  folderId: string;
+  origin: string;
+};
 
-if (Astro.request.method !== "POST") {
-  throw new BadRequestError(
-    `Unsupported method for this route: ${Astro.request.method}`,
-  );
-}
+export async function createMeetingPacket(props: Props) {
+  const {
+    organization,
+    folderId,
+    origin,
+  } = props;
 
-type RenderResult =
-  | { kind: "redirect"; url: string; setCookies: string[] }
-  | {
-      kind: "success";
-      pdfId: string;
-      webLink?: string;
-      calendarWarning?: string;
-    }
-  | { kind: "top-error"; message: string };
-
-let result: RenderResult;
-
-const { organization, member } = Astro.locals;
-if (!organization || !member) {
-  Astro.response.status = 403;
-  throw new BadRequestError("You are not authorized for this organization.");
-}
-
-const { sharepoint_site_id, sharepoint_drive_id } = organization;
-if (!sharepoint_site_id || !sharepoint_drive_id)
-  throw new BadRequestError("organization is missing ms site or drive ids.");
-
-try {
-  const formData = await Astro.request.formData();
-  const submitFields = Object.fromEntries(
-    [...formData.entries()].filter(([key]) => !key.startsWith("_")),
-  );
-  const { folderId, packetId } = submitFields;
-  // console.log({ folderId });
-  if (!folderId) throw new Error("folder Id must be set");
+  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } = organization;
+  if (!sharepoint_site_id || !sharepoint_drive_id)
+    throw new BadRequestError("organization is missing ms site or drive ids.");
 
   const integrationCredential = await db.query.IntegrationCredential.findFirst({
     where: and(
@@ -87,7 +62,7 @@ try {
     integrationSecret,
   );
 
-  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}?$select=name,parentReference`;
+  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${encodeURIComponent(folderId)}?$select=name,parentReference`;
 
   // TODO use msGraphFetch()
   const res = await fetch(endpoint, {
@@ -179,7 +154,6 @@ try {
   // Point the calendar event at the newly published packet.
   // Non-fatal: the PDF is already published, so a failure here becomes a warning.
   let calendarWarning: string | undefined;
-  const { mailbox_user_email } = organization;
 
   if (!updatedPacket.outlook_event_id) {
     calendarWarning =
@@ -194,7 +168,7 @@ try {
         mailboxUserEmail: mailbox_user_email,
         outlookEventId: updatedPacket.outlook_event_id,
         // Pick one (see note below):
-        href: `${Astro.url.origin}/org/${organization.slug}/items/${uploaded.id}`,
+        href: `${origin}/org/${organization.slug}/items/${uploaded.id}`,
         // href: uploaded.webUrl,
         label: filename,
       });
@@ -205,58 +179,9 @@ try {
     }
   }
 
-  result = {
-    kind: "success",
-    pdfId: uploaded.id,
+  return {
+    filename,
     webLink: uploaded.webUrl,
     calendarWarning,
   };
-
-  //? if sending pdf directly back to client
-  //   return new Response(pdfBytes, {
-  //      headers: {
-  //        "Content-Type": "application/pdf",
-  //        "Content-Disposition": `attachment; filename="packet-${folderId}.pdf"`,
-  //      },
-  //    });
-} catch (error) {
-  console.error("Unable to create Outlook event:", error);
-
-  const { err, status } = errorHandlingOnSubmit(error);
-
-  Astro.response.status = status;
-
-  result = {
-    kind: "top-error",
-    message: typeof err === "string" ? err : JSON.stringify(err),
-  };
-}
----
-
-{
-  result.kind === "success" && (
-    <section class="callout success">
-      <p class="callout success">Packet Created.</p>
-
-      {result.webLink && (
-        <p>
-          Open PDF in Browser{" "}
-          <a href={result.webLink} target="_blank">
-            {result.webLink.split("/")[result.webLink.split("/").length - 1]}
-          </a>
-        </p>
-      )}
-
-      {result.calendarWarning && <p role="status">{result.calendarWarning}</p>}
-    </section>
-  )
-}
-
-{
-  result.kind === "top-error" && (
-    <section role="alert">
-      <p>Unable to create packet.</p>
-      <p class="callout error">{result.message}</p>
-    </section>
-  )
 }

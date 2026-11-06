@@ -5,12 +5,20 @@ import { count, asc } from "drizzle-orm";
 interface Props {
   page: number;
   perPage?: number;
+  userRole: "admin" | undefined;
 }
-
-export async function getOrganizations({ page, perPage = 15 }: Props) {
+// TODO you may want to auth/permissions this too
+export async function getOrganizations({
+  page,
+  perPage = 15,
+  userRole,
+}: Props) {
+  if (userRole !== "admin") throw new Error("Unauthorized access");
   if (page < 1) page = 1;
 
-  const totalResult = await db.select({ count: count(Organization.id) }).from(Organization);
+  const totalResult = await db
+    .select({ count: count(Organization.id) })
+    .from(Organization);
 
   const totalCount = totalResult[0].count;
   const totalPages = Math.ceil(totalCount / perPage);

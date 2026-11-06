@@ -27,6 +27,7 @@ import { buildDriveHref } from "@lib/driveNav";
 import { auth } from "@lib/auth";
 import OutlookCalendarForm from "@components/form/OutlookCalendarForm.astro";
 import { filterDriveItemsByTeam } from "@lib/filterDriveItems";
+import FormCard from "@components/form/FormCard.astro";
 
 const { DOMAIN_URL } = import.meta.env;
 
@@ -252,41 +253,13 @@ try {
 
   if (rawItems.length > 0) isPublishFolder = workingDir === "PUBLISHED";
   parentFolderId = folderId;
-  // const data: DriveChildrenResponse = await res.json();
-  // // console.log(JSON.stringify({ preItems: data.value }, null, 2));
-  // // items = data.value ?? [];
-  // items = !["owner", "admin"].includes(member.role)
-  //   ? filterDriveItemsByTeam(teams, data.value ?? [])
-  //   : (data.value ?? []);
-  // parentFolderId = folderId;
-  // const firstItem = items[0];
-
-  // if (firstItem) {
-  //   const path = firstItem.parentReference?.path;
-  //   if (!path) throw new Error("path does not exist");
-
-  //   const afterRoot = path.split("root:")[1] ?? "";
-  //   const rootPath = afterRoot.replace(/^\/+/, ""); // strip a leading slash if present, no-op if absent
-  //   const parts = rootPath ? rootPath.split("/") : [];
-  //   const working_dir = parts.at(-4);
-  //   if (working_dir !== "PUBLISHED") isPublishFolder = false;
-  //   // TODO not sure if this works the way i think it should
-  //   const department = parts.at(-3); // MOEITS Board
-  //   const year = parts.at(-2); // 2026
-  //   const monthDay = parts.at(-1); // 09-15
-
-  //   // const isOrgAdmin = ["owner", "admin"].includes(member.role);
-  //   // const teamNames = new Set(teams?.map((t) => t.name) ?? []);
-
-  //   // if (department && !isOrgAdmin && !teamNames.has(department)) {
-  //   //   return Astro.redirect(
-  //   //     `/org/${organization.slug}/documents?msg=${encodeURIComponent(`You must be added to department [${department}] to view these folders`)}`,
-  //   //   );
-  //   // }
-  const isDayFldr =
-    anchor >= 0 &&
-    parts.length === anchor + 4 &&
-    isDayFolder([{ name: year! }, { name: monthDay! }]);
+  
+  // const isDayFldr =
+  //   anchor >= 0 &&
+  //   parts.length === anchor + 4 &&
+  //   isDayFolder([{ name: year! }, { name: monthDay! }]);
+  isDayFldr = isDayFolder([{ name: year! }, { name: monthDay! }]);
+  
 
   if (isDayFldr) {
     const crumbHref = buildDriveHref(basePath, [
@@ -317,9 +290,17 @@ try {
     );
   }
 } catch (err) {
-  console.error(err);
+  console.log('❌ /org/:slug/documents error => ', err);
   error = err instanceof Error ? err.message : String(err);
 }
+
+const { success: canPublishPackets } = await auth.api.hasPermission({
+  headers: Astro.request.headers,
+  body: {
+    organizationId: organization.id, // be explicit rather than relying on the "active" org
+    permissions: { packet: ["publish"] },
+  },
+});
 ---
 
 <OrgMemberPageLayout title={organization.name + " | Documents"}>
@@ -375,32 +356,55 @@ try {
             />
 
             {/* TODO make this flippable card with edit on the back */}
-            <form
-              class="card"
-              hx-post={`/org/${organization.slug}/partials/pdf-packet-builder`}
-              hx-swap="outerHTML"
-              hx-target="this"
-              hx-target-error="#pdf-packet-builder-error"
-            >
-              <h2>PDF Packet Builder</h2>
-              <input type="hidden" name="folderId" value={parentFolderId} />
+            {canPublishPackets ? (
+              <FormCard
+                id="pdf-packet-builder"
+                endpoint={`/org/${organization.slug}/partials/pdf-packet-builder/${encodeURIComponent(parentFolderId ?? "no-folderId-set")}`}
+                submitText="Generate New Packet"
+              >
+                <h2>PDF Packet Builder</h2>
+                {/* <input type="hidden" name="folderId" value={parentFolderId} /> */}
 
-              <div id="pdf-packet-builder-error" />
-              {packet?.published_file_url ? (
-                <p>
-                  view published packet{" "}
-                  <a href={packet.published_file_url} target="_blank">
-                    {
-                      packet.published_file_url.split("/")[
-                        packet.published_file_url.split("/").length - 1
-                      ]
-                    }
-                  </a>
-                </p>
-              ) : null}
-              <SubmitButton text="Generate New Packet" />
-            </form>
+                {packet?.published_file_url && (
+                  <p id="published-packet-link">
+                    View published packet{" "}
+                    <a
+                      href={packet.published_file_url}
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      {packet.published_file_url.split("/").pop()}
+                    </a>
+                  </p>
+                )}
+              </FormCard>
+            ) : null}
           </section>
+          {/* <form
+                class="card"
+                hx-post={`/org/${organization.slug}/partials/pdf-packet-builder`}
+                hx-swap="outerHTML"
+                hx-target="this"
+                hx-target-error="#pdf-packet-builder-error"
+              >
+                <h2>PDF Packet Builder</h2>
+                <input type="hidden" name="folderId" value={parentFolderId} />
+
+                <div id="pdf-packet-builder-error" />
+                {packet?.published_file_url ? (
+                  <p>
+                    view published packet{" "}
+                    <a href={packet.published_file_url} target="_blank">
+                      {
+                        packet.published_file_url.split("/")[
+                          packet.published_file_url.split("/").length - 1
+                        ]
+                      }
+                    </a>
+                  </p>
+                ) : null}
+                <SubmitButton text="Generate New Packet" />
+              </form> */}
         </>
       ) : null
     }

@@ -26,7 +26,7 @@ import * as schema from "@db/schema";
 import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, username, organization, emailOTP } from "better-auth/plugins";
-import { orgAccess, organizationRoles } from "./auth/permissions";
+import { orgAccess, organizationRoles } from "./auth/accessControl";
 
 const isProd = process.env.NODE_ENV === "production";
 

@@ -16,7 +16,7 @@ type Base = Omit<HTMLAttributes<"form">, "method" | "id"> & {
 type Props = Base &
   (
     | { endpoint: string; method?: HtmxMethod } // pure htmx
-    | { endpoint?: undefined; method?: "get" | "post" } // native + boost
+    | { endpoint?: undefined; method?: "get" | "post" | "patch" | "delete" | "put" } // native + boost
   );
 
 const {

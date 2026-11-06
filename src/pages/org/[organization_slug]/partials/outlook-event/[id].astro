@@ -9,157 +9,125 @@ import type {
 } from "@microsoft/microsoft-graph-types";
 import { db } from "@db/db";
 import { MeetingPacket } from "@db/schema";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import { validate } from "@lib/validate";
+import {
+  BadRequestError,
+  ForbiddenError,
+} from "@lib/errors";
 import { unflatten } from "@lib/formParsing";
-import { and, eq } from "drizzle-orm";
-import departments from "@db/seed/departments";
+import { eq } from "drizzle-orm";
 import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import {
   outlookTimeZoneHeader,
   resolveMeetingTimeZone,
 } from "@lib/calendarFactory";
-import { requireOrganizationAccess } from "@lib/auth/guards";
-
-interface EventCreatePayload {
-  subject: string;
-  body: ItemBody;
-  start: DateTimeTimeZone;
-  end: DateTimeTimeZone;
-  location: Location;
-  attendees: Attendee[];
-  transactionId: string;
-}
-type EventUpdatePayload = Omit<EventCreatePayload, "transactionId">;
-
-interface EventFormData extends EventCreatePayload {
-  folderId: string;
-}
+import { auth } from "@lib/auth";
+import { useForm } from "@lib/useForm";
+import FormMessage from "@components/form/FormMessage.astro";
+import FieldErrors from "@components/form/FieldErrors.astro";
 
 type OutlookEventSummary = Pick<Event, "id" | "webLink">;
 
-type RenderResult =
-  | { kind: "success"; eventId: string; webLink?: string | null }
-  | { kind: "top-error"; message: string };
-
-const TEST_DEPARTMENT_ID = departments[0].id;
-
-// const {
-//   MS_SHAREPOINT_MOEDOCS_DRIVE_ID,
-//   MS_SHAREPOINT_MOEDOCS_SITE_ID,
-//   MS_MAILBOX_USER_EMAIL,
-// } = import.meta.env;
-
-// const site_id = MS_SHAREPOINT_MOEDOCS_SITE_ID;
-// const drive_id = MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
-// const mailboxUserEmail = MS_MAILBOX_USER_EMAIL;
+if (Astro.request.method !== "PATCH") {
+  return new Response(null, { status: 405, headers: { Allow: "PATCH" } });
+}
 
 const { id: eventId } = Astro.params; // present only on the PATCH route
 if (!eventId) throw new BadRequestError("eventId is required.");
-const method = Astro.request.method;
 
-if (method !== "PATCH") {
-  throw new Error(`method ${method} is NOT allowed at this endpoint`);
-}
-let result: RenderResult;
+const formData = await Astro.request.formData();
+const input = unflatten(formData);
 
-try {
-  // --- UPDATE ---
-  // can use Astro.locals for {organization, member}
-  const { user } = Astro.locals;
-  if (!user) throw new BadRequestError("Not authenticated.");
-
-  const { organization_slug } = Astro.params;
-  if (!organization_slug)
-    throw new BadRequestError("organization_slug is required.");
-
-  // Same check as the page this partial is embedded in — the URL segment
-  // is just routing; the request is only trusted after this passes.
-  const { organization, membership } = await requireOrganizationAccess(
-    user.id,
-    organization_slug,
-  );
-  if (!organization || !membership) {
-    throw new BadRequestError("You are not authorized for this organization.");
-  }
-
-  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } =
-    organization;
-  if (!sharepoint_site_id || !sharepoint_drive_id || !mailbox_user_email) {
-    throw new Error("Organization SharePoint config is not set up correctly.");
-  }
-
-  const formData = await Astro.request.formData();
-  // const parsed = unflatten(formData) as Omit<EventFormData, "transactionId">;
-  const parsed = unflatten(formData) as EventFormData;
-  console.log("=== events/outlook-event/:id PATCH ===");
-  console.log({ parsed });
+const outcome = await useForm(input, {
+  schema: validate.outlookEvent,
+  labels: { subject: "subject" },
+  successMessage: "Outlook event updated",
   // i'm just pulling out transactionId cuz i'm too lazy to conditionally set in frontend...
-  const { folderId, transactionId, ...updateFields } = parsed as EventFormData;
-  const updatePayload: EventUpdatePayload = updateFields;
+  run: async ({ folderId, transactionId, ...updateFields }) => {
+    const { organization, member } = Astro.locals;
+    if (!organization || !member) {
+      throw new ForbiddenError("You are not authorized for this organization.");
+    }
+    // Authorize first, inside run, so a ForbiddenError renders in the form
+    const { success: canUpdateCalendar } = await auth.api.hasPermission({
+      headers: Astro.request.headers,
+      body: {
+        organizationId: organization.id, // be explicit rather than relying on the "active" org
+        permissions: { calendar: ["update"] },
+      },
+    });
 
-  // TODO(locations-schema): resolve from the packet's eventual location_id.
-  const meetingTimeZone = await resolveMeetingTimeZone(null);
+    if (!canUpdateCalendar)
+      throw new ForbiddenError("not allowed to create calendar events");
 
-  const url = `/users/${mailbox_user_email}/events/${eventId}`;
-  const updated = await msGraphFetch<OutlookEventSummary>(
-    organization.id,
-    url,
-    {
-      method: "PATCH",
-      headers: outlookTimeZoneHeader(meetingTimeZone),
-      body: JSON.stringify(updatePayload),
-    },
-  );
+    const meetingTimeZone = await resolveMeetingTimeZone(null);
 
-  console.log({ updated });
-
-  // Keep the packet's cached webLink in sync, in case it ever changes.
-  if (folderId) {
-    await db
-      .update(MeetingPacket)
-      .set({ outlook_web_link: updated.webLink })
-      .where(
-        and(
-          eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
-          eq(MeetingPacket.sharepoint_folder_id, folderId),
-        ),
+    const { mailbox_user_email, sharepoint_drive_id, sharepoint_site_id } =
+      organization;
+    if (!mailbox_user_email || !sharepoint_drive_id || !sharepoint_site_id)
+      throw new BadRequestError(
+        "mailbox and or sharepoint api not setup for organization",
       );
-  }
 
-  result = { kind: "success", eventId: updated.id!, webLink: updated.webLink };
-} catch (error) {
-  const { err, status } = errorHandlingOnSubmit(error);
-  console.error(JSON.stringify(err));
-  Astro.response.status = status;
-  result = {
-    kind: "top-error",
-    message: typeof err === "string" ? err : JSON.stringify(err),
-  };
-}
+    const url = `/users/${mailbox_user_email}/events/${eventId}`;
+    const updated = await msGraphFetch<OutlookEventSummary>(
+      organization.id,
+      url,
+      {
+        method: "PATCH",
+        headers: outlookTimeZoneHeader(meetingTimeZone),
+        body: JSON.stringify(updateFields),
+      },
+    );
+
+    // Keep the packet's cached webLink in sync, in case it ever changes.
+    if (folderId) {
+      await db
+        .update(MeetingPacket)
+        .set({ outlook_web_link: updated.webLink })
+        .where(eq(MeetingPacket.sharepoint_folder_id, folderId));
+    }
+
+    return {
+      eventId: updated.id!,
+      webLink: updated.webLink,
+    };
+  },
+});
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+
+const errorMessage = outcome.ok
+  ? ""
+  : (outcome.state.error ??
+    Object.values(outcome.state.fieldErrors ?? {})[0] ??
+    "Something went wrong.");
+
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
 ---
 
 {
-  result.kind === "success" && (
-    <section class="card">
-      <p>Event Updated</p>
-      {/* <p style="max-width: 15rem; text-wrap: balance;">
-        Event ID: <code>{result.eventId}</code>
-      </p> */}
-
-      {result.webLink && (
+  outcome.ok ? (
+    <FormMessage kind="success" message={outcome.state.success}>
+      {outcome.data.webLink && (
         <p>
-          <a href={result.webLink}>Open event in Outlook</a>
+          <a href={outcome.data.webLink}>Open event in Outlook</a>
         </p>
       )}
-    </section>
+    </FormMessage>
+  ) : (
+    <FormMessage
+      kind="error"
+      message={errorMessage}
+      status={outcome.state.status}
+    />
   )
 }
-
-{
-  result.kind === "top-error" && (
-    <section role="alert">
-      <p>Unable to save event.</p>
-      <pre>{result.message}</pre>
-    </section>
-  )
-}
+<FieldErrors
+  {formId}
+  names={Object.keys(validate.invitation.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

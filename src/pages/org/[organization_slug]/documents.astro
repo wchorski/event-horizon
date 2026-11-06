@@ -28,6 +28,7 @@ import { auth } from "@lib/auth";
 import OutlookCalendarForm from "@components/form/OutlookCalendarForm.astro";
 import { filterDriveItemsByTeam } from "@lib/filterDriveItems";
 import FormCard from "@components/form/FormCard.astro";
+import CalendarEventArticle from "@components/articles/CalendarEventArticle.astro";
 
 const { DOMAIN_URL } = import.meta.env;
 
@@ -135,10 +136,7 @@ let error: string | null = null;
 try {
   packet = folderId
     ? await db.query.MeetingPacket.findFirst({
-        where: and(
-          eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
-          eq(MeetingPacket.sharepoint_folder_id, folderId),
-        ),
+        where: eq(MeetingPacket.sharepoint_folder_id, folderId),
       })
     : null;
 
@@ -253,13 +251,12 @@ try {
 
   if (rawItems.length > 0) isPublishFolder = workingDir === "PUBLISHED";
   parentFolderId = folderId;
-  
+
   // const isDayFldr =
   //   anchor >= 0 &&
   //   parts.length === anchor + 4 &&
   //   isDayFolder([{ name: year! }, { name: monthDay! }]);
   isDayFldr = isDayFolder([{ name: year! }, { name: monthDay! }]);
-  
 
   if (isDayFldr) {
     const crumbHref = buildDriveHref(basePath, [
@@ -290,7 +287,7 @@ try {
     );
   }
 } catch (err) {
-  console.log('❌ /org/:slug/documents error => ', err);
+  console.log("❌ /org/:slug/documents error => ", err);
   error = err instanceof Error ? err.message : String(err);
 }
 
@@ -311,49 +308,38 @@ const { success: canPublishPackets } = await auth.api.hasPermission({
         <>
           <section class="flex gap-m">
             {packet?.outlook_event_id && outlookEvent ? (
-              <div class="card">
-                <h2>Event:</h2>
-                <dl class="kv">
-                  <dd>Subject</dd>
-                  <dt>{outlookEvent.subject}</dt>
-                  <dd>Start</dd>
-                  <dt>
-                    {outlookEvent.start?.dateTime
-                      ? prettyDateToLocale(
-                          new Date(outlookEvent.start.dateTime),
-                        )
-                      : "—"}
-                  </dt>
-                  <dd>End</dd>
-                  <dt>
-                    {outlookEvent.end?.dateTime
-                      ? prettyDateToLocale(new Date(outlookEvent.end.dateTime))
-                      : "—"}
-                  </dt>
-                  <dd>location</dd>
-                  <dt>{outlookEvent.location?.displayName ?? "—"}</dt>
-                  {/* <dd>onlineMeeting</dd>
-                  <dt>{String(outlookEvent.onlineMeeting)}</dt>
-                  <dd>isOnlineMeeting</dd>
-                  <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
-                  <dd>onlineMeetingProvider</dd>
-                  <dt>{outlookEvent.onlineMeetingProvider}</dt>
-                  <dd>onlineMeetingUrl</dd>
-                  <dt>{String(outlookEvent.onlineMeetingUrl)}</dt> */}
-                </dl>
-                <a href={outlookEvent.webLink} target="_blank">
-                  outlook link
-                </a>
-              </div>
-            ) : null}
+              <div class="scene" data-flip data-editing="false">
+                <div class="card">
+                  <div class="face front">
+                    <CalendarEventArticle {outlookEvent} />
+                    <button type="button" class="flip-btn edit" data-flip-to="true">
+                      Edit
+                    </button>
+                  </div>
 
-            <OutlookCalendarForm
-              outlookEvent={outlookEvent}
-              calendarDraft={calendarDraft}
-              packet={packet}
-              organizationSlug={organization.slug}
-              parentFolderId={parentFolderId}
-            />
+                  <div class="face back" inert>
+                    <OutlookCalendarForm
+                      {outlookEvent}
+                      {calendarDraft}
+                      {packet}
+                      organizationSlug={organization.slug}
+                      {parentFolderId}
+                    />
+                    <button type="button" class="flip-btn" data-flip-to="false">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <OutlookCalendarForm
+                {outlookEvent}
+                {calendarDraft}
+                {packet}
+                organizationSlug={organization.slug}
+                {parentFolderId}
+              />
+            )}
 
             {/* TODO make this flippable card with edit on the back */}
             {canPublishPackets ? (
@@ -418,3 +404,61 @@ const { success: canPublishPackets } = await auth.api.hasPermission({
     }
   </div>
 </OrgMemberPageLayout>
+
+<style>
+  .scene {
+    perspective: 1400px;
+  }
+
+  .card {
+    display: grid;                 /* both faces share one cell, so height = taller face */
+    transform-style: preserve-3d;
+    transition: transform 600ms cubic-bezier(0.4, 0.2, 0.2, 1);
+  }
+
+  .scene[data-editing="true"] .card {
+    transform: rotateY(180deg);
+  }
+  .scene[data-editing="true"] .flip-btn.edit {
+    opacity: 0;
+  }
+
+  .face {
+    grid-area: 1 / 1;
+    position: relative;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* pre-rotate the back so it reads correctly once the card has flipped */
+  .back {
+    transform: rotateY(180deg);
+  }
+
+  .flip-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-flip]").forEach((root) => {
+    const front = root.querySelector<HTMLElement>(".front")!;
+    const back = root.querySelector<HTMLElement>(".back")!;
+
+    root.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-flip-to]");
+      if (!btn) return;
+      const editing = btn.dataset.flipTo === "true";
+      root.dataset.editing = String(editing);
+      front.inert = editing;   // the face pointing away can't be focused or clicked
+      back.inert = !editing;
+    });
+  });
+</script>

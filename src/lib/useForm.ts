@@ -27,7 +27,14 @@ type Opts<S extends ZodType | undefined, T> = {
   run: (input: Input<S>) => Promise<T>;
 };
 
-import { findDrizzlePgError, columnFromDetail, BadRequestError, errorHandlingOnSubmit, ForbiddenError, NotFoundError } from "@lib/errors";
+import {
+  findDrizzlePgError,
+  columnFromDetail,
+  BadRequestError,
+  errorHandlingOnSubmit,
+  ForbiddenError,
+  NotFoundError,
+} from "@lib/errors";
 
 type ConstraintMap = Record<
   string,
@@ -53,11 +60,11 @@ function zodFailure(e: z.ZodError) {
   let formError: string | undefined;
 
   for (const issue of e.issues) {
-    const key = issue.path[0];
-    if (key === undefined) {
+    if (issue.path.length === 0) {
       formError ??= issue.message; // schema-level issue, no field to mark
     } else {
-      fieldErrors[String(key)] ??= issue.message; // first message per field wins
+      const key = issue.path.join(".");
+      fieldErrors[key] ??= issue.message; // first message per field wins
     }
   }
 

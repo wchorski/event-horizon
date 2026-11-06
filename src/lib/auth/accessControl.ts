@@ -12,6 +12,7 @@ export const orgStatements = {
   event: ["create", "read", "update", "delete", "publish"],
   ticket: ["create", "read", "update", "delete", "check-in"],
   packet: ["build", "publish", "read"],
+  calendar: ["create", "read", "update", "delete"],
 } as const;
 export const orgAccess = createAccessControl(orgStatements);
 
@@ -21,6 +22,7 @@ export const organizationOwner = orgAccess.newRole({
   event: ["create", "read", "update", "delete", "publish"],
   ticket: ["create", "read", "update", "delete", "check-in"],
   packet: ["build", "publish", "read"],
+  calendar: ["create", "read", "update", "delete"],
 });
 
 export const organizationAdmin = orgAccess.newRole({
@@ -29,6 +31,7 @@ export const organizationAdmin = orgAccess.newRole({
   event: ["create", "read", "update", "delete", "publish"],
   ticket: ["create", "read", "update", "delete", "check-in"],
   packet: ["build", "publish", "read"],
+  calendar: ["create", "read", "update", "delete"],
 });
 
 export const organizationMember = orgAccess.newRole({
@@ -37,6 +40,7 @@ export const organizationMember = orgAccess.newRole({
   event: ["read"],
   ticket: ["read"],
   packet: ["read"], // can view, can't publish
+  calendar: ["read"],
 });
 
 export const organizationRoles = {

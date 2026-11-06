@@ -205,6 +205,42 @@ export const validate = {
     folderId: z.string().regex(/^[\w!-]+$/, "Invalid folder id"),
   }),
 
+  outlookEvent: z
+    .object({
+      folderId: z.string().regex(/^[\w!-]+$/, "Invalid folder id"),
+      subject: z.string().trim().min(1, "Subject is required").max(255),
+      start: z.object({
+        dateTime: z.string().min(1, "Start is required"),
+        timeZone: z.string().min(1),
+      }),
+      end: z.object({
+        dateTime: z.string().min(1, "End is required"),
+        timeZone: z.string().min(1),
+      }),
+      body: z.object({
+        contentType: z.enum(["text", "html", "HTML", "Text"]),
+        content: z.string(),
+      }),
+      location: z.object({ displayName: z.string() }),
+      transactionId: z.string().min(1),
+      attendees: z
+        .array(
+          z.object({
+            emailAddress: z.object({
+              address: z.email(),
+              name: z.string().optional(),
+            }),
+            type: z.enum(["required", "optional", "resource"]),
+          }),
+        )
+        .max(100)
+        .default([]),
+    })
+    .refine((v) => new Date(v.end.dateTime) > new Date(v.start.dateTime), {
+      message: "End must be after start",
+      path: ["end", "dateTime"],
+    }),
+
   get userCreate() {
     return this.user.omit({ id: true });
   },

@@ -1,38 +1,46 @@
 ---
+// components/form/OutlookCalendarForm
 import type { CalendarEventDraft } from "@lib/calendarFactory";
 import InputField from "@components/form/InputField.astro";
 import SubmitButton from "@components/form/SubmitButton.astro";
+import FormCard from "./FormCard.astro";
 interface Props {
   outlookEvent: any;
   calendarDraft: CalendarEventDraft;
   packet: any;
   organizationSlug: string;
-  parentFolderId: string|null;
+  parentFolderId: string | null;
 }
-const { outlookEvent, calendarDraft, organizationSlug, packet, parentFolderId } = Astro.props;
+const {
+  outlookEvent,
+  calendarDraft,
+  organizationSlug,
+  packet,
+  parentFolderId,
+} = Astro.props;
 
-const formMethodEndpoint = outlookEvent
-  ? {
-      "hx-patch": `/org/${organizationSlug}/partials/outlook-event/${packet?.outlook_event_id}`,
-    }
-  : { "hx-post": `/org/${organizationSlug}/partials/outlook-event` };
+// const formMethodEndpoint = outlookEvent
+//   ? {
+//       "hx-patch": `/org/${organizationSlug}/partials/outlook-event/${packet?.outlook_event_id}`,
+//     }
+//   : { "hx-post": `/org/${organizationSlug}/partials/outlook-event` };
 
 const formId = "form--outlook-calendar-event";
 // TODO use the FormCard.astro component
 ---
 
-<form
-  class="card"
-  {...formMethodEndpoint}
-  hx-swap="innerHTML"
-  hx-target="#outlook-event-result"
-  hx-target-error="#outlook-calendar-error"
+<FormCard
+  id={formId}
+  submitText={packet?.outlook_event_id ? "update" : "create"}
+  method={outlookEvent ? "patch" : "post"}
+  endpoint={outlookEvent
+    ? `/org/${organizationSlug}/partials/outlook-event/${packet?.outlook_event_id}`
+    : `/org/${organizationSlug}/partials/outlook-event`}
 >
   <h2>{packet?.outlook_event_id ? "Update" : "Create"} Calendar Event</h2>
   <fieldset class="no-style">
     <InputField
       name="subject"
-      id="calendar.subject"
       type="text"
       {formId}
       value={calendarDraft.subject}
@@ -40,7 +48,6 @@ const formId = "form--outlook-calendar-event";
     <InputField
       name="start.dateTime"
       label={"Start"}
-      id="calendar.start.dateTime"
       type="datetime-local"
       {formId}
       value={calendarDraft.start.dateTime}
@@ -48,11 +55,10 @@ const formId = "form--outlook-calendar-event";
     <InputField
       name="end.dateTime"
       label={"End"}
-      id="calendar.end.dateTime"
       type="datetime-local"
       {formId}
       value={calendarDraft.end.dateTime}
-    />  
+    />
 
     <!-- fixed values the user doesn't edit, but still need to reach the server -->
     <input
@@ -93,20 +99,17 @@ const formId = "form--outlook-calendar-event";
         <>
           <input
             type="hidden"
-            name={`attendees[${i}].emailAddress.address`}
+            name={`attendees.${i}.emailAddress.address`}
             value={a.emailAddress?.address ?? ""}
           />
           <input
             type="hidden"
-            name={`attendees[${i}].emailAddress.name`}
+            name={`attendees.${i}.emailAddress.name`}
             value={a.emailAddress?.name ?? ""}
           />
-          <input type="hidden" name={`attendees[${i}].type`} value={a.type} />
+          <input type="hidden" name={`attendees.${i}.type`} value={a.type} />
         </>
       ))
     }
   </fieldset>
-  <div id="outlook-event-result"></div>
-  <div id="outlook-calendar-error"></div>
-  <SubmitButton />
-</form>
+</FormCard>

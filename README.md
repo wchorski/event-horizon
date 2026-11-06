@@ -84,6 +84,14 @@ The errors you're looking for will be in your database logs. i.e. the postgres c
 	ALTER TABLE "members" ALTER COLUMN "role" SET DATA TYPE "public"."member_role" USING "role"::"public"."member_role";
 ```
 
+or
+
+```log
+2026-11-06 16:53:46.385 UTC [37] ERROR:  constraint "meeting_packets_department_id_departments_id_fk" of relation "meeting_packets" does not exist
+2026-11-06 16:53:46.385 UTC [37] STATEMENT:  
+    ALTER TABLE "meeting_packets" DROP CONSTRAINT "meeting_packets_department_id_departments_id_fk";
+```
+
 > [!tip] Bad migrations will stack up. When youre confident you've figured out the migration issue, drop the recently created migrations and generate a new one.
 
 before a git commit it's easy to spot the green 'created' files. drop those

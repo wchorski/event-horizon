@@ -1,0 +1,49 @@
+---
+// components/articles/CalendarEventArticle
+import { prettyDateToLocale } from "@lib/formatters";
+import type { Event } from "@microsoft/microsoft-graph-types";
+
+interface Props {
+  outlookEvent: Event;
+}
+
+const { outlookEvent } = Astro.props;
+const {subject, location, webLink, start, end} = outlookEvent
+---
+
+<div class="card">
+  <h2>Event:</h2>
+  <dl class="kv">
+    <dd>Subject</dd>
+    <dt>{subject}</dt>
+    <dd>Start</dd>
+    <dt>
+      {
+        start?.dateTime
+          ? prettyDateToLocale(new Date(start.dateTime))
+          : "—"
+      }
+    </dt>
+    <dd>End</dd>
+    <dt>
+      {
+        end?.dateTime
+          ? prettyDateToLocale(new Date(end.dateTime))
+          : "—"
+      }
+    </dt>
+    <dd>location</dd>
+    <dt>{location?.displayName ?? "—"}</dt>
+    {
+      /* <dd>onlineMeeting</dd>
+                  <dt>{String(outlookEvent.onlineMeeting)}</dt>
+                  <dd>isOnlineMeeting</dd>
+                  <dt>{String(outlookEvent.isOnlineMeeting)}</dt>
+                  <dd>onlineMeetingProvider</dd>
+                  <dt>{outlookEvent.onlineMeetingProvider}</dt>
+                  <dd>onlineMeetingUrl</dd>
+                  <dt>{String(outlookEvent.onlineMeetingUrl)}</dt> */
+    }
+  </dl>
+  <a href={webLink} target="_blank"> outlook link </a>
+</div>

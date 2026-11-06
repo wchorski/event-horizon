@@ -324,14 +324,15 @@ export const MeetingPacket = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     event_id: uuid().references(() => Event.id, { onDelete: "cascade" }),
-    department_id: uuid()
-      .notNull()
-      .references(() => Department.id),
+    // department_id: uuid()
+    //   .notNull()
+    //   .references(() => Department.id),
     status: meetingPacketStatusEnum("status").notNull().default("DRAFT"),
 
     // new — the PREPERATIONS day-folder this packet draws from
-    sharepoint_site_id: text().notNull(),
-    sharepoint_drive_id: text().notNull(),
+    //? set in the org
+    // sharepoint_site_id: text().notNull(),
+    // sharepoint_drive_id: text().notNull(),
     sharepoint_folder_id: text().notNull(),
 
     published_file_id: text(),
@@ -347,11 +348,8 @@ export const MeetingPacket = pgTable(
       .notNull(),
   },
   (table) => [
-    unique().on(table.event_id, table.department_id),
-    uniqueIndex("meeting_packets_folder_unique").on(
-      table.sharepoint_drive_id,
-      table.sharepoint_folder_id,
-    ),
+    // unique().on(table.event_id, table.department_id),
+    uniqueIndex("meeting_packets_folder_unique").on(table.sharepoint_folder_id),
   ],
 );
 
@@ -360,34 +358,34 @@ export const meetingPacketRelations = relations(MeetingPacket, ({ one }) => ({
     fields: [MeetingPacket.event_id],
     references: [Event.id],
   }),
-  department: one(Department, {
-    fields: [MeetingPacket.department_id],
-    references: [Department.id],
-  }),
+  // department: one(Department, {
+  //   fields: [MeetingPacket.department_id],
+  //   references: [Department.id],
+  // }),
 }));
 
 // TODO can i remove this?
-export const MeetingPacketDirectory = pgTable("meeting_packet_directories", {
-  id: uuid()
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  meeting_packet_id: uuid()
-    .notNull()
-    .references(() => MeetingPacket.id, {
-      onDelete: "cascade",
-    }),
-  sharepoint_site_id: text().notNull(),
-  sharepoint_drive_id: text().notNull(),
-  sharepoint_folder_id: text().notNull(),
-  relative_path: text().notNull(),
-  include_subfolders: boolean().default(true).notNull(),
-  sort_order: integer().default(0).notNull(),
-  createdAt: timestamp().defaultNow().notNull(),
-  updatedAt: timestamp()
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+// export const MeetingPacketDirectory = pgTable("meeting_packet_directories", {
+//   id: uuid()
+//     .primaryKey()
+//     .default(sql`uuidv7()`),
+//   meeting_packet_id: uuid()
+//     .notNull()
+//     .references(() => MeetingPacket.id, {
+//       onDelete: "cascade",
+//     }),
+//   sharepoint_site_id: text().notNull(),
+//   sharepoint_drive_id: text().notNull(),
+//   sharepoint_folder_id: text().notNull(),
+//   relative_path: text().notNull(),
+//   include_subfolders: boolean().default(true).notNull(),
+//   sort_order: integer().default(0).notNull(),
+//   createdAt: timestamp().defaultNow().notNull(),
+//   updatedAt: timestamp()
+//     .defaultNow()
+//     .$onUpdate(() => new Date())
+//     .notNull(),
+// });
 
 // Junction table for many-to-many relationship between events and hosts
 export const EventHost = pgTable(
@@ -590,28 +588,29 @@ export const Organization = pgTable("organizations", {
   sharepoint_drive_id: text(),
   sharepoint_library_name: text(),
 });
-export const Department = pgTable(
-  "departments",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    organization_id: uuid()
-      .notNull()
-      .references(() => Organization.id, {
-        onDelete: "cascade",
-      }),
-    name: text().notNull(),
-    slug: text().notNull(),
-    color: text(),
-    createdAt: timestamp().defaultNow().notNull(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [unique().on(table.organization_id, table.slug)],
-);
+//? using better-auth built in org 'teams'
+// export const Department = pgTable(
+//   "departments",
+//   {
+//     id: uuid()
+//       .primaryKey()
+//       .default(sql`uuidv7()`),
+//     organization_id: uuid()
+//       .notNull()
+//       .references(() => Organization.id, {
+//         onDelete: "cascade",
+//       }),
+//     name: text().notNull(),
+//     slug: text().notNull(),
+//     color: text(),
+//     createdAt: timestamp().defaultNow().notNull(),
+//     updatedAt: timestamp()
+//       .defaultNow()
+//       .$onUpdate(() => new Date())
+//       .notNull(),
+//   },
+//   (table) => [unique().on(table.organization_id, table.slug)],
+// );
 
 export const Team = pgTable(
   "teams",

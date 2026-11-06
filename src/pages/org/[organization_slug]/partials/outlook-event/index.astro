@@ -1,146 +1,135 @@
 ---
-// pages/partials/events/outlook-event/index
+// pages/org/:slug/partials/outlook-event/index
 
 import { db } from "@db/db";
 import { MeetingPacket } from "@db/schema";
-import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+} from "@lib/errors";
 import { unflatten } from "@lib/formParsing";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { msGraphFetch } from "@lib/microsoft/msGraphFetch";
-import { requireOrganizationAccess } from "@lib/auth/guards";
 import type {
-  EventFormData,
   OutlookEventSummary,
-  RenderResult,
 } from "@ty/OutlookEvent";
 import {
   outlookTimeZoneHeader,
   resolveMeetingTimeZone,
 } from "@lib/calendarFactory";
-import departments from "@db/seed/departments";
+import { useForm } from "@lib/useForm";
+import { validate } from "@lib/validate";
+import { auth } from "@lib/auth";
+import FormMessage from "@components/form/FormMessage.astro";
+import FieldErrors from "@components/form/FieldErrors.astro";
 
 if (Astro.request.method !== "POST") {
-  throw new BadRequestError(
-    `Unsupported method for this route: ${Astro.request.method}`,
-  );
+  return new Response(null, { status: 405, headers: { Allow: "POST" } });
 }
+const formData = await Astro.request.formData();
+const input = unflatten(formData);
 
-let result: RenderResult;
+const outcome = await useForm(input, {
+  schema: validate.outlookEvent,
+  labels: { subject: "subject" },
+  successMessage: "Outlook event created",
+  run: async ({ folderId, ...calEventFields }) => {
 
-try {
-  const user = Astro.locals.user;
-  if (!user) throw new BadRequestError("Not authenticated.");
-
-  const { organization_slug } = Astro.params;
-  if (!organization_slug)
-    throw new BadRequestError("organization_slug is required.");
-
-  // Same check as the page this partial is embedded in — the URL segment
-  // is just routing; the request is only trusted after this passes.
-  const { organization, membership } = await requireOrganizationAccess(
-    user.id,
-    organization_slug,
-  );
-  if (!organization || !membership) {
-    throw new BadRequestError("You are not authorized for this organization.");
-  }
-
-  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } =
-    organization;
-  if (!sharepoint_site_id || !sharepoint_drive_id || !mailbox_user_email) {
-    throw new Error("Organization SharePoint config is not set up correctly.");
-  }
-
-  const formData = await Astro.request.formData();
-  // TODO integrate department schema but for now just take from pathname
-  const departmentId = departments[0].id;
-  const { folderId, ...eventFields } = unflatten(formData) as EventFormData;
-
-  if (!folderId) {
-    throw new BadRequestError(
-      "folderId is required to link this event to a folder.",
-    );
-  }
-  if (!departmentId) {
-    throw new BadRequestError(
-      "departmentId is required to create a new packet.",
-    );
-  }
-
-  const meetingTimeZone = await resolveMeetingTimeZone(null);
-
-  const created = await msGraphFetch<OutlookEventSummary>(
-    organization.id,
-    `/users/${mailbox_user_email}/events`,
-    {
-      method: "POST",
-      headers: outlookTimeZoneHeader(meetingTimeZone),
-      body: JSON.stringify(eventFields),
-    },
-  );
-
-  const existingPacket = await db.query.MeetingPacket.findFirst({
-    where: and(
-      eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
-      eq(MeetingPacket.sharepoint_folder_id, folderId),
-    ),
-  });
-
-  if (existingPacket) {
-    await db
-      .update(MeetingPacket)
-      .set({ outlook_event_id: created.id, outlook_web_link: created.webLink })
-      .where(eq(MeetingPacket.id, existingPacket.id));
-  } else {
-    await db.insert(MeetingPacket).values({
-      outlook_event_id: created.id,
-      outlook_web_link: created.webLink,
-      department_id: departmentId,
-      sharepoint_site_id,
-      sharepoint_drive_id,
-      sharepoint_folder_id: folderId,
+    const { organization, member } = Astro.locals;
+    if (!organization || !member) {
+      throw new ForbiddenError("You are not authorized for this organization.");
+    }
+    // Authorize first, inside run, so a ForbiddenError renders in the form
+    const { success: canCreateCalendar } = await auth.api.hasPermission({
+      headers: Astro.request.headers,
+      body: {
+        organizationId: organization.id, // be explicit rather than relying on the "active" org
+        permissions: { calendar: ["create"] },
+      },
     });
-  }
 
-  result = {
-    kind: "success",
-    eventId: created.id!,
-    webLink: created.webLink,
-    mode: "created",
-  };
-} catch (error) {
-  const { err, status } = errorHandlingOnSubmit(error);
-  console.error(JSON.stringify(err));
-  Astro.response.status = status;
-  result = {
-    kind: "top-error",
-    message: typeof err === "string" ? err : JSON.stringify(err),
-  };
-}
+    if (!canCreateCalendar)
+      throw new ForbiddenError("not allowed to create calendar events");
+
+    const meetingTimeZone = await resolveMeetingTimeZone(null);
+
+    const { mailbox_user_email, sharepoint_drive_id, sharepoint_site_id } =
+      organization;
+    if (!mailbox_user_email || !sharepoint_drive_id || !sharepoint_site_id)
+      throw new BadRequestError(
+        "mailbox and or sharepoint api not setup for organization",
+      );
+
+    const created = await msGraphFetch<OutlookEventSummary>(
+      organization.id,
+      `/users/${mailbox_user_email}/events`,
+      {
+        method: "POST",
+        headers: outlookTimeZoneHeader(meetingTimeZone),
+        body: JSON.stringify(calEventFields),
+      },
+    );
+
+    const existingPacket = await db.query.MeetingPacket.findFirst({
+      where: eq(MeetingPacket.sharepoint_folder_id, folderId),
+    });
+
+    if (existingPacket) {
+      await db
+        .update(MeetingPacket)
+        .set({
+          outlook_event_id: created.id,
+          outlook_web_link: created.webLink,
+        })
+        .where(eq(MeetingPacket.id, existingPacket.id));
+    } else {
+      await db.insert(MeetingPacket).values({
+        outlook_event_id: created.id,
+        outlook_web_link: created.webLink,
+        sharepoint_folder_id: folderId,
+      });
+    }
+
+    return {
+      eventId: created.id!,
+      webLink: created.webLink,
+    };
+  },
+});
+
+if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
+
+const errorMessage = outcome.ok
+  ? ""
+  : (outcome.state.error ??
+    Object.values(outcome.state.fieldErrors ?? {})[0] ??
+    "Something went wrong.");
+
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
 ---
 
 {
-  result.kind === "success" && (
-    <section class="card">
-      <p>Event Created</p>
-      {/* <p style="max-width: 15rem; text-wrap: balance;">
-        Event ID: <code>{result.eventId}</code>
-      </p> */}
-
-      {result.webLink && (
+  outcome.ok ? (
+    <FormMessage kind="success" message={outcome.state.success}>
+      {outcome.data.webLink && (
         <p>
-          <a href={result.webLink}>Open event in Outlook</a>
+          <a href={outcome.data.webLink}>Open event in Outlook</a>
         </p>
       )}
-    </section>
+    </FormMessage>
+  ) : (
+    <FormMessage
+      kind="error"
+      message={errorMessage}
+      status={outcome.state.status}
+    />
   )
 }
-
-{
-  result.kind === "top-error" && (
-    <section role="alert">
-      <p>Unable to create event.</p>
-      <pre>{result.message}</pre>
-    </section>
-  )
-}
+<FieldErrors
+  {formId}
+  names={Object.keys(validate.invitation.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>

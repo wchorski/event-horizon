@@ -44,9 +44,12 @@
  *  just { value, label } since the server owns rendering, not a full
  *  template-derived record).
  */
+import { fieldErrorId, fieldId } from "@lib/fieldIds";
 import type { HTMLAttributes } from "astro/types";
 
 type Props = {
+  formId:string;
+  idSuffix?: string;
   endpoint: string; // htmx POST target, e.g. "/partials/users/search"
   model: string,
   searchName?: string; // form field name htmx sends, default "search"
@@ -55,11 +58,13 @@ type Props = {
   label?: string;
   value?: string | number; // pre-selected id
   preloadInput?: string; // display text to show for the pre-selected value
-  fieldError?: string | unknown | null;
+  error?: string;
   isCreate?:boolean
 } & Omit<HTMLAttributes<"input">, "value" | "type">;
 
 const {
+  formId,
+  idSuffix,
   endpoint,
   model,
   searchName = "search",
@@ -68,21 +73,21 @@ const {
   label = "Select",
   value,
   preloadInput = "",
-  id = "ssa",
   name = "searchSelectValue",
   required,
   isCreate = false,
-  fieldError,
+  error,
   ...inputAttrs
 } = Astro.props;
 
 const preValue = value !== undefined ? String(value) : "";
-const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
+const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
+const errorId = fieldErrorId(formId, idSuffix ? `${name}-${idSuffix}` : name);
 ---
 
 <search-select-async
   class="ss-root"
-  id={id}
+  {id}
   data-pre-value={preValue}
   data-min-chars={minChars}
 >
@@ -143,6 +148,7 @@ const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
         aria-autocomplete="list"
         aria-haspopup="listbox"
         aria-controls={`${id}-listbox`}
+        aria-describedby={errorId}
         value={preloadInput}
         hx-post={endpoint}
         hx-trigger={`input changed delay:${debounce}ms`}
@@ -197,9 +203,9 @@ const errorId = `field-error-${model}-${isCreate ? "create" : id}-${name}`;
       <ul class="ss-list" id={`${id}-list`}></ul>
     </div>
 
-    <span id={errorId} class="anim-vibrate field-error">
-      {fieldError ?? ""}
-    </span>
+    <small id={errorId} class="field-error" aria-live="polite">
+        {error}
+      </small>
   </div>
 
   <template data-tpl="option">

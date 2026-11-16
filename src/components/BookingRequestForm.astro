@@ -1,22 +1,20 @@
 ---
 // components/BookingRequestForm.astro
-import { Booking } from "@db/schema";
-import type { BookingSelect, LocationSelect } from "@ty/Schema";
 import InputField from "./form/InputField.astro";
 import SubmitButton from "./form/SubmitButton.astro";
 import type { HTMLAttributes } from "astro/types";
 import type { SelectOption } from "@ty/Form";
-import SelectField from "./form/SelectField.astro";
 import TextareaField from "./form/TextareaField.astro";
-import SearchSelect from "./form/SearchSelect.astro";
 import SearchSelectAsync from "./form/SearchSelectAsync.astro";
 import { DATALIST_TIMEZONES } from "astro:env/client";
+import FormCard from "./form/FormCard.astro";
 
 interface Props extends HTMLAttributes<"form"> {
   author_user_id: string;
   formId?: string;
   timelineId?: string | null;
   start?: string | null;
+  end?: string | null;
   locationOptions?: SelectOption[];
   userOptions?: SelectOption[];
 }
@@ -25,6 +23,7 @@ const {
   formId = "create_a_booking",
   timelineId,
   start,
+  end,
   class: classList,
   locationOptions = [],
   userOptions = [],
@@ -41,28 +40,26 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
 }));
 ---
 
-<form
+<FormCard
   id={formId}
   class:list={[classList, "bookings-form"]}
   hx-ext="response-targets"
-  hx-post={`/partials/bookings/request`}
-  hx-target={`#${formId}-success`}
-  hx-target-error={`#${errorTargetId}`}
-  hx-swap="innerHTML"
+  method="post"
+  endpoint="/partials/bookings/request"
   hx-headers='{"X-Partial-Type": "single-page"}'
   hx-include="[name^='booking'], [name^='location']"
 >
-  <legend>Request a Booking</legend>
+  <h2>Request a Booking</h2>
 
   <fieldset>
     <legend>Connect Timeline by ID</legend>
     <InputField
-      id={"timelineId"}
+      formId={formId}
       name={"timeline_id"}
-      model={"bookings"}
+
       type={"text"}
       value={timelineId}
-      isCreate={true}
+
     />
     <p class="ghost info">
       Optional: You may create and connect a timeline later
@@ -72,12 +69,20 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
   <fieldset>
     <legend>Date & Time</legend>
     <InputField
-      id={"start"}
+      formId={formId}
       name={"start"}
-      model={"bookings"}
+
       type={"datetime-local"}
       value={start ? `${start}T00:00` : null}
-      isCreate={true}
+  
+    />
+    <InputField
+      formId={formId}
+      name={"end"}
+
+      type={"datetime-local"}
+      value={end ? `${end}T00:00` : null}
+  
     />
     <TextareaField name={"notes"} errorId={"notes-error"} />
   </fieldset>
@@ -85,6 +90,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
   <fieldset>
     <legend>Select Location</legend>
     <SearchSelectAsync
+    {formId}
       endpoint="/partials/locations/search"
       searchName="search.locations"
       model="locations"
@@ -101,46 +107,43 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
       <summary>Or add a new location</summary>
       <div class="grid gap-s" id="new-location-fields">
         <InputField
-          id={"location.name"}
+          formId={formId}
           name={"location.name"}
-          model={"bookings"}
+     
           type={"text"}
-          isCreate={true}
+      
         />
         <InputField
-          id={"location.address"}
+          formId={formId}
           name={"location.address"}
-          model={"bookings"}
+  
           type={"text"}
-          isCreate={true}
+     
         />
         <InputField
-          id={"location.city"}
+          {formId}
           name={"location.city"}
-          model={"bookings"}
+      
           type={"text"}
-          isCreate={true}
+      
         />
         <InputField
-          id={"location.state"}
+          {formId}
           name={"location.state"}
-          model={"bookings"}
           type={"text"}
-          isCreate={true}
+   
         />
         <InputField
-          id={"location.zip"}
+          {formId}
           name={"location.zip"}
-          model={"bookings"}
+       
           type={"text"}
         />
         <InputField
-          id={"location.timezone"}
+          {formId}
           name={"location.timezone"}
-          model={"bookings"}
           type={"text"}
-          isCreate={true}
-          datalist={cityOptions}
+          options={cityOptions}
         />
       </div>
     </details>
@@ -148,6 +151,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
   <fieldset>
     <legend>Connect a User</legend>
     <SearchSelectAsync
+    {formId}
       endpoint="/partials/users/search"
       searchName="search.users"
       model="users"
@@ -165,48 +169,34 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
       <div class="grid gap-s" id="new-user-fields">
         <InputField
           label="first name"
-          id={"new-user.first_name"}
+          {formId}
           name={"user.first_name"}
-          model={"bookings"}
           type={"text"}
-          isCreate={true}
         />
         <InputField
           label="last name"
-          id={"new-user.last_name"}
+          {formId}
           name={"user.last_name"}
-          model={"bookings"}
           type={"text"}
-          isCreate={true}
+          
         />
         <InputField
           label="email"
-          id={"new-user.email"}
+          {formId}
           name={"user.email"}
-          model={"bookings"}
+          
           type={"text"}
-          isCreate={true}
+          
         />
         <InputField
           label="phone"
-          id={"new-user.phone"}
+          {formId}
           name={"user.phone"}
-          model={"bookings"}
+          
           type={"text"}
-          isCreate={true}
+          
         />
       </div>
     </details>
   </fieldset>
-
-  <fieldset class="actions" id={`${formId}-success`}>
-    <div class="row-error error top-level">
-      <p class="message">
-        <span id={errorTargetId}></span>
-      </p>
-    </div>
-
-    <!-- <div id={`${formId}-success`}></div> -->
-    <SubmitButton />
-  </fieldset>
-</form>
+</FormCard>

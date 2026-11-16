@@ -1,17 +1,13 @@
 ---
 // partials/auth-providers/[provider].astro
+import FormMessage from "@components/form/FormMessage.astro";
 import { auth } from "@lib/auth";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
-import TopLevelError from "@components/mgmt/TopLevelError.partial.astro";
 
 const SUPPORTED_PROVIDERS = ["facebook", "github", "microsoft"] as const;
 type SocialProvider = (typeof SUPPORTED_PROVIDERS)[number];
 
-interface Params {
-  provider: string | undefined;
-}
-
-const { provider } = Astro.params as Params;
+const { provider } = Astro.params;
 
 if (!provider) throw new BadRequestError("provider missing in request");
 if (!SUPPORTED_PROVIDERS.includes(provider as SocialProvider)) {
@@ -73,9 +69,7 @@ if (result.kind === "redirect") {
 }
 ---
 
-<TopLevelError
-  id={provider}
-  headers={["provider"]}
-  crud="auth-providers"
+<FormMessage
+  kind="error"
   message={result.message}
 />

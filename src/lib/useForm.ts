@@ -173,7 +173,8 @@ export async function useForm<S extends ZodType | undefined, T>(
         : (o.successMessage ?? "");
     return { ok: true, data, state: succeed(msg) };
   } catch (e) {
-    console.log({ e });
+    console.log("📝 useForm ERROR...");
+    // console.log("useForm =>", { e });
     return {
       ok: false,
       state: fail({ ...toFailure(e, o.constraints), values, labels: o.labels }),

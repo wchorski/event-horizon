@@ -1,4 +1,5 @@
 ---
+import { fieldErrorId, fieldId } from "@lib/fieldIds";
 import type { FieldSlot, FieldOption } from "@ty/FieldConfig";
 import type { HTMLAttributes } from "astro/types";
 
@@ -6,30 +7,33 @@ interface Props extends Omit<
   HTMLAttributes<"textarea">,
   "type" | "value" | "checked" | "name"
 > {
-  formId?: string;
-  errorId: string;
+  formId: string;
+  idSuffix?: string;
   name: string;
   label?: string;
   value?: string | number;
-  fieldError?: string | null;
-  inputAttrs?: Omit<FieldSlot, "label" | "value" | "type">;
-  //   options: FieldOption[] | undefined;
+  error?: string;
 }
 const {
   formId,
-  errorId,
-  inputAttrs,
+  idSuffix,
   name,
   label,
   value,
-  fieldError,
+  error,
   //   options,
   autofocus,
+  ...props
 } = Astro.props;
+
+const id = fieldId(formId, idSuffix ? `${name}-${idSuffix}` : name);
+const errorId = fieldErrorId(formId, idSuffix ? `${name}-${idSuffix}` : name);
 ---
 
 <label>
   <span class="text">{label ?? name}</span>
-  <textarea {...inputAttrs} form={formId} name={name} autofocus={autofocus}>{value}</textarea>
-  <span id={errorId} class="anim-vibrate field-error">{fieldError ?? ""}</span>
+  <textarea {id} form={formId} name={name} autofocus={autofocus} {...props}>{value}</textarea>
+  <small id={errorId} class="field-error" aria-live="polite">
+        {error}
+      </small>
 </label>

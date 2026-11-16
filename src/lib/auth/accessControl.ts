@@ -11,6 +11,7 @@ export const orgStatements = {
   ...defaultStatements, // keep built-in org/member/invitation actions
   event: ["create", "read", "update", "delete", "publish"],
   ticket: ["create", "read", "update", "delete", "check-in"],
+  // booking: ["create", "read", "update", "delete", "request"],
   packet: ["build", "publish", "read"],
   calendar: ["create", "read", "update", "delete"],
 } as const;

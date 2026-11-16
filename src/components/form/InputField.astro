@@ -9,12 +9,12 @@ interface Props extends Omit<
   "type" | "value" | "checked" | "name"
 > {
   formId: string;
+  idSuffix?: string;
   name: string;
   label?: string;
   type?: InputFieldType;
   value?: string | null;
   checked?: boolean;
-  idSuffix?: string;
   error?: string; // only for non-htmx / initial render
   options?: FieldOption[]; // datalist
 }

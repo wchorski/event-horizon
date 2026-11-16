@@ -488,7 +488,7 @@ export const validateBookingRequest = z
     start: datetimeLocalToDate,
     end: datetimeLocalToDate,
     notes: z.string().optional(),
-    status: z.enum(BOOKING_STATUSES),
+    // status: z.enum(BOOKING_STATUSES),
     author_user_id: z.uuidv7(),
     client_id: uuidv7OrNullFromForm,
     user: optionalUser,
@@ -500,7 +500,7 @@ export const validateBookingRequest = z
     if (!data.location_id && !data.location) {
       ctx.addIssue({
         code: "custom",
-        path: ["search.locations"],
+        path: ["location_id"],
         message: "An existing location or new location is required",
       });
     }
@@ -508,7 +508,7 @@ export const validateBookingRequest = z
     if (data.location_id && data.location) {
       ctx.addIssue({
         code: "custom",
-        path: ["search.locations"],
+        path: ["location_id"],
         message: "Choose either an existing location or create a new location",
       });
     }
@@ -516,7 +516,7 @@ export const validateBookingRequest = z
     if (!data.client_id && !data.user) {
       ctx.addIssue({
         code: "custom",
-        path: ["search.users"],
+        path: ["client_id"],
         message: "An existing client or new user is required",
       });
     }
@@ -524,7 +524,7 @@ export const validateBookingRequest = z
     if (data.client_id && data.user) {
       ctx.addIssue({
         code: "custom",
-        path: ["search.users"],
+        path: ["client_id"],
         message: "Choose either an existing client or create a new user",
       });
     }

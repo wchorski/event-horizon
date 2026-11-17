@@ -7,6 +7,7 @@ import {
   type FormState,
   type FormValues,
 } from "@lib/form-state";
+const { DEV } = import.meta.env;
 
 export type RawInput = Record<
   string,
@@ -34,11 +35,12 @@ import {
   errorHandlingOnSubmit,
   ForbiddenError,
   NotFoundError,
+  parseKeyDetail,
 } from "@lib/errors";
 
 type ConstraintMap = Record<
   string,
-  { field?: string; message: string; status?: number }
+  { field?: string; message: string; error?: string; status?: number }
 >;
 
 export class FormError extends Error {
@@ -97,12 +99,14 @@ function toFailure(e: unknown, constraints?: ConstraintMap) {
     const hit = pg.constraint ? constraints?.[pg.constraint] : undefined;
 
     if (hit) {
+      const status = hit.status ?? 409;
       return hit.field
         ? {
-            status: hit.status ?? 409,
+            status,
+            error: hit.error ?? hit.message,
             fieldErrors: { [hit.field]: hit.message },
           }
-        : { status: hit.status ?? 409, error: hit.message };
+        : { status, error: hit.error ?? hit.message };
     }
 
     // Unmapped: log the useful bits, not the whole error (it contains query params)
@@ -112,15 +116,28 @@ function toFailure(e: unknown, constraints?: ConstraintMap) {
       table: pg.table,
     });
 
+    const label = (col: string) => col.replace(/_id$/, "").replace(/_/g, " ");
+
     switch (pg.code) {
       case "23505": {
-        const field = columnFromDetail(pg.detail);
-        return field
-          ? {
-              status: 409,
-              fieldErrors: { [field]: "That value is already in use" },
-            }
-          : { status: 409, error: "That already exists." };
+        const key = parseKeyDetail(pg.detail);
+
+        // Single-column key: safe to attach to that field
+        if (key && key.columns.length === 1) {
+          const [col] = key.columns;
+          return {
+            status: 409,
+            error: `Another record already uses that ${label(col)}.`,
+            fieldErrors: { [col]: `"${key.values[0]}" is already in use.` },
+          };
+        }
+
+        // Composite or unparseable: don't guess a field
+        return {
+          status: 409,
+          error:
+            "A record with those values already exists. Change the details and try again.",
+        };
       }
       case "23503":
         return { status: 409, error: "This record is linked to other data." };
@@ -173,8 +190,8 @@ export async function useForm<S extends ZodType | undefined, T>(
         : (o.successMessage ?? "");
     return { ok: true, data, state: succeed(msg) };
   } catch (e) {
-    console.log("📝 useForm ERROR...");
-    // console.log("useForm =>", { e });
+    console.log("📝 useForm ERROR => ");
+    if (DEV) console.log({ e });
     return {
       ok: false,
       state: fail({ ...toFailure(e, o.constraints), values, labels: o.labels }),

@@ -1,13 +1,13 @@
+// lib/getBookingsPage
 import { db } from "@db/db";
-import { Booking, Location, User } from "@db/schema";
-import { desc, count, eq, and, gt, or } from "drizzle-orm";
+import { Booking, BookingClient, Location, User } from "@db/schema";
+import { desc, count, eq, and, gt, or, inArray } from "drizzle-orm";
 
 interface Props {
   page: number;
   perPage?: number;
   location_id?: string;
-  author_user_id?: string;
-  client_id?: string;
+  session_user_id: string;
   organization_id?: string;
   selectFields?: Object;
 }
@@ -17,45 +17,40 @@ export async function getBookingsPage({
   page,
   perPage = 12,
   location_id,
-  author_user_id,
-  client_id,
+  session_user_id,
   organization_id,
 }: Props) {
-  const conditions = [];
-
-  if (location_id) {
-    conditions.push(eq(Booking.location_id, location_id));
-  }
-  if (author_user_id) {
-    conditions.push(eq(Booking.author_user_id, author_user_id));
-  }
-  if (client_id) {
-    conditions.push(eq(Booking.client_id, client_id));
-  }
-  if (organization_id) {
-    conditions.push(eq(Booking.organization_id, organization_id));
-  }
-
-  // const now = new Date();
-  // conditions.push(gt(Booking.start, now));
+  if (!session_user_id) throw new Error("getBookingsPage requires a session_user_id");
+  // bookings where this user is a linked client
+  const clientBookingIds = db
+    .select({ id: BookingClient.booking_id })
+    .from(BookingClient)
+    .where(eq(BookingClient.user_id, session_user_id));
 
   if (page < 1) page = 1;
 
-  const totalResult = await db
+  const mine = or(
+    eq(Booking.author_user_id, session_user_id),
+    inArray(Booking.id, clientBookingIds),
+  );
+
+  const where = and(mine, location_id ? eq(Booking.location_id, location_id) : undefined);
+
+  const [{ count: totalCount }] = await db
     .select({ count: count(Booking.id) })
     .from(Booking)
-    .where(or(...conditions));
+    .where(where);
 
-  const totalCount = totalResult[0].count;
   const totalPages = Math.ceil(totalCount / perPage);
+  if (page > totalPages && totalPages > 0) return { redirect: true as const };
 
   if (page > totalPages && totalPages > 0) {
-    return { redirect: true };
+    return { redirect: true as const };
   }
 
   const bookings = await db.query.Booking.findMany({
-    where: or(...conditions),
-    orderBy: desc(Booking.start),
+    where,
+    orderBy: [desc(Booking.start), desc(Booking.id)],
     limit: perPage,
     offset: (page - 1) * perPage,
     with: {
@@ -65,16 +60,20 @@ export async function getBookingsPage({
           // role: true,
         },
       },
-      client: true,
+      clients: {
+        with: { user: { columns: { id: true, name: true } } },
+      },
       location: true,
       author: true,
       timeline: true,
     },
   });
 
-  // TODO don't fetch ALL locations. maybe use a join?
-  // TODO this is VERY BAD
-  const locations = await db.select().from(Location);
+  // TODO only fetch locations authored by the user, or already exist on invited locations. 
+  // maybe use a join transaction?
+  const locations = await db.query.Location.findMany({
+    where : eq(Location.author_user_id, session_user_id)
+  });
   // .limit(perPage)
   // .offset((page - 1) * perPage);
 
@@ -85,9 +84,17 @@ export async function getBookingsPage({
     totalCount,
     totalPages,
     perPage,
-    clients: bookings.flatMap((b) => (b.client ? [b.client] : [])),
+    clients: bookings.flatMap((b) => b.clients),
     authors: bookings.flatMap((b) => (b.author ? [b.author] : [])),
     // workers: bookings.map((b) => b.assignments).map((a) => a.user),
     event_ids: bookings.flatMap((b) => b.event_id),
   };
 }
+
+export type BookingsPageResult = Awaited<ReturnType<typeof getBookingsPage>>;
+
+// the success branch only (excludes { redirect: true })
+export type BookingsPageData = Exclude<BookingsPageResult, { redirect: true }>;
+
+// one booking, with every relation from the `with` block
+export type BookingWithRelations = BookingsPageData["bookings"][number];

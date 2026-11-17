@@ -452,12 +452,12 @@ const optionalLocation = z.preprocess(
   },
   z
     .object({
-      name: z.string().min(3, "Location name is required"),
-      address: z.string().min(3, "Address is required"),
-      city: z.string().min(2, "City is required"),
-      state: z.string().min(2, "State is required"),
-      zip: z.string().min(5, "ZIP code is required"),
-      timezone: z.string().min(1, "Timezone is required"),
+      name: z.string().min(3, "Location name is required").toLowerCase(),
+      address: z.string().min(3, "Address is required").toLowerCase(),
+      city: z.string().min(2, "City is required").toLowerCase(),
+      state: z.string().min(2, "State is required").toLowerCase(),
+      zip: z.string().min(5, "Invalid ZIP code").max(5, "Invalid ZIP code"),
+      timezone: z.string().min(1, "Timezone is required").toLowerCase(),
     })
     .optional(),
 );
@@ -477,11 +477,42 @@ const optionalUser = z.preprocess(
     .object({
       first_name: z.string().min(3, "First name is required"),
       last_name: z.string().min(3, "Last name is required"),
-      email: z.string().min(3, "Email is required"),
+      email: z.email().min(3, "Email is required").toLowerCase(),
       phone: validate.phoneOptional,
     })
     .optional(),
 );
+
+const MAX_CLIENTS = 10;
+const emailSchema = z.string().email();
+
+export const clientEmails = z
+  .string()
+  .optional()
+  .transform((raw, ctx) => {
+    // split on comma, semicolon, or any whitespace/newline
+    const emails = [
+      ...new Set(
+        (raw ?? "")
+          .split(/[,;\s]+/)
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ];
+
+    if (emails.length > MAX_CLIENTS) {
+      ctx.addIssue({ code: "custom", message: `You can invite up to ${MAX_CLIENTS} clients` });
+      return z.NEVER;
+    }
+
+    const invalid = emails.filter((e) => !emailSchema.safeParse(e).success);
+    if (invalid.length) {
+      ctx.addIssue({ code: "custom", message: `Not a valid email: ${invalid.join(", ")}` });
+      return z.NEVER;
+    }
+
+    return emails; // string[]
+  });
 
 export const validateBookingRequest = z
   .object({
@@ -491,6 +522,7 @@ export const validateBookingRequest = z
     // status: z.enum(BOOKING_STATUSES),
     author_user_id: z.uuidv7(),
     client_id: uuidv7OrNullFromForm,
+    client_emails: clientEmails,
     user: optionalUser,
     location_id: uuidv7OrNullFromForm,
     timeline_id: uuidv7OrNullFromForm,

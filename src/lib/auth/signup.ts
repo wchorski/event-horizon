@@ -1,21 +1,17 @@
 // lib/auth/signup.ts
 import { auth } from "@lib/auth";
-import { slugify } from "@lib/formatters";
+import { makeUsername, slugify } from "@lib/formatters";
 import { FormError } from "@lib/useForm";
 import type { SignupCredentials } from "@lib/validate";
 
 export type AuthCookies = { setCookies: string[] };
 export type SignupResult = AuthCookies & {
+  userId: string;
   email: string;
 };
 
 
 type AuthErrorBody = { message?: string; code?: string };
-
-const makeUsername = (first: string, last: string) => {
-  const base = slugify(`${first}_${[...last][0] ?? ""}`).replaceAll("-", "_");
-  return base ? `${base}_${crypto.randomUUID().slice(0, 4)}` : undefined;
-};
 
 export async function signup(
   credentials: SignupCredentials,
@@ -59,10 +55,13 @@ export async function signup(
   //   console.error("sendVerificationOTP failed", err);
   // }
 
+  const { user } = await response.clone().json();
+
   return {
-    setCookies: response.headers.getSetCookie(),
     // otpSent,
+    userId: user.id,
     email,
+    setCookies: response.headers.getSetCookie(),
     // type: "email-verification",
   };
 }

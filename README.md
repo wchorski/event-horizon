@@ -244,6 +244,7 @@ pnpm dlx auth@latest create-admin --email admin@example.com --name "Admin" --rol
 </details>
 
 #todo
+- [ ] fix endpoints for location and user search. make sure to narrow down by organization (maybe even hide search if user is not apart of organization). maybe even do a search for user (by email) before creating new user
 - [ ] impliment better-auth's teams/departments plugin 
 - [ ] org member management but only by member.role === 'admin'
 - [ ] invitations: allow admin to cancel and users to reject invitations https://better-auth.com/docs/plugins/organization

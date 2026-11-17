@@ -1,0 +1,23 @@
+---
+import FormMessage from "@components/form/FormMessage.astro";
+import { auth } from "@lib/auth";
+import Request from "@partials/bookings/request.astro";
+
+const formData = await Astro.request.formData();
+
+const email = formData.get("email") as string|undefined;
+if(!email) return new Response("need to know the user's email", { status: 401 });
+
+  const verify = await auth.api.sendVerificationOTP({
+      body: { email, type: "email-verification" },
+    });
+---
+{verify.success ? (
+    <FormMessage kind="success" message="Check your email for a new code">
+        {" "} <button id="request-otp-btn" type="button" hx-post=""> or resend again</button>
+      </FormMessage>
+) : (
+    <FormMessage kind="error" message={"Code send failed."}>
+        {" "}<button id="request-otp-btn" type="button" hx-post="">Resend new code</button>
+      </FormMessage>
+)}

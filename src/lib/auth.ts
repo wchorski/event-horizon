@@ -27,6 +27,8 @@ import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, username, organization, emailOTP } from "better-auth/plugins";
 import { orgAccess, organizationRoles } from "./auth/accessControl";
+import { BookingClient, User } from "@db/schema";
+import { and, eq, isNull } from "drizzle-orm";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -135,6 +137,19 @@ export const auth = betterAuth({
     sendOnSignUp: true, // trigger verification on sign-up
     sendOnSignIn: true, // re-send when an unverified user tries to log in
     autoSignInAfterVerification: true,
+    async afterEmailVerification(user, request) {
+      // Runs after successful email verification
+
+      await db
+        .update(BookingClient)
+        .set({ user_id: user.id, claimed_at: new Date() })
+        .where(
+          and(
+            eq(BookingClient.email, user.email.toLowerCase()),
+            isNull(BookingClient.user_id),
+          ),
+        );
+    },
   },
   socialProviders,
   session: {

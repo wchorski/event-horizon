@@ -40,6 +40,8 @@ if (Astro.request.method === "POST") {
   state = outcome.state;
   Astro.response.status = state.status;
 }
+
+const formId = 'sign-up-form'
 ---
 
 <CommonPageLayout title={'Sign Up'}>
@@ -48,49 +50,50 @@ if (Astro.request.method === "POST") {
   </header>
   <div data-layout="content">
 
-    <FormCard id="sign-up-form" submitText="Sign Up" {state}>
+    <FormCard id={formId} submitText="Sign Up" {state}>
       <div class="flex gap-m">
         <InputField
+        {formId}
           name="first_name"
           type="text"
-          id="first_name"
+
           model="accounts"
           value={state.values.first_name}
           fieldError={state.fieldErrors.first_name}
         />
         <InputField
+        {formId}
           name="last_name"
           type="text"
-          id="last_name"
+   
           model="accounts"
           value={state.values.last_name}
-          fieldError={state.fieldErrors.last_name}
+          error={state.fieldErrors.last_name}
         />
       </div>
       <InputField
+      {formId}
         name="email"
         type="email"
-        id="email"
-        model="accounts"
         required
         value={state.values.email}
-        fieldError={state.fieldErrors.email}
+        error={state.fieldErrors.email}
       />
       <InputField
+      {formId}
         name="password"
         type="password"
-        id="password"
-        model="accounts"
+
         required
-        fieldError={state.fieldErrors.password}
+        error={state.fieldErrors.password}
       />
       <InputField
+      {formId}
         name="image"
         type="text"
-        id="image"
-        model="accounts"
+
         value={state.values.image}
-        fieldError={state.fieldErrors.image}
+        error={state.fieldErrors.image}
       />
     </FormCard>
   </div>

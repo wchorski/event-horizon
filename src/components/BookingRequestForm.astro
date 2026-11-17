@@ -84,7 +84,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
       value={end ? `${end}T00:00` : null}
   
     />
-    <TextareaField name={"notes"} errorId={"notes-error"} />
+    <TextareaField {formId} name={"notes"}  />
   </fieldset>
 
   <fieldset>
@@ -109,9 +109,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
         <InputField
           formId={formId}
           name={"location.name"}
-     
           type={"text"}
-      
         />
         <InputField
           formId={formId}
@@ -150,23 +148,31 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
   </fieldset>
   <fieldset>
     <legend>Connect a User</legend>
-    <SearchSelectAsync
-    {formId}
+    <p>search combobox not yet supported</p>
+    <!-- <SearchSelectAsync
+      {formId}
       endpoint="/partials/users/search"
       searchName="search.users"
       model="users"
       isCreate={true}
       name={"client_id"}
-      id={"user-search"}
       label="Search by name or email"
       minChars={2}
       debounce={300}
-    />
+    /> -->
   </fieldset>
   <fieldset>
     <details>
-      <summary>Or register a new User</summary>
-      <div class="grid gap-s" id="new-user-fields">
+      <summary>Or invite users by email</summary>
+      <TextareaField 
+        {formId}
+        name="client_emails"
+        label="Client Email List"
+        rows={3}
+        placeholder="alice@example.com, bob@example.com"
+        autocomplete="off"
+      />
+      <!-- <div class="grid gap-s" id="new-user-fields">
         <InputField
           label="first name"
           {formId}
@@ -196,7 +202,7 @@ const cityOptions = DATALIST_TIMEZONES.split(",").map((str) => ({
           type={"text"}
           
         />
-      </div>
+      </div> -->
     </details>
   </fieldset>
 </FormCard>

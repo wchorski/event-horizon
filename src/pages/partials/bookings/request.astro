@@ -1,27 +1,11 @@
 ---
 // pages/partials/bookings/request
-import { bookingConfigRequired } from "@lib/tableConfigs";
-import {
-  BadRequestError,
-  errorHandlingOnSubmit,
-  ForbiddenError,
-  NotFoundError,
-  UnauthorizedError,
-} from "@lib/errors";
-import { crud, type CrudRegistryType } from "@lib/crudRegistry";
-import type { BookingSelect } from "@ty/Schema";
-
-import { handleResult } from "@lib/handleRenderResult";
-import { Booking, Location } from "@db/schema";
-import { db } from "@db/db";
-import { validate, validateBookingRequest } from "@lib/validate";
-import { parseNestedFormData } from "@lib/parseFormFields";
+import { validateBookingRequest } from "@lib/validate";
 import FieldErrors from "@components/form/FieldErrors.astro";
-import TopLevelError from "@components/form/TopLevelError.astro";
 import FormMessage from "@components/form/FormMessage.astro";
 import { useForm } from "@lib/useForm";
-import { auth } from "@lib/auth";
 import { unflatten } from "@lib/formParsing";
+import { createBooking, resolveClientLinks } from "@lib/crud/bookingHelpers";
 // import { createUser } from "@lib/auth/createUser";
 
 export const partial = true;
@@ -43,12 +27,33 @@ const input = {
   ...unflat,
   author_user_id: user.id,
 }
+
 // console.log({formData, unflat, input});
 const outcome = await useForm(input, {
   schema: validateBookingRequest,
   labels: { start: "start", id: "id",  location_id: "location_id", client_id: "client_id"},
   successMessage: "Booking Created",
-  run: async ({location_id, location, user: newUser, author_user_id, start, end, notes, status, client_id}) => {
+  constraints: {
+    locations_org_name_unique: {
+      field: "location.name",
+      message: "Name already being used",
+      error: "CREATION CONFLICT: Your organization already has a Location with this name.",
+      status: 409,
+    },
+    locations_author_name_unique: {
+      field: "location.name",
+      message: "Name already being used",
+      error: "CREATION CONFLICT: You already have a Location with this name.",
+      status: 409,
+    },
+    booking_clients_booking_email_role_unique: {
+      field: "user.email",
+      message: "Email already being used",
+      error: "CREATION CONFLICT: You already have a user with email booked.",
+      status: 409,
+    },
+  },
+  run: async ({location_id, location, client_emails, client_id, author_user_id, start, end, notes }) => {
     // const { success: canCreateBooking } = await auth.api.hasPermission({
     //   headers: Astro.request.headers,
     //   body: {
@@ -60,179 +65,31 @@ const outcome = await useForm(input, {
     // if (!canCreateBooking)
     //   throw new ForbiddenError("not allowed to create bookings");
 
-    let new_location_id = undefined
+    const clients = await resolveClientLinks({
+      emails: client_emails,
+      user_ids: client_id ? [client_id] : [],
+    });
 
-    if (!location_id && location) {
-      const [newLocation] = await db
-        .insert(Location)
-        .values({
-          ...location,
-          author_user_id: user.id,
-        })
-        .returning();
-
-      if (!newLocation) {
-        throw new Error("Location could not be created");
-      }
-
-      new_location_id = newLocation.id;
-    }
-
-    const [result] = await db
-      .insert(Booking)
-      .values({
-        start,
-        end,
-        notes,
-        status: "REQUESTED",
-        author_user_id,
-        client_id,
-        location_id: location_id ?? new_location_id,
-      })
-      .returning();
-    if (!result) throw new NotFoundError(`Booking not created`);
-    return result
+    return createBooking({
+      location_id,
+      location,
+      clients,
+      author_user_id,
+      start,
+      end,
+      notes,
+    });
   },
 });
 
 if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
-// let booking: BookingSelect | null | undefined = null;
-// let error = null;
-// const userId = user.id;
-// const locations = await crud.locations.readMany();
-// const users = await crud.users.readMany();
-// const config = bookingConfigRequired(locations, users);
-// const ctx = {
-//   crud: "bookings" as CrudRegistryType,
-//   config,
-//   endpoint: "/bookings",
-//   // TODO is there a better way to make sure error ids sync with partials?
-//   headers: [
-//     ...Object.keys(config),
-//     "user.phone",
-//     "user.first_name",
-//     "user.last_name",
-//     "user.email",
-//     "location.name",
-//     "location.address",
-//     "location.city",
-//     "location.state",
-//     "location.zip",
-//     "location.timezone",
-//   ],
-// };
-
-// type Payload = {
-//   start: string;
-//   end?: string;
-//   status?: string;
-//   notes: string;
-//   location_id?: string;
-
-//   location: {
-//     name: string;
-//     address: string;
-//     city: string;
-//     state: string;
-//     zip: string;
-//     timezone: string;
-//   };
-//   user: {
-//     id: string;
-//   };
-// };
-
-
-//   try {
-//     if (!userId) {
-//       throw new UnauthorizedError("Must be logged in to submit form");
-//     }
-//     const formData = await Astro.request.formData();
-
-//     const submitFields = Object.fromEntries(
-//       [...formData.entries()].filter(([key]) => !key.startsWith("_")),
-//     );
-
-//     const payload = parseNestedFormData({
-//       ...submitFields,
-//       author_user_id: userId || "",
-//     }) as Payload;
-
-//     payload.end = payload.start;
-//     payload.status = "REQUESTED";
-//     const validated = validateBookingRequest.parse(payload);
-//     let locationId = validated.location_id;
-//     let clientId = validated.client_id;
-
-    // if (!locationId && validated.location) {
-    //   const [newLocation] = await db
-    //     .insert(Location)
-    //     .values({
-    //       ...validated.location,
-    //       author_user_id: userId,
-    //     })
-    //     .returning();
-
-    //   if (!newLocation) {
-    //     throw new Error("Location could not be created");
-    //   }
-
-    //   locationId = newLocation.id;
-    // }
-
-    // //! TODO prob shouldn't be allowing everybody to create users
-    // // if (!clientId && validated.user) {
-    // //   const userResult = await createUser(validated.user);
-
-    // //   if (!userResult.success)
-    // //     throw new Error(`User Create Error: ${userResult.error}`);
-    // //   clientId = userResult.user.id;
-    // // }
-
-    // const [result] = await db
-    //   .insert(Booking)
-    //   .values({
-    //     start: validated.start,
-    //     end: validated.end,
-    //     notes: validated.notes,
-    //     status: validated.status,
-    //     author_user_id: validated.author_user_id,
-    //     client_id: clientId,
-    //     location_id: locationId,
-    //   })
-    //   .returning();
-    // if (!result) throw new NotFoundError(`Booking not created`);
-    // booking = result;
-//     Astro.response.headers.set("HX-Redirect", "/dashboard");
-//   } catch (e) {
-//     const { err, status } = errorHandlingOnSubmit(e);
-//     Astro.response.status = status;
-//     error = err;
-//   }
-
-
-// enum PartialType {
-//   TableRow = "table-row",
-//   SinglePage = "single-page",
-// }
-
-// const partialType = Astro.request.headers.get("X-Partial-Type") as
-//   PartialType | undefined;
-// if (!partialType) throw new BadRequestError("X-Partial-Type header not set");
-
-// const result = handleResult<BookingSelect>({
-//   error,
-//   entity: booking,
-//   method,
-//   emptyMessage: "No data available",
-// });
 ---
 
 {
   outcome.ok ? (
     <>
       <FormMessage kind="success" message={outcome.state.success}>
-        <strong>{new Date(outcome.data.start).toLocaleTimeString()}</strong>
+        {" "}<strong>{new Date(outcome.data.start).toLocaleString()}</strong>
       </FormMessage>
     </>
   ) : (
@@ -245,6 +102,6 @@ if (!outcome.ok) Astro.response.status = outcome.state.status ?? 422;
 }
 <FieldErrors
   {formId}
-  names={Object.keys(validate.team.shape)}
+  names={Object.keys(validateBookingRequest.shape)}
   errors={outcome.ok ? {} : outcome.state.fieldErrors}
 />

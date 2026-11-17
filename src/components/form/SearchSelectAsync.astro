@@ -49,6 +49,7 @@ import type { HTMLAttributes } from "astro/types";
 
 type Props = {
   formId:string;
+  name:string,
   idSuffix?: string;
   endpoint: string; // htmx POST target, e.g. "/partials/users/search"
   model: string,
@@ -73,7 +74,7 @@ const {
   label = "Select",
   value,
   preloadInput = "",
-  name = "searchSelectValue",
+  name,
   required,
   isCreate = false,
   error,

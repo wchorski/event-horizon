@@ -225,11 +225,23 @@ button,
   }
 }
 
+button.just-text {
+  background-color: transparent;
+  border: none;
+  color: var(--c-txt);
+
+  &:hover {
+    background-color: transparent !important;
+    color: var(--c-accent);
+    text-decoration: underline;
+  }
+}
+
 button:not(:disabled):hover,
 .btn:hover {
   background-color: var(--c-primary);
   background-position: 20px 20px;
-  filter: brightness(2);
+  filter: brightness(1.5);
 
   &.delete {
     color: var(--c-txt);

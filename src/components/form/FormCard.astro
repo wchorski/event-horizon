@@ -4,6 +4,7 @@ import type { HTMLAttributes } from "astro/types";
 import type { FormState } from "@lib/form-state";
 import SubmitButton from "./SubmitButton.astro";
 import { toplevelMsgId } from "@lib/fieldIds";
+import FormMessage from "./FormMessage.astro";
 
 type HtmxMethod = "get" | "post" | "put" | "patch" | "delete";
 
@@ -63,21 +64,20 @@ const attrs = { ...modeAttrs, ...props };
   <slot />
   <div id={msgId} class="toplevel-msg">
     {
-      state?.error && (
+      state?.error ? (
         <p class="form-error error callout" role="alert">
           {state.error}
         </p>
-      )
-    }
-    {
-      state?.success && (
+      ) : state?.success ? (
         <p class="form-success success callout" role="status">
           {state.success}
         </p>
-      )
+      ) : null
     }
+
   </div>
   <SubmitButton text={submitText} size="m">
     <slot name="icon" slot="icon" />
   </SubmitButton>
+  <slot name="sub-actions" />
 </form>

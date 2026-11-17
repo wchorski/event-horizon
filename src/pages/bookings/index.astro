@@ -8,9 +8,11 @@ import TableMenu from "@components/tables/TableMenu.astro";
 import TableEditable from "@components/TableEditable.astro";
 import FilterSelect from "@components/form/FilterSelect.astro";
 import { eq } from "drizzle-orm";
+import BookingsManagementTable from "@components/tables/BookingsManagementTable.astro";
 const { SITE_TITLE } = import.meta.env;
 
-const user = Astro.locals.user
+const {user} = Astro.locals
+if (!user || user.banned) return new Response("must have an account and be logged in to use bookings", { status: 401 });
 
 const page = parseInt(Astro.url.searchParams.get("page") || "1");
 
@@ -47,11 +49,10 @@ if (rawPerPage !== null) {
 }
 
 const result = await getBookingsPage({
+  session_user_id: user.id,
   page,
   perPage: perPageParam,
   location_id,
-  author_user_id: user?.id,
-  client_id: user?.id
 });
 
 if ("redirect" in result) {
@@ -61,12 +62,12 @@ if ("redirect" in result) {
 const { bookings, locations, perPage, totalCount, clients, totalPages } = result;
 
 
-const config = bookingConfigRequired(locations, clients)
-const ctx = {
-  crud: "bookings" as const,
-  config,
-  headers: Object.keys(config)
-}
+// const config = bookingConfigRequired(locations, clients)
+// const ctx = {
+//   crud: "bookings" as const,
+//   config,
+//   headers: Object.keys(config)
+// }
 // SEO metadata
 const canonicalUrl =
   page === 1 ? `${Astro.site}/bookings` : `${Astro.site}/bookings?page=${page}`;
@@ -121,21 +122,12 @@ const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
         locations.length === 0 ? (
           <p>
             No locations set. First create a location on the{" "}
-            <a href="/attendance/admin/locations">locations page</a>
+            <a href="/locations">locations page</a>
           </p>
         ) : bookings.length === 0 ? (
           <p class="callout not-found">no bookings found</p>
-          <table data-crud={ctx.crud}>
-            <tbody id={`${ctx.crud}-table-body`}>
-            </tbody>
-          </table>
         ) : (
-          <TableEditable
-            crud={ctx.crud}
-            rows={bookings}
-            config={ctx.config}
-            showCreateRow={true}
-          />
+          <BookingsManagementTable rows={bookings} orgSlug={'org-not-integrated-yet'} />
         )
       }
     </div>
@@ -143,7 +135,7 @@ const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
       {
         bookings.length > 0 ? (
           <PaginationNav
-            path="/admin/bookings"
+            path="/bookings"
             page={page}
             perPage={perPage}
             totalCount={totalCount}

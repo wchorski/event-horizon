@@ -188,7 +188,7 @@ export function errorHandlingOnSubmit(e: unknown): {
   }
 
   const msg = e instanceof Error ? e.message : String(e);
-  console.log('❌ 500 ', {msg});
+  console.log("❌ 500 ", { msg });
   return { status: 500, err: "< An unexpected error occurred ≥ -- " };
 }
 
@@ -263,15 +263,29 @@ function flattenWithDottedPaths(error: ZodError): DottedFlattenedError {
   return { formErrors, fieldErrors };
 }
 
-type PgCause = { code?: string; constraint?: string; table?: string; detail?: string };
+type PgCause = {
+  code?: string;
+  constraint?: string;
+  table?: string;
+  detail?: string;
+};
 
 export function findDrizzlePgError(e: unknown): PgCause | undefined {
   for (let cur: any = e, i = 0; cur && i < 5; cur = cur.cause, i++) {
-    if (cur instanceof DrizzleQueryError) return cur.cause as PgCause | undefined;
+    if (cur instanceof DrizzleQueryError)
+      return cur.cause as PgCause | undefined;
   }
 }
 
 // "Key (slug)=(foo) already exists." -> "slug". Returns nothing for composite keys.
 export function columnFromDetail(detail?: string) {
   return detail?.match(/^Key \((\w+)\)=/)?.[1];
+}
+
+export function parseKeyDetail(detail?: string) {
+  const m = detail?.match(/Key \((.*?)\)=\((.*)\) already exists/);
+  if (!m) return null;
+  const columns = m[1].split(",").map((s) => s.trim());
+  const values = m[2].split(",").map((s) => s.trim());
+  return { columns, values };
 }

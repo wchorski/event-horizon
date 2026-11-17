@@ -1,0 +1,53 @@
+---
+// components/tables/BookingManagemntRow
+import type { auth } from "@lib/auth";
+import type { BookingSelect, TimelineSelect } from "@ty/Schema";
+import type { HTMLAttributes } from "astro/types";
+import type { BookingWithRelations } from "@lib/getBookingsPage";
+
+interface Props extends HTMLAttributes<"tr"> {
+  row: BookingWithRelations;
+  orgSlug?: string;
+}
+
+export type TBookingsManagementRow = BookingSelect & {
+  clients: { id: string; name: string, email:string, emailVerified: boolean }[];
+  location?: {id:string, name:string},
+  timeline: TimelineSelect,
+};
+const { row, orgSlug, class: className, ...attrs } = Astro.props;
+const { id, start, location, timeline, clients } = row;
+const rowId = `bookings-row--${id}`;
+const dateAndTime = new Date(start).toLocaleString()
+const clientLabel = (c: (typeof clients)[number]) =>
+  c.status === "accepted" && c.user ? c.user.name : c.email;
+---
+
+<tr id={rowId} class:list={[className]} {...attrs}>
+  <td>
+    {dateAndTime}
+  </td>
+  <td>
+    <ul>
+      {clients.map(c => <li>
+        <span>{clientLabel(c)}
+          {!c.user && <span class="badge">pending</span>}</span>
+        {/* {!c.emailVerified && <span style="color: red;" data-verified={c.emailVerified}>
+            email not verified
+          </span>} */}
+      </li>)}
+    </ul>
+  </td>
+  <td>{location?.name ?? <span class="no-data">-</span>}</td>
+  <td>
+    {timeline ? <a href={`/timelines/${timeline.id}`}>timeline</a> : <button>create/connect</button>}
+  </td>
+  <td>
+    <button
+      hx-get={`/partials/bookings/${encodeURIComponent(id)}/edit-form`}
+      hx-target={"#edit-booking-wrap"}
+    >
+      edit
+    </button>
+  </td>
+</tr>

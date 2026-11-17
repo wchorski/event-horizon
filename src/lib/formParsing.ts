@@ -7,6 +7,23 @@ function tokenize(key: string): string[] {
   return key.replace(/\[(\d+)\]/g, ".$1").split(".");
 }
 
+/**
+ * parses formData and builds js object i.e. as `user.email` & `user.name` => `user: { email, name }`
+ * @param formData 
+ * @returns 
+ */
+export function unflatten(formData: FormData): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("_")) continue;
+    const path = tokenize(key);
+    //? limit large numbered arrays from spaming
+    if (path.some((p) => BLOCKED.has(p) || (/^\d+$/.test(p) && Number(p) > 50))) continue;
+    setPath(result, path, value);
+  }
+  return result;
+}
+
 function setPath(target: Record<string, any>, path: string[], value: unknown) {
   let node = target;
   for (let i = 0; i < path.length - 1; i++) {
@@ -16,15 +33,4 @@ function setPath(target: Record<string, any>, path: string[], value: unknown) {
     node = node[key];
   }
   node[path[path.length - 1]] = value;
-}
-
-export function unflatten(formData: FormData): Record<string, any> {
-  const result: Record<string, any> = {};
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith("_")) continue;
-    const path = tokenize(key);
-    if (path.some((p) => BLOCKED.has(p))) continue;
-    setPath(result, path, value);
-  }
-  return result;
 }

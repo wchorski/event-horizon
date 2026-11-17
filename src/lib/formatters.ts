@@ -274,6 +274,11 @@ export function toLocalDateTimeString(
   return `${y}-${m}-${d}T${h}:${min}`;
 }
 
+export const makeUsername = (first: string, last: string) => {
+  const base = slugify(`${first}_${[...last][0] ?? ""}`).replaceAll("-", "_");
+  return base ? `${base}_${crypto.randomUUID().slice(0, 4)}` : undefined;
+};
+
 // export function localDateTimeToRealDate(
 //   date_civil: string,        // "2026-02-26T19:00"
 //   timeZone: string          // "America/Chicago"

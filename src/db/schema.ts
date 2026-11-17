@@ -59,8 +59,19 @@ export const Location = pgTable(
   (table) => [
     index("locations_city_idx").on(table.city),
     index("locations_state_idx").on(table.state),
-    // unique().on(table.organization_id, table.name),
-    unique().on(table.organization_id, table.name).nullsNotDistinct(),
+
+    //? old unique constrant
+    // unique().on(table.organization_id, table.name).nullsNotDistinct(),
+
+    // Org locations: unique name per organization
+    uniqueIndex("locations_org_name_unique")
+      .on(table.organization_id, sql`lower(${table.name})`)
+      .where(sql`${table.organization_id} is not null`),
+
+    // Personal locations: unique name per owner
+    uniqueIndex("locations_author_name_unique")
+      .on(table.author_user_id, sql`lower(${table.name})`)
+      .where(sql`${table.organization_id} is null`),
   ],
 );
 
@@ -149,9 +160,6 @@ export const Booking = pgTable(
     author_user_id: uuid()
       .notNull()
       .references(() => User.id),
-    client_id: uuid().references(() => User.id),
-    // TODO allow booking to survive if User is deleted
-    // account_id: uuid().references(() => Account.id, { onDelete: "set null" }),
     location_id: uuid().references(() => Location.id),
     event_id: uuid().references(() => Event.id),
     organization_id: uuid().references(() => Organization.id, {
@@ -160,6 +168,42 @@ export const Booking = pgTable(
   },
   (table) => [check("end_after_start", sql`${table.end} >= ${table.start}`)],
 );
+
+export const bookingClientRole = pgEnum("booking_client_role", ["client"]);
+// add values later as you need them, e.g. "observer", "co_host"
+
+export const bookingClientStatus = pgEnum("booking_client_status", [
+  "invited",
+  "accepted",
+  "declined",
+]);
+
+export const BookingClient = pgTable("booking_clients", {
+  id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+  booking_id: uuid("booking_id").notNull().references(() => Booking.id, { onDelete: "cascade" }),
+
+  // always set; this is the stable identity of the invitation
+  email: text("email").notNull(),          // normalized: trim + lowercase
+
+  // null until a verified user with this email exists
+  user_id: uuid("user_id").references(() => User.id, { onDelete: "set null" }),
+  role: bookingClientRole("role").notNull().default("client"),
+  status: bookingClientStatus("status").notNull().default("invited"),
+
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  claimed_at: timestamp("claimed_at"),
+}, (table) => [
+    unique("booking_clients_booking_email_role_unique").on(
+      table.booking_id,
+      table.email,
+      table.role,
+    ),
+    index("booking_clients_user_idx").on(table.user_id),
+    index("booking_clients_email_idx").on(table.email),
+    index("booking_clients_booking_idx").on(table.booking_id),
+  ],);
 
 // maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
 // export const assignmentsRoleEnum = pgEnum("worker_role", [
@@ -198,11 +242,12 @@ export const bookingRelations = relations(Booking, ({ many, one }) => ({
     references: [User.id],
     relationName: "booking_author",
   }),
-  client: one(User, {
-    fields: [Booking.client_id],
-    references: [User.id],
-    relationName: "booking_client",
-  }),
+  // client: one(User, {
+  //   fields: [Booking.client_id],
+  //   references: [User.id],
+  //   relationName: "booking_client",
+  // }),
+  clients: many(BookingClient),
   location: one(Location, {
     fields: [Booking.location_id],
     references: [Location.id],
@@ -743,6 +788,11 @@ export const IntegrationCredential = pgTable(
   ],
 );
 
+export const bookingClientRelations = relations(BookingClient, ({ one }) => ({
+  booking: one(Booking, { fields: [BookingClient.booking_id], references: [Booking.id] }),
+  user: one(User, { fields: [BookingClient.user_id], references: [User.id] }),
+}));
+
 export const userRelations = relations(User, ({ many }) => ({
   sessions: many(Session),
   accounts: many(Account),
@@ -750,6 +800,7 @@ export const userRelations = relations(User, ({ many }) => ({
   teamMembers: many(TeamMember),
   members: many(Member),
   invitations: many(Invitation),
+  bookingClientLinks: many(BookingClient),
 }));
 
 export const sessionRelations = relations(Session, ({ one }) => ({

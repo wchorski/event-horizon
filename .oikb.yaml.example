@@ -1,0 +1,85 @@
+## using open web-ui, build knowledge bases off of the source code and relavent libraries
+defaults:
+  url: http://open-web-ui-host:3030 # your Open WebUI URL
+  api-key: sk-API_KEY
+  no-verify-ssl: true
+
+sources:
+  - name: event-horizon
+    source: /LOCAL_PATH/event-horizon
+    kb-id: KNOWLEDGEBASE_ID # from Open WebUI KB settings
+    filter:
+      # max-size: 1mb # skip binaries/large files
+      exclude:
+        - "node_modules/**"
+        - ".git/**"
+        - "dist/**"
+        - "db/**"
+        - ".astro/**"
+        - "playwright-report/**"
+        - "build/**"
+        - ".env*"
+        - "**/*.lock"
+        - "**/*.png"
+        - "**/*.jpg"
+        - "**/*.svg"
+        - "**/*.bmp"
+        - "**/*.mp3"
+        - "**/*.ogg"
+        - "**/*.ico"
+        - "coverage/**"
+        - ".next/**"
+        - "**/*.min.js"
+        - "**/*.min.css "
+
+  - name: astro-docs
+    source: github:withastro/astro
+    kb-id: KNOWLEDGEBASE_ID
+    filter:
+      include:
+        - "src/content/docs/en/**/*.mdx"
+        - "src/content/docs/en/**/*.md"
+      exclude:
+        - "src/content/docs/en/**/*.png"
+        - "src/content/docs/en/**/*.jpg"
+        - "src/content/docs/en/**/*.svg"
+
+  - name: htmx-docs
+    source: github:bigskysoftware/htmx
+    kb-id: KNOWLEDGEBASE_ID
+    filter:
+      include:
+        - "www/content/**/*.mdx"
+        - "www/content/**/*.md"
+      exclude:
+        - "www/content/**/*.png"
+        - "www/content/**/*.jpg"
+        - "www/content/**/*.svg"
+
+  - name: better-auth-docs
+    source: github:better-auth/better-auth
+    kb-id: KNOWLEDGEBASE_ID
+    filter:
+      include:
+        - "docs/content/docs/**/*.mdx"
+        - "docs/content/docs/**/*.md"
+      exclude:
+        - "docs/content/docs/**/*.png"
+        - "docs/content/docs/**/*.jpg"
+        - "docs/content/docs/**/*.svg"
+
+  - name: drizzle-orm-docs
+    source: github:drizzle-team/drizzle-orm-docs
+    kb-id: KNOWLEDGEBASE_ID
+    filter:
+      include:
+        - "src/content/docs/**/*.mdx"
+        - "src/content/docs/**/*.md"
+      exclude:
+        - "src/content/docs/**/*.png"
+        - "src/content/docs/**/*.jpg"
+        - "src/content/docs/**/*.svg"
+        - "src/content/docs/cockroach/**"
+        - "src/content/docs/mssql/**"
+        - "src/content/docs/mysql/**"
+        - "src/content/docs/sqlite/**"

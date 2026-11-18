@@ -72,6 +72,8 @@ const { bookings, locations, perPage, totalCount, clients, totalPages } = result
 const canonicalUrl =
   page === 1 ? `${Astro.site}/bookings` : `${Astro.site}/bookings?page=${page}`;
 const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
+
+// TODO check if apart of organizaiton. dynamically show s
 ---
 
 <CommonPageLayout>

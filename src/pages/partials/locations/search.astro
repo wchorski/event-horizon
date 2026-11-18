@@ -9,14 +9,22 @@ import type { LocationSelect } from "@ty/Schema";
 import { tableConfigs } from "@lib/tableConfigs";
 import RowView from "@components/tables/RowView.astro";
 import { handleQueryResult } from "@lib/handleQueryResult";
+import { auth } from "@lib/auth";
 
-const { user } = Astro.locals;
+const { user, organization } = Astro.locals;
 if (!user) return new Response('must be logged in', { status: 401 });
+if (!organization) return new Response('must be apart of an organization', { status: 401 });
 
-if (user.role !== "admin")
-  throw new ForbiddenError(
-    "use better-auth api for user creation and management",
-  );
+const { success: canReadLocations } = await auth.api.hasPermission({
+  headers: Astro.request.headers,
+  body: {
+    organizationId: organization.id, // be explicit rather than relying on the "active" org
+    permissions: { location: ["read"] },
+  },
+});
+
+
+if(!canReadLocations) return new Response('not allowed to read/view locations', { status: 401 });
 
 // TODO
 console.log('🐸🐸🐸🐸🐸🐸 Only allow users apart of an organization create and search for locations');

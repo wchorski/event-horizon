@@ -207,6 +207,8 @@ WHERE email = 'will@tawtaw.site';
 
 ```shell
 pip install oikb
+cp .oikb.yaml.example .oikb.yaml
+## add in your own api_key and kb_id(s)
 oikb init
 oikb sync
 ```

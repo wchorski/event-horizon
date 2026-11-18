@@ -13,9 +13,12 @@ import {
   check,
   unique,
   jsonb,
+  pgPolicy,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
+import { appUser } from "./roles";
+import { myself } from "./schemas/sql";
 
 //! now using better-auth admin and org plugins
 // export const Role = pgTable("roles", {
@@ -178,23 +181,30 @@ export const bookingClientStatus = pgEnum("booking_client_status", [
   "declined",
 ]);
 
-export const BookingClient = pgTable("booking_clients", {
-  id: uuid()
+export const BookingClient = pgTable(
+  "booking_clients",
+  {
+    id: uuid()
       .primaryKey()
       .default(sql`uuidv7()`),
-  booking_id: uuid("booking_id").notNull().references(() => Booking.id, { onDelete: "cascade" }),
+    booking_id: uuid("booking_id")
+      .notNull()
+      .references(() => Booking.id, { onDelete: "cascade" }),
 
-  // always set; this is the stable identity of the invitation
-  email: text("email").notNull(),          // normalized: trim + lowercase
+    // always set; this is the stable identity of the invitation
+    email: text("email").notNull(), // normalized: trim + lowercase
 
-  // null until a verified user with this email exists
-  user_id: uuid("user_id").references(() => User.id, { onDelete: "set null" }),
-  role: bookingClientRole("role").notNull().default("client"),
-  status: bookingClientStatus("status").notNull().default("invited"),
+    // null until a verified user with this email exists
+    user_id: uuid("user_id").references(() => User.id, {
+      onDelete: "set null",
+    }),
+    role: bookingClientRole("role").notNull().default("client"),
+    status: bookingClientStatus("status").notNull().default("invited"),
 
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  claimed_at: timestamp("claimed_at"),
-}, (table) => [
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    claimed_at: timestamp("claimed_at"),
+  },
+  (table) => [
     unique("booking_clients_booking_email_role_unique").on(
       table.booking_id,
       table.email,
@@ -203,7 +213,8 @@ export const BookingClient = pgTable("booking_clients", {
     index("booking_clients_user_idx").on(table.user_id),
     index("booking_clients_email_idx").on(table.email),
     index("booking_clients_booking_idx").on(table.booking_id),
-  ],);
+  ],
+);
 
 // maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
 // export const assignmentsRoleEnum = pgEnum("worker_role", [
@@ -359,8 +370,23 @@ export const Event = pgTable(
       table.date_civil,
       table.location_id,
     ),
+    // anyone, signed in or not
+    // pgPolicy("events_public_read", {
+    //   for: "select",
+    //   to: appUser,
+    //   using: sql`${table.status} = 'published'`, // adjust to your column names
+    // }),
+    // authors can also see and edit their drafts
+    pgPolicy("events_owner", {
+      for: "all",
+      to: appUser,
+      using: sql`${table.author_user_id} = ${myself}`,
+      withCheck: sql`${table.author_user_id} = ${myself}`,
+    }),
+    // admin("events_admin"),
   ],
-);
+)
+// .enableRLS();
 
 export const MeetingPacket = pgTable(
   "meeting_packets",
@@ -789,7 +815,10 @@ export const IntegrationCredential = pgTable(
 );
 
 export const bookingClientRelations = relations(BookingClient, ({ one }) => ({
-  booking: one(Booking, { fields: [BookingClient.booking_id], references: [Booking.id] }),
+  booking: one(Booking, {
+    fields: [BookingClient.booking_id],
+    references: [Booking.id],
+  }),
   user: one(User, { fields: [BookingClient.user_id], references: [User.id] }),
 }));
 

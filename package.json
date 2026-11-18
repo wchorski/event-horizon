@@ -20,18 +20,21 @@
     "db:seed": "tsx src/db/seed.ts --seed",
     "db:seed:fix": "tsx src/db/fix-seed-data.ts",
     "db:seed:truncate": "tsx src/db/seed.ts -- --seed --truncate",
+    "auth:schema": "AUTH_SCHEMA_GEN=1 pnpm dlx auth@latest generate --config src/lib/auth.ts --output src/db/auth-schema.ts -y && sed -i.bak 's/pg_catalog.gen_random_uuid()/uuidv7()/g' src/db/auth-schema.ts && rm src/db/auth-schema.ts.bak",
     "start": "node ./dist/server/entry.mjs",
-    "chat:sync": "oikb sync"
+    "chat:sync": "oikb sync",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@astrojs/node": "11.1.7",
     "@azure/msal-node": "^5.4.1",
+    "@better-auth/drizzle-adapter": "^1.7.25",
     "@better-auth/passkey": "^1.6.23",
     "@js-temporal/polyfill": "^0.5.1",
     "astro": "7.3.8",
     "better-auth": "^1.7.12",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^1.0.0-rc.5",
     "fast-xml-parser": "^5.10.1",
     "htmx-ext-response-targets": "^2.0.4",
     "htmx.org": "^2.0.10",
@@ -39,7 +42,8 @@
     "nodemailer": "^10.0.10",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.21",
@@ -48,8 +52,8 @@
     "@types/node": "^25.9.5",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10",
-    "drizzle-seed": "^0.3.1",
+    "drizzle-kit": "^1.0.0-rc.5",
+    "drizzle-seed": "^1.0.0-rc.5",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.23.1",
     "typescript-plugin-css-modules": "^5.2.0",

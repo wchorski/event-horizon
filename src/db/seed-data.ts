@@ -15,23 +15,18 @@ import roles from "./seed/roles";
 import tickets, { type TicketSeedInsert } from "./seed/tickets";
 import organizations, { type OrganizationSeedInsert } from "./seed/organizations";
 import accounts from "./seed/accounts";
-import departments from "./seed/departments";
-import type { DepartmentSeedInsert } from "./seed/departments";
 
 type SeedData = {
   locations: LocationSeedInsert[];
   tickets: TicketSeedInsert[];
   users: UserSeedInsert[];
   events: EventSeedInsert[];
-  // roles: RoleSelect[];
   bookings: BookingSelect[];
   organizations: OrganizationSeedInsert[];
   accounts: AccountInsert[];
-  departments: DepartmentSeedInsert[];
 };
 
 export const seedData: SeedData = {
-  // roles,
   locations,
   tickets,
   users,
@@ -39,5 +34,4 @@ export const seedData: SeedData = {
   bookings,
   organizations,
   accounts,
-  departments,
 };

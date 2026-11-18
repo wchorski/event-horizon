@@ -13,7 +13,8 @@ if (!users[0].id)
   throw new Error(
     "first user in seed-data should be the admin and should exist",
   );
-const author_user_id = users[0].id;
+const authorUserId: string = users[0].id;
+if (!authorUserId) throw new Error("seed/locations => author_user_id not set");
 
 const locations: LocationSeedInsert[] = [
   {
@@ -24,8 +25,8 @@ const locations: LocationSeedInsert[] = [
     state: "Illinois",
     zip: "60602",
     timezone: "America/Chicago",
-    excerpt: 'Midwest Operating Engeneers Information Services',
-    author_user_id,
+    excerpt: "Midwest Operating Engeneers Information Services",
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
   },
@@ -39,7 +40,7 @@ const locations: LocationSeedInsert[] = [
     timezone: "America/Chicago",
     excerpt:
       "A legendary recording room tied to early rock 'n' roll history—perfect for a rockabilly / classic rock themed party vibe.",
-    author_user_id,
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
   },
@@ -51,7 +52,7 @@ const locations: LocationSeedInsert[] = [
     state: "Michigan",
     zip: "48208",
     timezone: "America/Detroit",
-    author_user_id,
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
     excerpt:
@@ -65,7 +66,7 @@ const locations: LocationSeedInsert[] = [
     state: "Minnesota",
     zip: "55403",
     timezone: "America/Chicago",
-    author_user_id,
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
     excerpt:
@@ -79,7 +80,7 @@ const locations: LocationSeedInsert[] = [
     state: "California",
     zip: "90069",
     timezone: "America/Los_Angeles",
-    author_user_id,
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
     excerpt:
@@ -93,7 +94,7 @@ const locations: LocationSeedInsert[] = [
     state: "internet",
     zip: "00000",
     timezone: "America/Chicago",
-    author_user_id,
+    authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
     excerpt: null,

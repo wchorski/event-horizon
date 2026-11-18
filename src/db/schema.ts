@@ -1,129 +1,31 @@
 // db/schema.ts
 import {
-  pgTable,
-  integer,
-  text,
-  boolean,
-  date,
-  uniqueIndex,
-  index,
-  timestamp,
-  uuid,
   pgEnum,
-  check,
-  unique,
+  uuid,
+  text,
+  timestamp,
+  integer,
+  boolean,
   jsonb,
-  pgPolicy,
+  index,
+  uniqueIndex,
+  foreignKey,
+  primaryKey,
+  unique,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
-import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
-import { appUser } from "./roles";
-import { myself } from "./schemas/sql";
+import { sql } from "drizzle-orm";
+import { pgTable } from "@db/table";
+import { organization, user } from "@db/auth-schema";
 
-//! now using better-auth admin and org plugins
-// export const Role = pgTable("roles", {
-//   id: uuid()
-//     .primaryKey()
-//     .default(sql`uuidv7()`),
-//   label: text().notNull().unique(),
-//   excerpt: text(),
-//   permissions: text().array().notNull().default([]),
-//   organization_id: uuid()
-//     .notNull()
-//     .references(() => Organization.id, { onDelete: "cascade" }),
-// });
+export const pk = () =>
+  uuid()
+    .default(sql`uuidv7()`)
+    .primaryKey();
+/** foreign key column to a uuid pk (chain .notNull() / .references() as needed) */
+export const fk = () => uuid();
 
-export const Location = pgTable(
-  "locations",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    name: text().notNull(),
-    address: text().notNull(),
-    city: text().notNull(),
-    state: text().notNull(),
-    zip: text().notNull(),
-    timezone: text().notNull(),
-    excerpt: text(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    author_user_id: uuid()
-      .notNull()
-      .references(() => User.id),
-    // TODO set to `notNull()` if locations must be tied to org
-    organization_id: uuid().references(() => Organization.id, {
-      onDelete: "cascade",
-    }),
-  },
-  (table) => [
-    index("locations_city_idx").on(table.city),
-    index("locations_state_idx").on(table.state),
-
-    //? old unique constrant
-    // unique().on(table.organization_id, table.name).nullsNotDistinct(),
-
-    // Org locations: unique name per organization
-    uniqueIndex("locations_org_name_unique")
-      .on(table.organization_id, sql`lower(${table.name})`)
-      .where(sql`${table.organization_id} is not null`),
-
-    // Personal locations: unique name per owner
-    uniqueIndex("locations_author_name_unique")
-      .on(table.author_user_id, sql`lower(${table.name})`)
-      .where(sql`${table.organization_id} is null`),
-  ],
-);
-
-export const User = pgTable("users", {
-  // TODO switch to uuid when this app gets more serious and need more privacy with url
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  // role_id: uuid().references(() => Role.id),
-  role: text(),
-  username: text().notNull().unique(),
-  displayUsername: text(),
-  name: text().notNull(),
-  first_name: text(),
-  last_name: text(),
-  middle_initial: text(),
-  phone: text().unique(),
-  email: text().notNull().unique(),
-  emailVerified: boolean().default(false).notNull(),
-  address_1: text(),
-  address_2: text(),
-  city: text(),
-  state: text(),
-  zip: text(),
-  image: text(),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp()
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  banned: boolean().default(false),
-  banReason: text(),
-  banExpires: timestamp(),
-});
-
-// export const Service = pgTable("services", {
-//   id: uuid("id").primaryKey().default(sql`uuidv7()`),
-//   // ... service fields
-// });
-
-export const memberRoleEnum = pgEnum("member_role", [
-  "owner",
-  "admin",
-  "member",
-]);
-
-export const MEMBER_ROLES = memberRoleEnum.enumValues;
-
-export const bookingStatusEnum = pgEnum("booking_status", [
+export const bookingStatus = pgEnum("booking_status", [
   "REQUESTED",
   "CANCELED",
   "DECLINED",
@@ -131,771 +33,338 @@ export const bookingStatusEnum = pgEnum("booking_status", [
   "ACCEPTED",
   "POSTPONED",
 ]);
-
-export const meetingPacketStatusEnum = pgEnum("meeting_packet_status", [
+export const meetingPacketStatus = pgEnum("meeting_packet_status", [
   "DRAFT",
   "PUBLISHED",
 ]);
-
-export const BOOKING_STATUSES = bookingStatusEnum.enumValues;
-
-export const Booking = pgTable(
-  "bookings",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    // TODO handled with helper
-    // summary: ,
-    start: timestamp().notNull(),
-    end: timestamp().notNull(),
-    notes: text(),
-    secret_notes: text(),
-    revision: integer().notNull().default(1),
-    google_calendar: jsonb().$type<GoogleCalendarData>(),
-    status: bookingStatusEnum("status").notNull().default("REQUESTED"),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    // worker_ids: added with bookingRelations
-    author_user_id: uuid()
-      .notNull()
-      .references(() => User.id),
-    location_id: uuid().references(() => Location.id),
-    event_id: uuid().references(() => Event.id),
-    organization_id: uuid().references(() => Organization.id, {
-      onDelete: "cascade",
-    }),
-  },
-  (table) => [check("end_after_start", sql`${table.end} >= ${table.start}`)],
-);
-
+export const integrationProvider = pgEnum("integration_provider", [
+  "microsoft",
+  "google",
+]);
+export const memberRole = pgEnum("member_role", ["owner", "admin", "member"]);
 export const bookingClientRole = pgEnum("booking_client_role", ["client"]);
-// add values later as you need them, e.g. "observer", "co_host"
-
 export const bookingClientStatus = pgEnum("booking_client_status", [
   "invited",
   "accepted",
   "declined",
 ]);
 
-export const BookingClient = pgTable(
-  "booking_clients",
+export const bookingAssignment = pgTable(
+  "booking_assignment",
   {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    booking_id: uuid("booking_id")
+    id: pk(),
+    bookingId: uuid("booking_id")
       .notNull()
-      .references(() => Booking.id, { onDelete: "cascade" }),
-
-    // always set; this is the stable identity of the invitation
-    email: text("email").notNull(), // normalized: trim + lowercase
-
-    // null until a verified user with this email exists
-    user_id: uuid("user_id").references(() => User.id, {
-      onDelete: "set null",
-    }),
-    role: bookingClientRole("role").notNull().default("client"),
-    status: bookingClientStatus("status").notNull().default("invited"),
-
-    created_at: timestamp("created_at").defaultNow().notNull(),
-    claimed_at: timestamp("claimed_at"),
+      .references(() => booking.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    dateAssigned: timestamp("date_assigned").notNull().defaultNow(),
   },
   (table) => [
-    unique("booking_clients_booking_email_role_unique").on(
-      table.booking_id,
-      table.email,
-      table.role,
+    unique("booking_assignments_booking_id_user_id_unique").on(
+      table.bookingId,
+      table.userId,
     ),
-    index("booking_clients_user_idx").on(table.user_id),
-    index("booking_clients_email_idx").on(table.email),
-    index("booking_clients_booking_idx").on(table.booking_id),
   ],
 );
 
-// maybe connect this with "Roles" table as to make it configurable with labels and customize permissions
-// export const assignmentsRoleEnum = pgEnum("worker_role", [
-//   "PRIMARY",
-//   "ASSISTANT",
-//   "SUPPORT",
-// ]);
-// Junction table for many-to-many relationship between bookings and workers
-
-export const BookingAssignment = pgTable(
-  "booking_assignments",
+export const bookingClient = pgTable(
+  "booking_client",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    booking_id: uuid()
+    id: pk(),
+    bookingId: uuid("booking_id")
       .notNull()
-      .references(() => Booking.id, { onDelete: "cascade" }),
-    user_id: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    // role: assignmentsRoleEnum("role").notNull().default("PRIMARY"),
-    // role_id: uuid()
-    //   .notNull()
-    //   .references(() => Role.id),
-
-    date_assigned: timestamp().notNull().defaultNow(),
+      .references(() => booking.id, { onDelete: "cascade" }),
+    email: text().notNull(),
+    userId: uuid("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    role: bookingClientRole().default("client").notNull(),
+    status: bookingClientStatus().default("invited").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    claimedAt: timestamp("claimed_at"),
   },
-  (table) => [unique().on(table.booking_id, table.user_id)],
+  (table) => [
+    index("booking_clients_booking_idx").using(
+      "btree",
+      table.bookingId.asc().nullsLast(),
+    ),
+    index("booking_clients_email_idx").using(
+      "btree",
+      table.email.asc().nullsLast(),
+    ),
+    index("booking_clients_user_idx").using(
+      "btree",
+      table.userId.asc().nullsLast(),
+    ),
+    unique("booking_clients_booking_email_role_unique").on(
+      table.bookingId,
+      table.email,
+      table.role,
+    ),
+  ],
 );
 
-export const bookingRelations = relations(Booking, ({ many, one }) => ({
-  assignments: many(BookingAssignment),
-  author: one(User, {
-    fields: [Booking.author_user_id],
-    references: [User.id],
-    relationName: "booking_author",
-  }),
-  // client: one(User, {
-  //   fields: [Booking.client_id],
-  //   references: [User.id],
-  //   relationName: "booking_client",
-  // }),
-  clients: many(BookingClient),
-  location: one(Location, {
-    fields: [Booking.location_id],
-    references: [Location.id],
-  }),
-  organization: one(Organization, {
-    fields: [Booking.organization_id],
-    references: [Organization.id],
-  }),
-  // Booking.timeline_id -> Timeline.id
-  // inverse side — no fields/references, Drizzle infers this from
-  // timelineRelations.booking below since it's the only FK path
-  timeline: one(Timeline),
-}));
-
-export const bookingAssignmentRelations = relations(
-  BookingAssignment,
-  ({ one }) => ({
-    booking: one(Booking, {
-      fields: [BookingAssignment.booking_id],
-      references: [Booking.id],
-    }),
-    user: one(User, {
-      fields: [BookingAssignment.user_id],
-      references: [User.id],
-    }),
-    // role: one(Role, {
-    //   fields: [BookingAssignment.role_id],
-    //   references: [Role.id],
-    // }),
-  }),
-);
-
-export const Timeline = pgTable("timelines", {
-  id: uuid()
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  booking_id: uuid()
-    .references(() => Booking.id, { onDelete: "cascade" })
-    .unique(),
-  owner_user_id: uuid()
-    // .notNull()
-    .references(() => User.id, { onDelete: "cascade" }),
-  rev: integer().notNull().default(1),
-  createdAt: timestamp().notNull().defaultNow(),
-  date: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp()
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  timestamp: timestamp().notNull(),
-  date_civil: text().notNull(),
-  notes: text(),
-  secret_notes: text(),
-  color: text(),
-  summary: text(),
-  timezone: text(),
-  start: integer().notNull(),
-  end: integer().notNull(),
-  // TODO if i start supporting rev undo then I'll need this to nest like `{timeline_1: {}, timleline_2: {}}`
-  // data: jsonb("data").$type<Record<string, TimelineData>>(),
-  data: jsonb().$type<TimelineData>(),
-});
-
-export const timelineRelations = relations(Timeline, ({ one }) => ({
-  // Timeline.booking_id -> Booking.id
-  booking: one(Booking, {
-    fields: [Timeline.booking_id],
-    references: [Booking.id],
-  }),
-}));
-
-// TODO where is 'start' and 'end' times? i know i derive timezone from location. but maybe i should still make start/end timestamps as well? but based on what, the user's location?
-export const Event = pgTable(
-  "events",
+export const booking = pgTable(
+  "booking",
   {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    wp_post_id: integer().unique(),
+    id: pk(),
+    start: timestamp().notNull(),
+    end: timestamp().notNull(),
+    notes: text(),
+    secretNotes: text("secret_notes"),
+    revision: integer().default(1).notNull(),
+    googleCalendar: jsonb("google_calendar"),
+    status: bookingStatus().default("REQUESTED").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => user.id),
+    locationId: uuid("location_id").references(() => location.id),
+    eventId: uuid("event_id").references(() => event.id),
+    organizationId: uuid("organization_id").references(() => organization.id, {
+      onDelete: "cascade",
+    }),
+  },
+  (table) => [check("end_after_start", sql`("end" >= start)`)],
+);
+
+export const eventHost = pgTable(
+  "event_host",
+  {
+    id: pk(),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    dateAssigned: timestamp("date_assigned").notNull().defaultNow(),
+  },
+  (table) => [
+    unique("event_hosts_event_id_user_id_unique").on(
+      table.eventId,
+      table.userId,
+    ),
+  ],
+);
+
+export const event = pgTable(
+  "event",
+  {
+    id: pk(),
+    wpPostId: integer("wp_post_id"),
     subject: text().notNull(),
     excerpt: text(),
     where: text(),
     timestamp: timestamp().notNull(),
-    date_civil: text().notNull(),
-    location_id: uuid()
+    dateCivil: text("date_civil").notNull(),
+    locationId: uuid("location_id")
       .notNull()
-      .references(() => Location.id),
-    organization_id: uuid().references(() => Organization.id, {
+      .references(() => location.id),
+    organizationId: uuid("organization_id").references(() => organization.id, {
       onDelete: "cascade",
     }),
-    author_user_id: uuid()
+    authorUserId: uuid("author_user_id")
       .notNull()
-      .references(() => User.id),
-
-    // new — ties this row to the Outlook event created from a folder
-    outlook_event_id: text().unique(),
-    outlook_web_link: text(),
-
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+      .references(() => user.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    outlookEventId: text("outlook_event_id"),
+    outlookWebLink: text("outlook_web_link"),
   },
   (table) => [
-    index("events_location_id_idx").on(table.location_id),
-    uniqueIndex("events_subject_date_location_unique").on(
-      table.subject,
-      table.date_civil,
-      table.location_id,
+    index("events_location_id_idx").using(
+      "btree",
+      table.locationId.asc().nullsLast(),
     ),
-    // anyone, signed in or not
-    // pgPolicy("events_public_read", {
-    //   for: "select",
-    //   to: appUser,
-    //   using: sql`${table.status} = 'published'`, // adjust to your column names
-    // }),
-    // authors can also see and edit their drafts
-    pgPolicy("events_owner", {
-      for: "all",
-      to: appUser,
-      using: sql`${table.author_user_id} = ${myself}`,
-      withCheck: sql`${table.author_user_id} = ${myself}`,
+    uniqueIndex("events_subject_date_location_unique").using(
+      "btree",
+      table.subject.asc().nullsLast(),
+      table.dateCivil.asc().nullsLast(),
+      table.locationId.asc().nullsLast(),
+    ),
+    unique("events_outlook_event_id_unique").on(table.outlookEventId),
+    unique("events_wp_post_id_unique").on(table.wpPostId),
+  ],
+);
+
+export const integrationCredential = pgTable(
+  "integration_credential",
+  {
+    id: pk(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    provider: integrationProvider().notNull(),
+    tenantId: text("tenant_id").notNull(),
+    clientId: text("client_id").notNull(),
+    secretCiphertext: text("secret_ciphertext").notNull(),
+    secretIv: text("secret_iv").notNull(),
+    secretAuthTag: text("secret_auth_tag").notNull(),
+    keyVersion: integer("key_version").default(1).notNull(),
+    expiresAt: timestamp("expires_at"),
+    rotatedAt: timestamp("rotated_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("integration_credentials_org_idx").using(
+      "btree",
+      table.organizationId.asc().nullsLast(),
+    ),
+    unique("integration_credentials_organizationId_provider_unique").on(
+      table.organizationId,
+      table.provider,
+    ),
+  ],
+);
+
+export const location = pgTable(
+  "location",
+  {
+    id: pk(),
+    name: text().notNull(),
+    address: text().notNull(),
+    city: text().notNull(),
+    state: text().notNull(),
+    zip: text().notNull(),
+    timezone: text().notNull(),
+    excerpt: text(),
+    authorUserId: uuid("author_user_id")
+      .notNull()
+      .references(() => user.id),
+    organizationId: uuid("organization_id").references(() => organization.id, {
+      onDelete: "cascade",
     }),
-    // admin("events_admin"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("locations_author_name_unique")
+      .using("btree", table.authorUserId.asc().nullsLast(), sql`lower(name)`)
+      .where(sql`(organization_id IS NULL)`),
+    index("locations_city_idx").using("btree", table.city.asc().nullsLast()),
+    uniqueIndex("locations_org_name_unique")
+      .using("btree", table.organizationId.asc().nullsLast(), sql`lower(name)`)
+      .where(sql`(organization_id IS NOT NULL)`),
+    index("locations_state_idx").using("btree", table.state.asc().nullsLast()),
   ],
-)
-// .enableRLS();
+);
 
-export const MeetingPacket = pgTable(
-  "meeting_packets",
+export const meetingPacket = pgTable(
+  "meeting_packet",
   {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    event_id: uuid().references(() => Event.id, { onDelete: "cascade" }),
-    // department_id: uuid()
-    //   .notNull()
-    //   .references(() => Department.id),
-    status: meetingPacketStatusEnum("status").notNull().default("DRAFT"),
-
-    // new — the PREPERATIONS day-folder this packet draws from
-    //? set in the org
-    // sharepoint_site_id: text().notNull(),
-    // sharepoint_drive_id: text().notNull(),
-    sharepoint_folder_id: text().notNull(),
-
-    published_file_id: text(),
-    published_file_url: text(),
-    publishedAt: timestamp(),
+    id: pk(),
+    eventId: uuid("event_id").references(() => event.id, {
+      onDelete: "cascade",
+    }),
+    status: meetingPacketStatus().default("DRAFT").notNull(),
+    publishedFileId: text("published_file_id"),
+    publishedFileUrl: text("published_file_url"),
+    publishedAt: timestamp("published_at"),
     notes: text(),
-    outlook_event_id: text(),
-    outlook_web_link: text(),
-    createdAt: timestamp().defaultNow().notNull(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    sharepointFolderId: text("sharepoint_folder_id").notNull(),
+    outlookEventId: text("outlook_event_id"),
+    outlookWebLink: text("outlook_web_link"),
   },
   (table) => [
-    // unique().on(table.event_id, table.department_id),
-    uniqueIndex("meeting_packets_folder_unique").on(table.sharepoint_folder_id),
+    uniqueIndex("meeting_packets_folder_unique").using(
+      "btree",
+      table.sharepointFolderId.asc().nullsLast(),
+    ),
   ],
 );
 
-export const meetingPacketRelations = relations(MeetingPacket, ({ one }) => ({
-  event: one(Event, {
-    fields: [MeetingPacket.event_id],
-    references: [Event.id],
-  }),
-  // department: one(Department, {
-  //   fields: [MeetingPacket.department_id],
-  //   references: [Department.id],
-  // }),
-}));
-
-// TODO can i remove this?
-// export const MeetingPacketDirectory = pgTable("meeting_packet_directories", {
-//   id: uuid()
-//     .primaryKey()
-//     .default(sql`uuidv7()`),
-//   meeting_packet_id: uuid()
-//     .notNull()
-//     .references(() => MeetingPacket.id, {
-//       onDelete: "cascade",
-//     }),
-//   sharepoint_site_id: text().notNull(),
-//   sharepoint_drive_id: text().notNull(),
-//   sharepoint_folder_id: text().notNull(),
-//   relative_path: text().notNull(),
-//   include_subfolders: boolean().default(true).notNull(),
-//   sort_order: integer().default(0).notNull(),
-//   createdAt: timestamp().defaultNow().notNull(),
-//   updatedAt: timestamp()
-//     .defaultNow()
-//     .$onUpdate(() => new Date())
-//     .notNull(),
-// });
-
-// Junction table for many-to-many relationship between events and hosts
-export const EventHost = pgTable(
-  "event_hosts",
+export const ticket = pgTable(
+  "ticket",
   {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    event_id: uuid()
-      .notNull()
-      .references(() => Event.id, { onDelete: "cascade" }),
-    user_id: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    date_assigned: timestamp().notNull().defaultNow(),
-  },
-  (table) => [unique().on(table.event_id, table.user_id)],
-);
-
-export const eventRelations = relations(Event, ({ many, one }) => ({
-  hosts: many(EventHost),
-  location: one(Location, {
-    fields: [Event.location_id],
-    references: [Location.id],
-  }),
-  organization: one(Organization, {
-    fields: [Event.organization_id],
-    references: [Organization.id],
-  }),
-  author: one(User, {
-    fields: [Event.author_user_id],
-    references: [User.id],
-    relationName: "event_author",
-  }),
-}));
-
-export const eventHostRelations = relations(EventHost, ({ one }) => ({
-  event: one(Event, {
-    fields: [EventHost.event_id],
-    references: [Event.id],
-  }),
-  User: one(User, {
-    fields: [EventHost.user_id],
-    references: [User.id],
-    relationName: "event_host_user",
-  }),
-}));
-
-export const Ticket = pgTable(
-  "tickets",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    user_id: uuid()
-      .notNull()
-      .references(() => User.id),
-    event_id: uuid()
-      .notNull()
-      .references(() => Event.id),
-    timestamp: timestamp().notNull(),
-    grade: text(),
-    // TODO thinking about changing to `redeemed`
-    attended: boolean().notNull().default(false),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("tickets_user_id_idx").on(table.user_id),
-    index("tickets_event_id_idx").on(table.event_id),
-    // TODO only useful for ONE ticket per USER
-    // uniqueIndex("tickets_event_user_unique").on(
-    //   table.event_id,
-    //   table.user_id,
-    // ),
-  ],
-);
-
-export const Session = pgTable(
-  "sessions",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    expiresAt: timestamp().notNull(),
-    token: text().notNull().unique(),
-    createdAt: timestamp().defaultNow().notNull(),
-    updatedAt: timestamp()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    ipAddress: text(),
-    userAgent: text(),
+    id: pk(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    impersonatedBy: text(),
-    activeOrganizationId: uuid(),
-    activeTeamId: uuid(),
-  },
-  (table) => [index("session_user_id_idx").on(table.userId)],
-);
-
-export const Account = pgTable(
-  "accounts",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    accountId: text().notNull(),
-    providerId: text().notNull(),
-    userId: uuid()
+      .references(() => user.id),
+    eventId: uuid("event_id")
       .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    accessToken: text(),
-    refreshToken: text(),
-    idToken: text(),
-    accessTokenExpiresAt: timestamp(),
-    refreshTokenExpiresAt: timestamp(),
-    scope: text(),
-    password: text(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("account_user_id_idx").on(table.userId)],
-);
-
-export const Verification = pgTable(
-  "verifications",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    identifier: text().notNull(),
-    value: text().notNull(),
-    expiresAt: timestamp().notNull(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
-);
-
-export const Passkey = pgTable(
-  "passkey",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    name: text("name"),
-    publicKey: text().notNull(),
-    userId: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    credentialID: text().notNull(),
-    counter: integer().notNull(),
-    deviceType: text().notNull(),
-    backedUp: boolean().notNull(),
-    transports: text(),
-    createdAt: timestamp().notNull().defaultNow(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    aaguid: text(),
+      .references(() => event.id),
+    timestamp: timestamp().notNull(),
+    grade: text(),
+    attended: boolean().default(false).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
-    index("passkey_userId_idx").on(table.userId),
-    index("passkey_credentialID_idx").on(table.credentialID),
+    index("tickets_event_id_idx").using(
+      "btree",
+      table.eventId.asc().nullsLast(),
+    ),
+    index("tickets_user_id_idx").using("btree", table.userId.asc().nullsLast()),
   ],
 );
 
-export const Organization = pgTable("organizations", {
-  id: uuid()
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  name: text().notNull().unique(),
-  slug: text().notNull().unique(),
-  logo: text(),
-  createdAt: timestamp().notNull(),
-  updatedAt: timestamp()
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  // TODO this should be Key : Value pair. idk why metadata is text();
-  metadata: text(),
-  dedicated_db_url: text(),
-  color: text(),
-  color_2: text(),
-  mailbox_user_email: text(),
-  sharepoint_site_url: text(),
-  sharepoint_site_id: text(),
-  sharepoint_drive_id: text(),
-  sharepoint_library_name: text(),
-});
-//? using better-auth built in org 'teams'
-// export const Department = pgTable(
-//   "departments",
+export const timeline = pgTable(
+  "timeline",
+  {
+    id: pk(),
+    bookingId: uuid("booking_id").references(() => booking.id, {
+      onDelete: "cascade",
+    }),
+    ownerUserId: uuid("owner_user_id").references(() => user.id, {
+      onDelete: "cascade",
+    }),
+    rev: integer().default(1).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    date: timestamp()
+      .default(sql`now()`)
+      .notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    timestamp: timestamp().notNull(),
+    dateCivil: text("date_civil").notNull(),
+    notes: text(),
+    secretNotes: text("secret_notes"),
+    color: text(),
+    summary: text(),
+    timezone: text(),
+    start: integer().notNull(),
+    end: integer().notNull(),
+    data: jsonb(),
+  },
+  (table) => [unique("timelines_booking_id_unique").on(table.bookingId)],
+);
+
+//? generated in auth-schema.ts
+// export const user = pgTable(
+//   "user",
 //   {
-//     id: uuid()
-//       .primaryKey()
-//       .default(sql`uuidv7()`),
-//     organization_id: uuid()
-//       .notNull()
-//       .references(() => Organization.id, {
-//         onDelete: "cascade",
-//       }),
+//     id: pk(),
+//     role: text(),
+//     username: text().notNull(),
+//     displayUsername: text("display_username"),
 //     name: text().notNull(),
-//     slug: text().notNull(),
-//     color: text(),
-//     createdAt: timestamp().defaultNow().notNull(),
-//     updatedAt: timestamp()
-//       .defaultNow()
-//       .$onUpdate(() => new Date())
-//       .notNull(),
+//     firstName: text("first_name"),
+//     lastName: text("last_name"),
+//     middleInitial: text("middle_initial"),
+//     phone: text(),
+//     email: text().notNull(),
+//     emailVerified: boolean("email_verified").default(false).notNull(),
+//     address1: text("address_1"),
+//     address2: text("address_2"),
+//     city: text(),
+//     state: text(),
+//     zip: text(),
+//     image: text(),
+//     createdAt: timestamp("created_at").notNull().defaultNow(),
+//     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+//     banned: boolean().default(false),
+//     banReason: text("ban_reason"),
+//     banExpires: timestamp("ban_expires"),
 //   },
-//   (table) => [unique().on(table.organization_id, table.slug)],
+//   (table) => [
+//     unique("users_email_unique").on(table.email),
+//     unique("users_phone_unique").on(table.phone),
+//     unique("users_username_unique").on(table.username),
+//   ],
 // );
-
-export const Team = pgTable(
-  "teams",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    name: text().notNull(),
-    memberCount: integer().default(0).notNull(),
-    organizationId: uuid()
-      .notNull()
-      .references(() => Organization.id, { onDelete: "cascade" }),
-    createdAt: timestamp().notNull(),
-    updatedAt: timestamp().$onUpdate(() => /* @__PURE__ */ new Date()),
-  },
-  (table) => [
-    index("team_organizationId_idx").on(table.organizationId),
-    unique().on(table.organizationId, table.name),
-  ],
-);
-
-export const TeamMember = pgTable(
-  "team_members",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    teamId: uuid()
-      .notNull()
-      .references(() => Team.id, { onDelete: "cascade" }),
-    userId: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    membershipKey: text().unique(),
-    createdAt: timestamp(),
-  },
-  (table) => [
-    index("teamMember_teamId_idx").on(table.teamId),
-    index("teamMember_userId_idx").on(table.userId),
-  ],
-);
-
-export const Member = pgTable(
-  "members",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    organizationId: uuid()
-      .notNull()
-      .references(() => Organization.id, { onDelete: "cascade" }),
-    userId: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-    role: memberRoleEnum().default("member").notNull(),
-    //? Better Auth can store multiple roles as a comma-separated string ("admin,sale") and supports custom roles, and the enum will reject those inserts. It’s fine if you’ll only ever use the three built-in roles.
-    // role: text().default("member").notNull(),
-    createdAt: timestamp().defaultNow().notNull(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("member_organizationId_idx").on(table.organizationId),
-    index("member_userId_idx").on(table.userId),
-  ],
-);
-
-export const Invitation = pgTable(
-  "invitations",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    organizationId: uuid()
-      .notNull()
-      .references(() => Organization.id, { onDelete: "cascade" }),
-    email: text().notNull(),
-    role: text(),
-    teamId: uuid(),
-    status: text().default("pending").notNull(),
-    expiresAt: timestamp().notNull(),
-    createdAt: timestamp().defaultNow().notNull(),
-    inviterId: uuid()
-      .notNull()
-      .references(() => User.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    index("invitation_organizationId_idx").on(table.organizationId),
-    index("invitation_email_idx").on(table.email),
-  ],
-);
-export const integrationProviderEnum = pgEnum("integration_provider", [
-  "microsoft",
-  "google",
-]);
-
-export const INTEGRATION_PROVIDERS = integrationProviderEnum.enumValues;
-
-export const IntegrationCredential = pgTable(
-  "integration_credentials",
-  {
-    id: uuid()
-      .primaryKey()
-      .default(sql`uuidv7()`),
-    organizationId: uuid()
-      .notNull()
-      .references(() => Organization.id, { onDelete: "cascade" }),
-    provider: integrationProviderEnum("provider").notNull(),
-    tenantId: text().notNull(),
-    clientId: text().notNull(),
-    // ciphertext only — never plaintext
-    secretCiphertext: text().notNull(),
-    // AES-GCM needs a fresh IV per encryption + the auth tag; store both alongside
-    secretIv: text().notNull(),
-    secretAuthTag: text().notNull(),
-    keyVersion: integer().notNull().default(1), // lets you rotate the master key later
-    expiresAt: timestamp(), // Azure secrets expire — track it, alert before it lapses
-    rotatedAt: timestamp(),
-    createdAt: timestamp().defaultNow().notNull(),
-    updatedAt: timestamp()
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
-  },
-  (table) => [
-    unique().on(table.organizationId, table.provider),
-    index("integration_credentials_org_idx").on(table.organizationId),
-  ],
-);
-
-export const bookingClientRelations = relations(BookingClient, ({ one }) => ({
-  booking: one(Booking, {
-    fields: [BookingClient.booking_id],
-    references: [Booking.id],
-  }),
-  user: one(User, { fields: [BookingClient.user_id], references: [User.id] }),
-}));
-
-export const userRelations = relations(User, ({ many }) => ({
-  sessions: many(Session),
-  accounts: many(Account),
-  passkeys: many(Passkey),
-  teamMembers: many(TeamMember),
-  members: many(Member),
-  invitations: many(Invitation),
-  bookingClientLinks: many(BookingClient),
-}));
-
-export const sessionRelations = relations(Session, ({ one }) => ({
-  User: one(User, {
-    fields: [Session.userId],
-    references: [User.id],
-  }),
-}));
-
-export const accountRelations = relations(Account, ({ one }) => ({
-  User: one(User, {
-    fields: [Account.userId],
-    references: [User.id],
-  }),
-}));
-
-export const passkeyRelations = relations(Passkey, ({ one }) => ({
-  user: one(User, {
-    fields: [Passkey.userId],
-    references: [User.id],
-  }),
-}));
-
-export const organizationRelations = relations(Organization, ({ many }) => ({
-  teams: many(Team),
-  members: many(Member),
-  invitations: many(Invitation),
-}));
-
-export const teamRelations = relations(Team, ({ one, many }) => ({
-  organization: one(Organization, {
-    fields: [Team.organizationId],
-    references: [Organization.id],
-  }),
-  teamMembers: many(TeamMember),
-}));
-
-export const teamMemberRelations = relations(TeamMember, ({ one }) => ({
-  team: one(Team, {
-    fields: [TeamMember.teamId],
-    references: [Team.id],
-  }),
-  user: one(User, {
-    fields: [TeamMember.userId],
-    references: [User.id],
-  }),
-}));
-
-export const memberRelations = relations(Member, ({ one }) => ({
-  organization: one(Organization, {
-    fields: [Member.organizationId],
-    references: [Organization.id],
-  }),
-  user: one(User, {
-    fields: [Member.userId],
-    references: [User.id],
-  }),
-}));
-
-export const invitationRelations = relations(Invitation, ({ one }) => ({
-  organization: one(Organization, {
-    fields: [Invitation.organizationId],
-    references: [Organization.id],
-  }),
-  user: one(User, {
-    fields: [Invitation.inviterId],
-    references: [User.id],
-  }),
-}));

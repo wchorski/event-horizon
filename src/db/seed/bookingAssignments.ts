@@ -17,15 +17,15 @@ export function createAssignmentsForBooking(
   const validUsers = users.map((u) => u.id);
   const userIds = randomSubset(validUsers, 3);
 
-  return userIds.map((user_id, i) => ({
+  return userIds.map((userId, i) => ({
     id: crypto.randomUUID(),
-    booking_id: bookingId,
-    user_id,
-    role_id:
+    bookingId: bookingId,
+    userId,
+    roleId:
       i === 0
         ? rolesNoAdmin.find((r) => r.label === "worker")!.id
         : randomItem(rolesNoAdmin).id,
-    date_assigned: randomDate(range),
+    dateAssigned: randomDate(range),
   }));
 }
 

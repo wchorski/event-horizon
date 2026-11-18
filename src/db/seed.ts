@@ -3,11 +3,14 @@ import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 //? only use if wanting random generated data
 import * as schema from "@db/schema.js";
+import * as authSchema from "@db/auth-schema.js";
 import { seedData } from "@db/seed-data.js";
 import { createPgClient, getPGDatabaseUrl } from "@db/client.js";
 import { createAssignmentsForBooking } from "@db/seed/bookingAssignments.js";
 import { hashPassword } from "better-auth/crypto";
 import members from "./seed/members";
+import { relations } from "./relations";
+import { authRelations } from "./auth-schema";
 
 // ---- guards -------------------------------------------------
 const SECRET = process.env.BETTER_AUTH_SECRET;
@@ -38,9 +41,9 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     throw e;
   }
 
-  const db = drizzle(client, {
-    schema,
-    casing: "snake_case",
+  const db = drizzle({
+    client,
+    relations: {...relations, ...authRelations}
     // logger: import.meta.env.DEV
     // logger: true
   });
@@ -49,15 +52,14 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
 
   if (process.argv.includes("--truncate")) {
     console.log("⚠️ Truncating tables...");
-    await db.delete(schema.BookingAssignment);
-    await db.delete(schema.Booking);
-    await db.delete(schema.Ticket);
-    await db.delete(schema.Event);
-    await db.delete(schema.Location);
-    await db.delete(schema.User);
-    await db.delete(schema.Role);
-    await db.delete(schema.Organization);
-    await db.delete(schema.Account);
+    await db.delete(schema.bookingAssignment);
+    await db.delete(schema.booking);
+    await db.delete(schema.ticket);
+    await db.delete(schema.event);
+    await db.delete(schema.location);
+    await db.delete(authSchema.user);
+    await db.delete(authSchema.organization);
+    await db.delete(authSchema.account);
   }
 
   // if (process.argv.includes("--truncate")) {
@@ -101,12 +103,10 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     users,
     locations,
     organizations,
-    roles,
     accounts,
     events,
     tickets,
     bookings,
-    departments,
   } = seedData;
 
   console.log("🌱 Seeding Database 🌱");
@@ -116,30 +116,11 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(item.updatedAt),
   }));
   const inOrgs = await db
-    .insert(schema.Organization)
+    .insert(authSchema.organization)
     .values(orgCoreced)
     .onConflictDoNothing()
     .returning();
   console.log(`=== Organizations (+${inOrgs.length}) ===`);
-
-  const departmentsCoreced = departments.map((item) => ({
-    ...item,
-    createdAt: new Date(item.createdAt),
-    updatedAt: new Date(item.updatedAt),
-  }));
-  const inDepts = await db
-    .insert(schema.Department)
-    .values(departmentsCoreced)
-    .onConflictDoNothing()
-    .returning();
-  console.log(`=== Departments (+${inDepts.length}) ===`);
-
-  const inRoles = await db
-    .insert(schema.Role)
-    .values(roles)
-    .onConflictDoNothing()
-    .returning();
-  console.log(`=== Roles (+${inRoles.length})===`);
 
   const usersCoreced = users.map((item) => ({
     ...item,
@@ -147,7 +128,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(item.updatedAt),
   }));
   const inUsers = await db
-    .insert(schema.User)
+    .insert(authSchema.user)
     .values(usersCoreced)
     .onConflictDoNothing()
     .returning();
@@ -159,7 +140,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(item.updatedAt),
   }));
   const inMembers = await db
-    .insert(schema.Member)
+    .insert(authSchema.member)
     .values(membersCoreced)
     .onConflictDoNothing()
     .returning();
@@ -177,26 +158,9 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
       };
     }),
   );
-  //! does not allow manual uuid insertion for user
-  // for (const { email, image, username, ...user } of firstThreeUsers) {
-  //   try {
-  //     const result = await auth.api.signUpEmail({
-  //       body: {
-  //         email,
-  //         password: uuidv7(),
-  //         image: image || undefined,
-  //         username: username || undefined,
-  //         name: username || "",
-  //         displayUsername: username || undefined,
-  //       },
-  //     });
-  //     console.log(`✅ created account: ${email}`);
-  //   } catch (err) {
-  //     console.error(`❌ failed to create account for ${email}:`, err);
-  //   }
-  // }
+
   const inAccounts = await db
-    .insert(schema.Account)
+    .insert(authSchema.account)
     .values(accountsCoreced)
     .onConflictDoNothing()
     .returning();
@@ -208,7 +172,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(item.updatedAt),
   }));
   const inLocs = await db
-    .insert(schema.Location)
+    .insert(schema.location)
     .values(locationsCoreced)
     .onConflictDoNothing()
     .returning();
@@ -221,7 +185,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(e.updatedAt),
   }));
   const inEvents = await db
-    .insert(schema.Event)
+    .insert(schema.event)
     .values(eventsCoreced)
     .onConflictDoNothing()
     .returning();
@@ -229,7 +193,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
 
   const randomBookings = bookings;
   const inBooks = await db
-    .insert(schema.Booking)
+    .insert(schema.booking)
     .values(randomBookings)
     .onConflictDoNothing()
     .returning();
@@ -239,7 +203,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     createAssignmentsForBooking(b.id),
   );
   const inBookAss = await db
-    .insert(schema.BookingAssignment)
+    .insert(schema.bookingAssignment)
     .values(bookingAssignments)
     .onConflictDoNothing()
     .returning();
@@ -252,7 +216,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     updatedAt: new Date(t.updatedAt),
   }));
   const inTixs = await db
-    .insert(schema.Ticket)
+    .insert(schema.ticket)
     .values(ticketsCoreced)
     .onConflictDoNothing()
     .returning();
@@ -268,7 +232,6 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
   await client.end();
 
   const total =
-    roles.length +
     randomBookings.length +
     bookingAssignments.length +
     events.length +
@@ -276,12 +239,10 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     tickets.length +
     users.length +
     accounts.length +
-    departments.length +
     organizations.length +
     members.length;
 
   const inserted =
-    inRoles.length +
     inBooks.length +
     inEvents.length +
     inLocs.length +
@@ -289,7 +250,6 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     inUsers.length +
     inAccounts.length +
     inOrgs.length +
-    inDepts.length +
     inMembers.length;
 
   console.log(

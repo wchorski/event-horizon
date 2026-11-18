@@ -97,6 +97,7 @@ or
 before a git commit it's easy to spot the green 'created' files. drop those
 
 ```sh
+## drizzle v1: `drop` has been depreciated. you can just remove the folder inside drizzle/*
 pnpm drizzle-kit drop
 pnpm db:genearate
 ```

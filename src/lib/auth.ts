@@ -24,11 +24,12 @@ import { passkey } from "@better-auth/passkey";
 import { db } from "@db/db";
 import * as schema from "@db/schema";
 import { APIError, betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import { admin, username, organization, emailOTP } from "better-auth/plugins";
 import { orgAccess, organizationRoles } from "./auth/accessControl";
-import { BookingClient, User } from "@db/schema";
+import { bookingClient } from "@db/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { uuidv7 } from "@client/uuidv7";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -100,24 +101,25 @@ if (MS_CLIENT_ID && MS_SECRET_VALUE)
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: {
-      user: schema.User,
-      session: schema.Session,
-      account: schema.Account,
-      verification: schema.Verification,
-      passkey: schema.Passkey,
-      organization: schema.Organization,
-      member: schema.Member,
-      team: schema.Team,
-      teamMember: schema.TeamMember,
-      invitation: schema.Invitation,
-    },
+    // schema: {
+    //   user: schema.User,
+    //   session: schema.Session,
+    //   account: schema.Account,
+    //   verification: schema.Verification,
+    //   passkey: schema.Passkey,
+    //   organization: schema.Organization,
+    //   member: schema.Member,
+    //   team: schema.Team,
+    //   teamMember: schema.TeamMember,
+    //   invitation: schema.Invitation,
+    // },
   }),
   user: {
     additionalFields: {
       phone: { type: "string", required: false },
-      first_name: { type: "string", required: true },
-      last_name: { type: "string", required: true },
+      firstName: { type: "string", required: true },
+      lastName: { type: "string", required: true },
+      middleInitial: { type: "string", required: false },
       // username is already placed here by plugin
     },
   },
@@ -139,16 +141,17 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     async afterEmailVerification(user, request) {
       // Runs after successful email verification
-
+      if(!user.emailVerified) return;
       await db
-        .update(BookingClient)
-        .set({ user_id: user.id, claimed_at: new Date() })
+        .update(bookingClient)
+        .set({ userId: user.id, claimedAt: new Date() })
         .where(
           and(
-            eq(BookingClient.email, user.email.toLowerCase()),
-            isNull(BookingClient.user_id),
+            eq(bookingClient.email, user.email.toLowerCase()),
+            isNull(bookingClient.userId),
           ),
         );
+      
     },
   },
   socialProviders,
@@ -261,7 +264,8 @@ export const auth = betterAuth({
     cookiePrefix: "eh",
     useSecureCookies: isProd,
     database: {
-      generateId: false, // let database generate ID
+      generateId: process.env.AUTH_SCHEMA_GEN === "1" ? "uuid" : () => uuidv7(),
+      // generateId: false, // let database generate ID
     },
   },
 

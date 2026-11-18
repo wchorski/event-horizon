@@ -1,4 +1,4 @@
-import type { Booking } from "@db/schema";
+// db/seed/bookings
 import type { BookingSelect } from "@ty/Schema";
 import users from "./users";
 import locations from "./locations";
@@ -6,10 +6,10 @@ import { randomDate, randomInt, randomItem } from "@lib/random";
 import { modifyByNumOfHours } from "@lib/dateAndTime";
 import { uuidv7 } from "@client/uuidv7";
 
-const user_ids: (string | null)[] = users.map((u) => u.id);
-user_ids.push(null);
-const location_ids: (string | null)[] = locations.map((l) => l.id);
-location_ids.push(null);
+const userIds: (string | null)[] = users.map((u) => u.id);
+userIds.push(null);
+const locationIds: (string | null)[] = locations.map((l) => l.id);
+locationIds.push(null);
 
 const numToGenerate = 300;
 const range = {
@@ -46,13 +46,13 @@ function createBooking(i: number): BookingSelect {
     revision: Math.floor(Math.random() * 20),
     google_calendar: null,
     status: randomStatus(),
-    client_id: randomItem(user_ids),
-    location_id: randomItem(location_ids),
-    event_id: null,
+    clientId: randomItem(userIds),
+    locationId: randomItem(locationIds),
+    eventId: null,
     notes: null,
-    secret_notes: null,
-    author_user_id: users[0].id,
-    organization_id: null,
+    secretNotes: null,
+    authorUserId: users[0].id,
+    organizationId: null,
   };
 }
 

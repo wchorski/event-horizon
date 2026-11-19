@@ -4,7 +4,7 @@ import {
   BOOKING_STATUSES,
   INTEGRATION_PROVIDERS,
   MEMBER_ROLES,
-} from "@db/schema";
+} from "@db/enums";
 import { encryptSecret } from "@lib/auth/secretBox";
 
 const datetimeLocalToDate = z
@@ -40,7 +40,7 @@ const bookingValidation = z.object({
   status: z.enum(BOOKING_STATUSES),
   location_id: uuidv7OptionalNull,
   client_id: uuidv7OptionalNull,
-  author_user_id: z.uuidv7(),
+  authorUserId: z.uuidv7(),
   // event_id: z.string(),
 });
 
@@ -286,7 +286,7 @@ export const validate = {
     zip: z.string().min(5, "Invalid ZIP code").max(5, "Invalid ZIP code"),
     timezone: z.string().min(8, "Must be more than 8 characters"),
     excerpt: z.string().optional(),
-    author_user_id: z.uuidv7(),
+    authorUserId: z.uuidv7(),
   }),
 
   get locationCreate() {
@@ -520,7 +520,7 @@ export const validateBookingRequest = z
     end: datetimeLocalToDate,
     notes: z.string().optional(),
     // status: z.enum(BOOKING_STATUSES),
-    author_user_id: z.uuidv7(),
+    authorUserId: z.uuidv7(),
     client_id: uuidv7OrNullFromForm,
     client_emails: clientEmails,
     user: optionalUser,

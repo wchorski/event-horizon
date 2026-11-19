@@ -1,24 +1,22 @@
 // src/lib/db.ts
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
-// import * as schema from "@db/schema";
 import { relations } from "@db/relations";
-// import { getPGDatabaseUrl } from "./client";
 //? pool is better than client for concurrent connections
 // import { Client } from "pg";
 import { Pool } from "pg";
+//! spreading overrides the other relation's file
 import { authRelations } from "@db/auth-schema";
-
-// console.log("db.ts DATABASE_URL: ", getPGDatabaseUrl());
+const { user, organization, ...authRest } = authRelations;
 
 const pool = createPgAstroPool();
-// await client.connect();
+
 const DB_LOGGER =
   process.env.DB_LOGGER === "true" && process.env.NODE_ENV !== "production";
 
 export const db = drizzle({
   client: pool,
-  relations: { ...relations, ...authRelations },
+  relations: {...relations, ...authRest},
   logger: DB_LOGGER,
 });
 

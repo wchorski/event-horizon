@@ -124,6 +124,7 @@ export const booking = pgTable(
       .references(() => user.id),
     locationId: uuid("location_id").references(() => location.id),
     eventId: uuid("event_id").references(() => event.id),
+    // timelineId: uuid().references(() => timeline.id),
     organizationId: uuid("organization_id").references(() => organization.id, {
       onDelete: "cascade",
     }),

@@ -19,6 +19,7 @@ import { sql } from "drizzle-orm";
 import type { GoogleCalendarData, TimelineData } from "@ty/Schema";
 import { appUser } from "./roles";
 import { myself } from "./sql";
+import { bookingStatusEnum, integrationProviderEnum, meetingPacketStatusEnum, memberRoleEnum } from "./enums";
 
 //! now using better-auth admin and org plugins
 // export const Role = pgTable("roles", {
@@ -115,30 +116,6 @@ export const User = pgTable("users", {
 //   // ... service fields
 // });
 
-export const memberRoleEnum = pgEnum("member_role", [
-  "owner",
-  "admin",
-  "member",
-]);
-
-export const MEMBER_ROLES = memberRoleEnum.enumValues;
-
-export const bookingStatusEnum = pgEnum("booking_status", [
-  "REQUESTED",
-  "CANCELED",
-  "DECLINED",
-  "HOLDING",
-  "ACCEPTED",
-  "POSTPONED",
-]);
-
-export const meetingPacketStatusEnum = pgEnum("meeting_packet_status", [
-  "DRAFT",
-  "PUBLISHED",
-]);
-
-export const BOOKING_STATUSES = bookingStatusEnum.enumValues;
-
 export const Booking = pgTable(
   "bookings",
   {
@@ -172,14 +149,6 @@ export const Booking = pgTable(
   (table) => [check("end_after_start", sql`${table.end} >= ${table.start}`)],
 );
 
-export const bookingClientRole = pgEnum("booking_client_role", ["client"]);
-// add values later as you need them, e.g. "observer", "co_host"
-
-export const bookingClientStatus = pgEnum("booking_client_status", [
-  "invited",
-  "accepted",
-  "declined",
-]);
 
 export const BookingClient = pgTable(
   "booking_clients",
@@ -659,12 +628,6 @@ export const Invitation = pgTable(
     index("invitation_email_idx").on(table.email),
   ],
 );
-export const integrationProviderEnum = pgEnum("integration_provider", [
-  "microsoft",
-  "google",
-]);
-
-export const INTEGRATION_PROVIDERS = integrationProviderEnum.enumValues;
 
 export const IntegrationCredential = pgTable(
   "integration_credentials",

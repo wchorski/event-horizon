@@ -10,7 +10,7 @@ const admin = (name: string) =>
 const notBanned = (name: string) =>
   pgPolicy(name, { as: "restrictive", for: "all", to: appUser, using: sql`not app_is_banned()` });
 
-export const locationPolicies = (t: { id: AnyPgColumn; author_user_id: AnyPgColumn }) => [
+export const locationPolicies = (t: { id: AnyPgColumn; authorUserId: AnyPgColumn }) => [
   admin("locations_admin"),
   pgPolicy("locations_owner", {
     for: "all", to: appUser,
@@ -24,7 +24,7 @@ export const locationPolicies = (t: { id: AnyPgColumn; author_user_id: AnyPgColu
   notBanned("locations_not_banned"),
 ];
 
-export const bookingPolicies = (t: { id: AnyPgColumn; author_user_id: AnyPgColumn; location_id: AnyPgColumn }) => [
+export const bookingPolicies = (t: { id: AnyPgColumn; authorUserId: AnyPgColumn; location_id: AnyPgColumn }) => [
   admin("bookings_admin"),
   pgPolicy("bookings_author", {
     for: "all", to: appUser,

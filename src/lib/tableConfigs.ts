@@ -222,7 +222,7 @@ export const bookingConfigRequired = (
         label: `${user.first_name} ${user.last_name} <${user.email}>`,
       })),
     },
-    author_user_id: {
+    authorUserId: {
       label: "Author",
       type: "select",
       options: users.map((user) => ({

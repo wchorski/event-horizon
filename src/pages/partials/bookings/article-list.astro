@@ -14,7 +14,7 @@ if (user.role !== "admin")
 
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const { bookings, totalCount, totalPages } = await getBookingsPage({
-  author_user_id: user.id,
+  authorUserId: user.id,
   page,
   perPage: 3,
 });

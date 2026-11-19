@@ -68,14 +68,14 @@ if (FACEBOOK_CLIENT_ID && FACEBOOK_CLIENT_SECRET)
     clientId: FACEBOOK_CLIENT_ID,
     clientSecret: FACEBOOK_CLIENT_SECRET,
     mapProfileToUser: (profile: {
-      first_name?: string;
-      last_name?: string;
+      firstName?: string;
+      lastName?: string;
       name?: string;
       email?: string;
     }) =>
       deriveNameParts({
-        givenName: profile.first_name,
-        familyName: profile.last_name,
+        givenName: profile.firstName,
+        familyName: profile.lastName,
         fullName: profile.name,
         fallback: profile.email?.split("@")[0] ?? "Facebook User",
       }),
@@ -290,13 +290,13 @@ export type Auth = typeof auth;
 
 // src/lib/auth/name.ts
 export interface NameParts {
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface DeriveNameInput {
   /** Provider-native given/first name, when it's exposed as its own field
-   * (Google's given_name, Facebook's first_name, Microsoft's given_name). */
+   * (Google's given_name, Facebook's firstName, Microsoft's given_name). */
   givenName?: string | null;
   /** Provider-native family/last name, when exposed separately. */
   familyName?: string | null;
@@ -310,16 +310,16 @@ interface DeriveNameInput {
 
 /**
  * Normalizes whatever name shape an OAuth provider's profile gives you into
- * our schema's separate first_name/last_name fields. Use this from every
+ * our schema's separate firstName/lastName fields. Use this from every
  * provider's mapProfileToUser so the fallback behavior stays consistent.
  *
  * Priority:
  * 1. Provider-native givenName, if present — pairs with familyName if present,
- *    otherwise last_name is "".
- * 2. Split a single fullName string: the LAST word becomes last_name,
- *    everything before it becomes first_name (so "Mary Jane Smith" ->
- *    { first_name: "Mary Jane", last_name: "Smith" }).
- * 3. fallback as first_name, with an empty last_name.
+ *    otherwise lastName is "".
+ * 2. Split a single fullName string: the LAST word becomes lastName,
+ *    everything before it becomes firstName (so "Mary Jane Smith" ->
+ *    { firstName: "Mary Jane", lastName: "Smith" }).
+ * 3. fallback as firstName, with an empty lastName.
  */
 export function deriveNameParts({
   givenName,
@@ -330,8 +330,8 @@ export function deriveNameParts({
   const trimmedGiven = givenName?.trim();
   if (trimmedGiven) {
     return {
-      first_name: trimmedGiven,
-      last_name: familyName?.trim() ?? "",
+      firstName: trimmedGiven,
+      lastName: familyName?.trim() ?? "",
     };
   }
 
@@ -340,17 +340,17 @@ export function deriveNameParts({
     const words = trimmedFull.split(/\s+/);
 
     if (words.length === 1) {
-      return { first_name: words[0], last_name: "" };
+      return { firstName: words[0], lastName: "" };
     }
 
-    const last_name = words[words.length - 1];
-    const first_name = words.slice(0, -1).join(" ");
-    return { first_name, last_name };
+    const lastName = words[words.length - 1];
+    const firstName = words.slice(0, -1).join(" ");
+    return { firstName, lastName };
   }
 
   return {
-    first_name: fallback.trim() || "Anon-User",
-    last_name: "Anon-User",
+    firstName: fallback.trim() || "Anon-User",
+    lastName: "Anon-User",
   };
 }
 

@@ -91,7 +91,7 @@ type CreateBookingInput = {
   location_id: string | null;
   location?: Omit<typeof Location.$inferInsert, "author_user_id">;
   clients?: ClientInput[];
-  author_user_id: string;
+  authorUserId: string;
   client_id?: string;
   start: Date;
   end: Date;
@@ -109,7 +109,7 @@ export async function createBooking(input: CreateBookingInput) {
               .insert(Location)
               .values({
                 ...input.location,
-                author_user_id: input.author_user_id,
+                authorUserId: input.author_user_id,
               })
               .returning({ id: Location.id })
           )[0]?.id
@@ -123,7 +123,7 @@ export async function createBooking(input: CreateBookingInput) {
         end: input.end,
         notes: input.notes,
         status: "REQUESTED",
-        author_user_id: input.author_user_id,
+        authorUserId: input.author_user_id,
         location_id,
       })
       .returning();

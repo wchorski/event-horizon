@@ -25,7 +25,7 @@ const formData = await Astro.request.formData();
 const unflat = unflatten(formData);
 const input = {
   ...unflat,
-  author_user_id: user.id,
+  authorUserId: user.id,
 }
 
 // console.log({formData, unflat, input});

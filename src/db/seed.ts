@@ -109,6 +109,9 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     bookings,
   } = seedData;
 
+  let total = 0
+  let inserted = 0
+
   console.log("🌱 Seeding Database 🌱");
   const orgCoreced = organizations.map((item) => ({
     ...item,
@@ -121,8 +124,11 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Organizations (+${inOrgs.length}) ===`);
+  total += organizations.length
+  inserted += inOrgs.length
 
-  const usersCoreced = users.map((item) => ({
+  // TODO this is just temp to keep seed small for now
+  const usersCoreced = users.slice(0,10).map((item) => ({
     ...item,
     createdAt: new Date(item.createdAt),
     updatedAt: new Date(item.updatedAt),
@@ -133,6 +139,8 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Users (+${inUsers.length}) ===`);
+  total += users.length
+  inserted += inUsers.length
 
   const membersCoreced = members.map((item) => ({
     ...item,
@@ -145,6 +153,8 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Members (+${inMembers.length}) ===`);
+  total += members.length
+  inserted += inMembers.length
 
   const accountsCoreced = await Promise.all(
     accounts.map(async (item) => {
@@ -165,6 +175,8 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Accounts (+${inAccounts.length})===`);
+  total += accounts.length
+  inserted += inAccounts.length
 
   const locationsCoreced = locations.map((item) => ({
     ...item,
@@ -177,19 +189,23 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Locations (+${inLocs.length})===`);
+  total += locations.length
+  inserted += inLocs.length
 
-  const eventsCoreced = events.map((e) => ({
-    ...e,
-    timestamp: new Date(e.timestamp),
-    createdAt: new Date(e.createdAt),
-    updatedAt: new Date(e.updatedAt),
-  }));
-  const inEvents = await db
-    .insert(schema.event)
-    .values(eventsCoreced)
-    .onConflictDoNothing()
-    .returning();
-  console.log(`=== Events (+${inEvents.length})===`);
+  // const eventsCoreced = events.map((e) => ({
+  //   ...e,
+  //   timestamp: new Date(e.timestamp),
+  //   createdAt: new Date(e.createdAt),
+  //   updatedAt: new Date(e.updatedAt),
+  // }));
+  // const inEvents = await db
+  //   .insert(schema.event)
+  //   .values(eventsCoreced)
+  //   .onConflictDoNothing()
+  //   .returning();
+  // console.log(`=== Events (+${inEvents.length})===`);
+  // total += events.length
+  // inserted += inEvents.length
 
   const randomBookings = bookings;
   const inBooks = await db
@@ -198,59 +214,68 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
     .onConflictDoNothing()
     .returning();
   console.log(`=== Bookings (+${inBooks.length})===`);
+  total += randomBookings.length
+  inserted += inBooks.length
 
-  const bookingAssignments = randomBookings.flatMap((b) =>
-    createAssignmentsForBooking(b.id),
-  );
-  const inBookAss = await db
-    .insert(schema.bookingAssignment)
-    .values(bookingAssignments)
-    .onConflictDoNothing()
-    .returning();
-  console.log(`=== Booking Assignments (+${inBookAss.length})===`);
+  // const bookingAssignments = randomBookings.flatMap((b) =>
+  //   createAssignmentsForBooking(b.id),
+  // );
+  // const inBookAss = await db
+  //   .insert(schema.bookingAssignment)
+  //   .values(bookingAssignments)
+  //   .onConflictDoNothing()
+  //   .returning();
+  // console.log(`=== Booking Assignments (+${inBookAss.length})===`);
+  // total += bookingAssignments.length
+  // inserted += inBookAss.length
 
-  const ticketsCoreced = tickets.map((t) => ({
-    ...t,
-    timestamp: new Date(t.timestamp),
-    createdAt: new Date(t.createdAt),
-    updatedAt: new Date(t.updatedAt),
-  }));
-  const inTixs = await db
-    .insert(schema.ticket)
-    .values(ticketsCoreced)
-    .onConflictDoNothing()
-    .returning();
-  console.log(`=== Tickets (+${inTixs.length})===`);
+  // const ticketsCoreced = tickets.map((t) => ({
+  //   ...t,
+  //   timestamp: new Date(t.timestamp),
+  //   createdAt: new Date(t.createdAt),
+  //   updatedAt: new Date(t.updatedAt),
+  // }));
+  // const inTixs = await db
+  //   .insert(schema.ticket)
+  //   .values(ticketsCoreced)
+  //   .onConflictDoNothing()
+  //   .returning();
+  // console.log(`=== Tickets (+${inTixs.length})===`);
+  // total += tickets.length
+  // inserted += inTixs.length
+
   // const accountsCoreced = seedData.accounts.map((t) => ({
   //   ...t,
   //   timestamp: new Date(t.timestamp),
   //   createdAt: new Date(t.createdAt),
   //   updatedAt: new Date(t.updatedAt),
   // }));
-  // await db.insert(schema.Account).values(seedData.accounts);
-
+  // const inAccounts = await db.insert(schema.Account).values(seedData.accounts);
+  // console.log(`=== Accounts (+${inAccounts.length})===`);
+  // total += seedData.accounts.length
+  // inserted += inAccounts.length
   await client.end();
 
-  const total =
-    randomBookings.length +
-    bookingAssignments.length +
-    events.length +
-    locations.length +
-    tickets.length +
-    users.length +
-    accounts.length +
-    organizations.length +
-    members.length;
+  // const total =
+  //   randomBookings.length +
+  //   bookingAssignments.length +
+  //   events.length +
+  //   locations.length +
+  //   tickets.length +
+  //   users.length +
+  //   accounts.length +
+  //   organizations.length +
+  //   members.length;
 
-  const inserted =
-    inBooks.length +
-    inEvents.length +
-    inLocs.length +
-    inTixs.length +
-    inUsers.length +
-    inAccounts.length +
-    inOrgs.length +
-    inMembers.length;
+  // const inserted =
+  //   inBooks.length +
+  //   inEvents.length +
+  //   inLocs.length +
+  //   inTixs.length +
+  //   inUsers.length +
+  //   inAccounts.length +
+  //   inOrgs.length +
+  //   inMembers.length;
 
   console.log(
     `🌲 Database seeded successfully. +${inserted} of ${total} items added 🌲`,

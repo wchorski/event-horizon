@@ -1,1 +1,0 @@
-ALTER TABLE "meeting_packets" ADD COLUMN "outlook_web_link" text;

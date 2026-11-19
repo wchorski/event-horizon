@@ -13,7 +13,7 @@ export async function canViewLocation(
 
   const loc = await db.query.Location.findFirst({
     where: eq(Location.id, locationId),
-    columns: { author_user_id: true },
+    columns: { authorUserId: true },
   });
   if (!loc) return false;               // same response as "no access"
   if (loc.author_user_id === user.id) return true;

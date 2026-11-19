@@ -35,7 +35,7 @@ const {
   {
     email ? (
       <>
-        <input type="hidden" name="email" value={email} />
+        <input type="text" name="email" value={email} />
         <p>
           Code sent to <strong>{email}</strong>
         </p>
@@ -47,7 +47,7 @@ const {
         name="email"
         type="email"
         
-        required
+        
       />
     )
   }
@@ -58,7 +58,7 @@ const {
     label="Code"
     type="text"
 
-    required
+    
     value={otp ?? undefined}
     inputmode="numeric"
     autocomplete="one-time-code"
@@ -72,7 +72,7 @@ const {
         name="password"
         label="New Password"
         type="password"
-        required
+        
         autocomplete="new-password"
       />
     )

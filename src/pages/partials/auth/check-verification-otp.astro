@@ -53,8 +53,9 @@ async function verify({ otp, email, type, password, redirectTo }: Input) {
   // "sign-in" is not handled by this endpoint yet
   throw new FormError("Unsupported verification type.", 400);
 }
-
-const outcome = await useForm(await Astro.request.formData(), {
+const formData = await Astro.request.formData()
+console.log({formData});
+const outcome = await useForm(formData, {
   schema,
   sensitive: ["otp", "password"],
   run: verify,

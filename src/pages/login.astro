@@ -5,7 +5,6 @@ import SocialProviderLoginForm from "@components/auth/SocialProviderLoginForm.as
 import Dialog from "@components/Dialog.astro";
 import FormCard from "@components/form/FormCard.astro";
 import InputField from "@components/form/InputField.astro";
-import SubmitButton from "@components/form/SubmitButton.astro";
 import VerifyOneTimePassForm from "@components/form/VerifyOneTimePassForm.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import { login } from "@lib/auth/login";
@@ -35,6 +34,7 @@ let state = emptyForm();
 
 // TODO do i need a trycatch here?
 if (Astro.request.method === "POST") {
+  
   const outcome = await useForm(await Astro.request.formData(), {
     schema: validate.login,
     sensitive: ["password"],
@@ -67,6 +67,7 @@ if (Astro.request.method === "POST") {
   state = outcome.state;
   Astro.response.status = state.status;
 }
+const formId = "login-form"
 ---
 
 <CommonPageLayout title={"Login"}>
@@ -80,7 +81,7 @@ if (Astro.request.method === "POST") {
         <p class="callout">
           You are currently logged in as <br />
           <strong>
-            {`${user.first_name} ${user.last_name} <${user.email}>`}{" "}
+            {`${user.firstName} ${user.lastName} <${user.email}>`}{" "}
           </strong>
         </p>
       ) : null
@@ -88,21 +89,19 @@ if (Astro.request.method === "POST") {
     <FormCard id="login-form" submitText="Login" {state}>
       <h2>Login</h2>
       <InputField
+        {formId}
         name="email"
         type="email"
-        id="email"
-        model="accounts"
         required
-        value={state.values.email ?? email ?? undefined}
-        fieldError={state.fieldErrors.email}
+        value={state.values.email as string ?? email ?? undefined}
+        error={state.fieldErrors.email}
       />
       <InputField
+        {formId}
         name="password"
         type="password"
-        id="password"
-        model="accounts"
         required
-        fieldError={state.fieldErrors.password}
+        error={state.fieldErrors.password}
       />
     </FormCard>
 

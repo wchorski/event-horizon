@@ -1,14 +1,14 @@
 // lib/getBookingsPage
 import { db } from "@db/db";
-import { Booking, BookingClient, Location, User } from "@db/schema";
+import { booking, bookingClient, location } from "@db/schema";
 import { desc, count, eq, and, gt, or, inArray } from "drizzle-orm";
 
 interface Props {
   page: number;
   perPage?: number;
-  location_id?: string;
-  session_user_id: string;
-  organization_id?: string;
+  locationId?: string;
+  sessionUserId: string;
+  organizationId?: string;
   selectFields?: Object;
 }
 
@@ -16,30 +16,40 @@ interface Props {
 export async function getBookingsPage({
   page,
   perPage = 12,
-  location_id,
-  session_user_id,
-  organization_id,
+  locationId,
+  sessionUserId,
+  organizationId,
 }: Props) {
-  if (!session_user_id) throw new Error("getBookingsPage requires a session_user_id");
+  if (!sessionUserId)
+    throw new Error("getBookingsPage requires a sessionUserId");
   // bookings where this user is a linked client
-  const clientBookingIds = db
-    .select({ id: BookingClient.booking_id })
-    .from(BookingClient)
-    .where(eq(BookingClient.user_id, session_user_id));
+  // const clientBookingIds = await db
+  //   .select({ id: bookingClient.bookingId })
+  //   .from(bookingClient)
+  //   .where(eq(bookingClient.userId, sessionUserId));
+  const bookingClients = await db.query.bookingClient.findMany({
+    where: {
+      userId: sessionUserId
+    }
+  })
 
   if (page < 1) page = 1;
 
-  const mine = or(
-    eq(Booking.author_user_id, session_user_id),
-    inArray(Booking.id, clientBookingIds),
+  const myself = or(
+    eq(booking.authorUserId, sessionUserId),
+    inArray(booking.id, clientBookingIds),
   );
 
-  const where = and(mine, location_id ? eq(Booking.location_id, location_id) : undefined);
+  const where = and(
+    myself,
+    locationId ? eq(booking.locationId, locationId) : undefined,
+  );
 
   const [{ count: totalCount }] = await db
-    .select({ count: count(Booking.id) })
-    .from(Booking)
+    .select({ count: count(booking.id) })
+    .from(booking)
     .where(where);
+  await db.
 
   const totalPages = Math.ceil(totalCount / perPage);
   if (page > totalPages && totalPages > 0) return { redirect: true as const };
@@ -48,20 +58,32 @@ export async function getBookingsPage({
     return { redirect: true as const };
   }
 
-  const bookings = await db.query.Booking.findMany({
-    where,
-    orderBy: [desc(Booking.start), desc(Booking.id)],
+  const bookings = await db.query.booking.findMany({
+    where: {
+      OR: [
+        {
+          authorUserId: sessionUserId,
+        },
+        {
+          id: {
+            in: bookingClients.flatMap(bc => bc.id),
+          },
+        },
+      ],
+    },
+    // orderBy: [{ start: "desc" }, { id: "desc" }],
+    orderBy: (booking, { desc }) => [desc(booking.start), desc(booking.id)],
     limit: perPage,
     offset: (page - 1) * perPage,
     with: {
-      assignments: {
-        with: {
-          user: true,
-          // role: true,
-        },
-      },
+      // assignments: {
+      //   with: {
+      //     user: true,
+      //     // role: true,
+      //   },
+      // },
       clients: {
-        with: { user: { columns: { id: true, name: true } } },
+        with: { accounts: true },
       },
       location: true,
       author: true,
@@ -69,10 +91,10 @@ export async function getBookingsPage({
     },
   });
 
-  // TODO only fetch locations authored by the user, or already exist on invited locations. 
+  // TODO only fetch locations authored by the user, or already exist on invited locations.
   // maybe use a join transaction?
-  const locations = await db.query.Location.findMany({
-    where : eq(Location.author_user_id, session_user_id)
+  const locations = await db.query.location.findMany({
+    where: eq(location.authorUserId, sessionUserId),
   });
   // .limit(perPage)
   // .offset((page - 1) * perPage);
@@ -87,7 +109,7 @@ export async function getBookingsPage({
     clients: bookings.flatMap((b) => b.clients),
     authors: bookings.flatMap((b) => (b.author ? [b.author] : [])),
     // workers: bookings.map((b) => b.assignments).map((a) => a.user),
-    event_ids: bookings.flatMap((b) => b.event_id),
+    eventIds: bookings.flatMap((b) => b.eventId),
   };
 }
 

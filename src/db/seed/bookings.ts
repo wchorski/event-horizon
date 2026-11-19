@@ -11,7 +11,7 @@ userIds.push(null);
 const locationIds: (string | null)[] = locations.map((l) => l.id);
 locationIds.push(null);
 
-const numToGenerate = 300;
+const numToGenerate = 10;
 const range = {
   start: new Date("2020-01-01T00:00:00Z"),
   end: new Date("2027-12-31T23:59:59Z"),

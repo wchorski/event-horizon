@@ -1,1 +1,0 @@
-ALTER TABLE "passkey" RENAME COLUMN "username" TO "name";

@@ -7,25 +7,55 @@ import { getBookingsPage } from "@lib/getBookingsPage";
 import { SITE_TITLE } from "astro:env/client";
 import { auth } from "@lib/auth";
 import OrganizationCreationForm from "@components/form/OrganizationCreationForm.astro";
+import { db } from "@db/db";
+import Request from "./bookings/request.astro";
 
 const user = Astro.locals.user;
 
-if (user === null) return Astro.redirect("/login");
-if (!user) throw new Error("Must be logged in to view page");
+if (!user) return Astro.redirect("/login?msg=Must be logged in to view this page.");
 const organizations = await auth.api.listOrganizations({
   headers: Astro.request.headers,
 });
+
+console.log({organizations});
 
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const msg = Astro.url.searchParams.get("msg");
 const status = Astro.url.searchParams.get("status");
 
-// TODO don't fetch ALL locations. maybe use a join?
-const { bookings, locations, totalPages } = await getBookingsPage({
-  author_user_id: user.id,
-  page,
-  perPage: 3,
+const foundUser = await db.query.user.findFirst({
+  with: {
+    authoredLocations: {
+      limit: 5,
+      orderBy: {
+        createdAt: "desc"
+      }
+    },
+    authoredBookings: {
+      limit: 5,
+      orderBy: {
+        start: 'desc'
+      }
+    },
+    clientBookings: {
+      limit: 5,
+      orderBy: {
+        start: 'desc'
+      }
+    }
+  },
 });
+if(!foundUser) return new Response('User Not Found', {status: 404})
+
+const {authoredBookings, authoredLocations, clientBookings } = foundUser
+
+
+// TODO don't fetch ALL locations. maybe use a join?
+// const { bookings, locations, totalPages } = await getBookingsPage({
+//   sessionUserId: user.id,
+//   page,
+//   perPage: 3,
+// });
 ---
 
 <CommonPageLayout title={`Dashboard | ${SITE_TITLE}`}>
@@ -40,7 +70,22 @@ const { bookings, locations, totalPages } = await getBookingsPage({
     }
   </header>
   <div data-layout="content">
+    <section>
+      <h2>Locations</h2>
+      <ul>
+        {authoredLocations.map(item => <li>{item.name}</li>)}
+      </ul>
+      <h2>Gigs</h2>
+      <ul>
+        {authoredBookings.length > 0 ? (authoredBookings.map(item => <li>{item.start}</li>)) : (<li class="no-data">none</li>)}
+      </ul>
+      <h2>Booking as a client</h2>
+      <ul>
+        {clientBookings.length > 0 ? clientBookings.map(item => <li>{item.start}</li>) : (<li class="no-data">none</li>)}
+      </ul>
+    </section>
     <secton class="grid gap-m">
+      <h2>Organizations</h2>
       {
         organizations.length > 0 ? (
           <ul class="unstyled flex gap-m wrap">
@@ -48,7 +93,7 @@ const { bookings, locations, totalPages } = await getBookingsPage({
               <li>
                 <article class="card">
                   <h3>{org.name}</h3>
-                  <img src={org.logo} width="auto" height="100" class="shadow" />
+                  <img src={org.logo} width="auto" height="50" class="shadow" />
                   <p>
                     <a class="btn" href={`/org/${org.slug}`}>
                       manage
@@ -66,7 +111,7 @@ const { bookings, locations, totalPages } = await getBookingsPage({
     <section>
       <div class="flex gap-m flex-align-center">
         <h2>Upcoming Bookings</h2>
-        <MiniPaginationControls
+        <!-- <MiniPaginationControls
           id="bookings-pagination"
           paramKey="bookings_page"
           page={page}
@@ -74,11 +119,11 @@ const { bookings, locations, totalPages } = await getBookingsPage({
           partialUrl="/partials/bookings/article-list"
           pageUrl="/dashboard"
           target="#bookings-list"
-        />
+        /> -->
       </div>
 
       <ul id="bookings-list" class="unstyled grid auto-fill gap-s">
-        {
+        <!-- {
           bookings ? (
             bookings.map((bk) => (
               <li>
@@ -88,7 +133,7 @@ const { bookings, locations, totalPages } = await getBookingsPage({
           ) : (
             <li class="callout ghost">no bookings found</li>
           )
-        }
+        } -->
       </ul>
     </section>
   </div>

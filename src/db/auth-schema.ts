@@ -31,8 +31,8 @@ export const user = pgTable("user", {
   username: text("username").unique(),
   displayUsername: text("display_username"),
   phone: text("phone"),
-  first_name: text("first_name").notNull(),
-  last_name: text("last_name").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
 });
 
 export const session = pgTable(

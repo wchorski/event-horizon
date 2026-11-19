@@ -1,15 +1,19 @@
 // lib/microsoft/getMsCredentials.ts
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
-import { IntegrationCredential } from "@db/schema";
+import { integrationCredential as IntegrationCredential } from "@db/schema";
 import { decryptSecret } from "@lib/auth/secretBox";
 
 export async function getMsCredentials(organizationId: string) {
-  const row = await db.query.IntegrationCredential.findFirst({
-    where: and(
-      eq(IntegrationCredential.organizationId, organizationId),
-      eq(IntegrationCredential.provider, "microsoft"),
-    ),
+  const row = await db.query.integrationCredential.findFirst({
+    // where: and(
+    //   eq(IntegrationCredential.organizationId, organizationId),
+    //   eq(IntegrationCredential.provider, "microsoft"),
+    // ),
+    where: {
+      organizationId,
+      provider: 'microsoft'
+    }
   });
 
   if (!row)

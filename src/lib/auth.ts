@@ -174,11 +174,11 @@ export const auth = betterAuth({
           additionalFields: {
             color: { type: "string", required: false },
             color_2: { type: "string", required: false },
-            mailbox_user_email: { type: "string", required: false },
-            sharepoint_site_url: { type: "string", required: false },
-            sharepoint_site_id: { type: "string", required: false },
-            sharepoint_drive_id: { type: "string", required: false },
-            sharepoint_library_name: { type: "string", required: false },
+            mailboxUserEmail: { type: "string", required: false },
+            sharepointSiteUrl: { type: "string", required: false },
+            sharepointSiteId: { type: "string", required: false },
+            sharepointDriveId: { type: "string", required: false },
+            sharepointLibraryName: { type: "string", required: false },
 
             // sensitive: keep out of API responses and client input
             dedicated_db_url: {

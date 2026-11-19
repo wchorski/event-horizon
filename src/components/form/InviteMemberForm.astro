@@ -5,10 +5,10 @@ interface Props {
   organizationSlug: string;
   organizationId: string;
 }
-import { MEMBER_ROLES } from "@db/schema";
 import InputField from "@components/form/InputField.astro";
 import SelectField from "@components/form/SelectField.astro";
 import FormCard from "./FormCard.astro";
+import { MEMBER_ROLES } from "@db/enums";
 
 const {
   id = "form--member-invite",

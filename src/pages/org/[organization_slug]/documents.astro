@@ -11,7 +11,8 @@ import InputField from "@components/form/InputField.astro";
 import { isDayFolder } from "@lib/dayFolderCheck";
 import { db } from "@db/db";
 import { and, eq } from "drizzle-orm";
-import { IntegrationCredential, MeetingPacket, Organization } from "@db/schema";
+import { integrationCredential as IntegrationCredential, meetingPacket as MeetingPacket } from "@db/schema";
+import { organization as Organization} from "@db/auth-schema";
 import { GraphApiError, msGraphFetch } from "@lib/microsoft/msGraphFetch";
 import { prettyDateToLocale } from "@lib/formatters";
 import {
@@ -65,33 +66,37 @@ if (!member)
   );
 
 const {
-  sharepoint_site_url,
-  sharepoint_drive_id,
-  sharepoint_site_id,
-  mailbox_user_email,
+  sharepointSiteUrl,
+  sharepointDriveId,
+  sharepointSiteId,
+  mailboxUserEmail,
 } = organization;
-if (!sharepoint_drive_id || !sharepoint_site_id || !mailbox_user_email)
+if (!sharepointDriveId || !sharepointSiteId || !mailboxUserEmail)
   return new Response(
     "sharepoint columns not setup correctly on Organization",
     { status: 401 },
   );
-// const sharepoint_site_id =
+// const sharepointSiteId =
 //   MS_SHAREPOINT_MOEDOCS_SITE_ID;
-// const sharepoint_drive_id =
+// const sharepointDriveId =
 //   MS_SHAREPOINT_MOEDOCS_DRIVE_ID;
-// const mailbox_user_email = MS_MAILBOX_USER_EMAIL
+// const mailboxUserEmail = MS_MAILBOX_USER_EMAIL
 
 // TODO don't hardcode this when supporting future integrations (or native?)
-const integrationCredential = await db.query.IntegrationCredential.findFirst({
-  where: and(
-    eq(IntegrationCredential.organizationId, organization.id),
-    eq(IntegrationCredential.provider, "microsoft"),
-  ),
+const integrationCredential = await db.query.integrationCredential.findFirst({
+  // where: and(
+  //   eq(IntegrationCredential.organizationId, organization.id),
+  //   eq(IntegrationCredential.provider, "microsoft"),
+  // ),
+  where: {
+    organizationId: organization.id,
+    provider: 'microsoft'
+  }
 });
 if (!integrationCredential) {
-  const msg = `❌ ${"microsoft"} integration is not setup for ${organization.name}`;
-  Astro.redirect(`/org/${organization.slug}?msg=${encodeURIComponent(msg)}`);
-  throw new NotFoundError(msg);
+  const msg = `❌ ${"microsoft"} integration is not setup. Use the Integration Form`;
+  return Astro.redirect(`/org/${organization.slug}?msg=${encodeURIComponent(msg)}`);
+  // return new Response(msg, {status: 401});
 }
 
 const { tenantId, clientId, secretAuthTag, secretCiphertext, secretIv } =
@@ -117,8 +122,8 @@ const crumbs = parseDriveCrumbs(Astro.url.searchParams.get("crumbs"));
 // TODO stop non-team members from accessing wrong paths by crumbs[0].name
 
 const url = folderId
-  ? `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${folderId}/children`
-  : `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/root/children`;
+  ? `https://graph.microsoft.com/v1.0/sites/${sharepointSiteId}/drives/${sharepointDriveId}/items/${folderId}/children`
+  : `https://graph.microsoft.com/v1.0/sites/${sharepointSiteId}/drives/${sharepointDriveId}/root/children`;
 
 interface DriveChildrenResponse {
   "@odata.context": string;
@@ -135,16 +140,18 @@ let error: string | null = null;
 
 try {
   packet = folderId
-    ? await db.query.MeetingPacket.findFirst({
-        where: eq(MeetingPacket.sharepoint_folder_id, folderId),
+    ? await db.query.meetingPacket.findFirst({
+        where: {
+          sharepointFolderId: folderId
+        }
       })
     : null;
 
-  if (packet?.outlook_event_id) {
+  if (packet?.outlookEventId) {
     try {
       outlookEvent = await msGraphFetch<Event>(
         organization.id,
-        `/users/${mailbox_user_email}/events/${packet.outlook_event_id}`,
+        `/users/${mailboxUserEmail}/events/${packet.outlookEventId}`,
         { method: "GET", headers: outlookTimeZoneHeader(meetingTimeZone) },
       );
 
@@ -181,11 +188,11 @@ try {
         // Clear it so the UI falls back to "Create" instead of showing a dead link.
         await db
           .update(MeetingPacket)
-          .set({ outlook_event_id: null, outlook_web_link: null })
+          .set({ outlookEventId: null, outlookWebLink: null })
           .where(eq(MeetingPacket.id, packet.id));
 
-        packet.outlook_event_id = null;
-        packet.outlook_web_link = null;
+        packet.outlookEventId = null;
+        packet.outlookWebLink = null;
         outlookEvent = null;
         // calendarDraft stays as the CST default — no re-populate needed
       } else {
@@ -307,7 +314,7 @@ const { success: canPublishPackets } = await auth.api.hasPermission({
       isDayFldr && !isPublishFolder ? (
         <>
           <section class="flex gap-m">
-            {packet?.outlook_event_id && outlookEvent ? (
+            {packet?.outlookEventId && outlookEvent ? (
               <div class="scene" data-flip data-editing="false">
                 <div class="card">
                   <div class="face front">
@@ -345,21 +352,21 @@ const { success: canPublishPackets } = await auth.api.hasPermission({
             {canPublishPackets ? (
               <FormCard
                 id="pdf-packet-builder"
-                endpoint={`/org/${organization.slug}/partials/pdf-packet-builder/${encodeURIComponent(parentFolderId ?? "no-folderId-set")}`}
+                endpoint={`/org/${organization.slug}/partials/pdf-packet-builder/${encodeURIComponent(parentFolderId ?? "")}`}
                 submitText="Generate New Packet"
               >
                 <h2>PDF Packet Builder</h2>
                 {/* <input type="hidden" name="folderId" value={parentFolderId} /> */}
 
-                {packet?.published_file_url && (
+                {packet?.publishedFileUrl && (
                   <p id="published-packet-link">
                     View published packet{" "}
                     <a
-                      href={packet.published_file_url}
+                      href={packet.publishedFileUrl}
                       target="_blank"
                       rel="noopener"
                     >
-                      {packet.published_file_url.split("/").pop()}
+                      {packet.publishedFileUrl.split("/").pop()}
                     </a>
                   </p>
                 )}
@@ -377,13 +384,13 @@ const { success: canPublishPackets } = await auth.api.hasPermission({
                 <input type="hidden" name="folderId" value={parentFolderId} />
 
                 <div id="pdf-packet-builder-error" />
-                {packet?.published_file_url ? (
+                {packet?.publishedFileUrl ? (
                   <p>
                     view published packet{" "}
-                    <a href={packet.published_file_url} target="_blank">
+                    <a href={packet.publishedFileUrl} target="_blank">
                       {
-                        packet.published_file_url.split("/")[
-                          packet.published_file_url.split("/").length - 1
+                        packet.publishedFileUrl.split("/")[
+                          packet.publishedFileUrl.split("/").length - 1
                         ]
                       }
                     </a>

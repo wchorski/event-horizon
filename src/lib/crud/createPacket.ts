@@ -1,6 +1,6 @@
 // lib/crud/createPacket.ts
 import { db } from "@db/db";
-import { IntegrationCredential, MeetingPacket } from "@db/schema";
+import { integrationCredential as IntegrationCredential, meetingPacket as MeetingPacket } from "@db/schema";
 import { msAuthentication } from "@lib/auth/msAuthentication";
 import { decryptSecret } from "@lib/auth/secretBox";
 import { isDayFolder } from "@lib/dayFolderCheck";
@@ -31,15 +31,15 @@ export async function createMeetingPacket(props: Props) {
     origin,
   } = props;
 
-  const { sharepoint_site_id, sharepoint_drive_id, mailbox_user_email } = organization;
-  if (!sharepoint_site_id || !sharepoint_drive_id)
+  const { sharepointSiteId, sharepointDriveId, mailboxUserEmail } = organization;
+  if (!sharepointSiteId || !sharepointDriveId)
     throw new BadRequestError("organization is missing ms site or drive ids.");
 
-  const integrationCredential = await db.query.IntegrationCredential.findFirst({
-    where: and(
-      eq(IntegrationCredential.organizationId, organization.id),
-      eq(IntegrationCredential.provider, "microsoft"),
-    ),
+  const integrationCredential = await db.query.integrationCredential.findFirst({
+    where: {
+      organizationId: organization.id,
+      provider: 'microsoft'
+    }
   });
 
   if (!integrationCredential)
@@ -62,7 +62,7 @@ export async function createMeetingPacket(props: Props) {
     integrationSecret,
   );
 
-  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${encodeURIComponent(folderId)}?$select=name,parentReference`;
+  const endpoint = `https://graph.microsoft.com/v1.0/sites/${sharepointSiteId}/drives/${sharepointDriveId}/items/${encodeURIComponent(folderId)}?$select=name,parentReference`;
 
   // TODO use msGraphFetch()
   const res = await fetch(endpoint, {
@@ -89,12 +89,14 @@ export async function createMeetingPacket(props: Props) {
     throw new BadRequestError("Events can only be linked to day folders.");
   }
 
-  const existingPacket = await db.query.MeetingPacket.findFirst({
-    where: and(
-      eq(MeetingPacket.sharepoint_drive_id, sharepoint_drive_id),
-      eq(MeetingPacket.sharepoint_folder_id, folderId as string),
-    ),
+  const existingPacket = await db.query.meetingPacket.findFirst({
+    where: {
+      // TODO idk if i need to set this on meeting packet
+      // sharepointDriveId: sharepointDriveId,
+      sharepointFolderId: folderId
+    }
   });
+  console.log({existingPacket});
 
   if (!existingPacket) {
     throw new BadRequestError(
@@ -107,20 +109,20 @@ export async function createMeetingPacket(props: Props) {
 
   // TODO should i really be fetching folder before pdf packet generation?
   const publishedFolderId = await ensureFolderPath(
-    sharepoint_drive_id,
+    sharepointDriveId,
     publishedSegments,
     accessToken,
   );
 
   const { filename, rev } = await nextVersionedFilename(
-    sharepoint_drive_id,
+    sharepointDriveId,
     publishedFolderId,
     "MeetingPacket",
     accessToken,
   );
   const pdfBytes = await buildMergedPacket(
-    sharepoint_site_id,
-    sharepoint_drive_id,
+    sharepointSiteId,
+    sharepointDriveId,
     folderId as string,
     accessToken,
     {
@@ -133,7 +135,7 @@ export async function createMeetingPacket(props: Props) {
   );
 
   const uploaded = await uploadPacketResumable(
-    sharepoint_drive_id,
+    sharepointDriveId,
     publishedFolderId,
     filename,
     pdfBytes,
@@ -143,8 +145,8 @@ export async function createMeetingPacket(props: Props) {
   const [updatedPacket] = await db
     .update(MeetingPacket)
     .set({
-      published_file_id: uploaded.id,
-      published_file_url: uploaded.webUrl,
+      publishedFileId: uploaded.id,
+      publishedFileUrl: uploaded.webUrl,
       publishedAt: new Date(),
       status: "PUBLISHED",
     })
@@ -155,18 +157,18 @@ export async function createMeetingPacket(props: Props) {
   // Non-fatal: the PDF is already published, so a failure here becomes a warning.
   let calendarWarning: string | undefined;
 
-  if (!updatedPacket.outlook_event_id) {
+  if (!updatedPacket.outlookEventId) {
     calendarWarning =
       "Packet published, but no calendar event is linked to it.";
-  } else if (!mailbox_user_email) {
+  } else if (!mailboxUserEmail) {
     calendarWarning =
       "Packet published, but the organization has no mailbox configured.";
   } else {
     try {
       await updateEventPacketLink({
         organizationId: organization.id,
-        mailboxUserEmail: mailbox_user_email,
-        outlookEventId: updatedPacket.outlook_event_id,
+        mailboxUserEmail: mailboxUserEmail,
+        outlookEventId: updatedPacket.outlookEventId,
         // Pick one (see note below):
         href: `${origin}/org/${organization.slug}/items/${uploaded.id}`,
         // href: uploaded.webUrl,

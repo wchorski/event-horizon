@@ -2,9 +2,10 @@
 // src/pages/org/:organization_slug/partials/integrations/:organizationId
 import type { IntegrationCredentialFormOutput } from "@lib/validate";
 import { validateIntegrationCredentialForm } from "@lib/validate";
-import { INTEGRATION_PROVIDERS, IntegrationCredential } from "@db/schema";
+import {  integrationCredential as IntegrationCredential } from "@db/schema";
 import { db } from "@db/db";
 import { BadRequestError, errorHandlingOnSubmit } from "@lib/errors";
+import type { INTEGRATION_PROVIDERS } from "@db/enums";
 
 type RenderResult =
   | {

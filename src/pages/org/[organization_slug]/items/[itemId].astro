@@ -30,7 +30,7 @@ if (!member)
     `/not-authorized?msg=${encodeURIComponent(`you are not a member of this organization: ${organization.name}`)}`,
   );
 
-const { sharepoint_drive_id, sharepoint_site_id } = organization;
+const { sharepointDriveId, sharepointSiteId } = organization;
 
 let errorMessage: string | undefined;
 
@@ -41,7 +41,7 @@ try {
   const token = await msAuthentication(tenantId, clientId, clientSecret);
   const authHeaders = { Authorization: `Bearer ${token}` };
 
-  const base = `https://graph.microsoft.com/v1.0/sites/${sharepoint_site_id}/drives/${sharepoint_drive_id}/items/${itemId}`;
+  const base = `https://graph.microsoft.com/v1.0/sites/${sharepointSiteId}/drives/${sharepointDriveId}/items/${itemId}`;
 
   // 1. Metadata: name, mime type, and parent path (for authorization)
   const metaRes = await fetch(

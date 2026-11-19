@@ -4,7 +4,7 @@ interface Props {
   organizationId: string;
   organizationSlug: string;
 }
-import { INTEGRATION_PROVIDERS } from "@db/schema";
+import { INTEGRATION_PROVIDERS } from "@db/enums";
 import InputField from "./InputField.astro";
 import SelectField from "./SelectField.astro";
 import SubmitButton from "./SubmitButton.astro";
@@ -15,49 +15,47 @@ const providerOptions = INTEGRATION_PROVIDERS.map((text) => ({
   value: text,
 }));
 
-const idPrefix = "integration-form";
-const model = "integrationProvider";
+const formId = "integration-form";
+// TODO use FormCard
 ---
 
 <form
-  id={idPrefix}
+  id={formId}
   class="card"
   hx-post=`/org/${organizationSlug}/partials/integrations/${organizationId}`
-  hx-target={`#${idPrefix}-success`}
-  hx-target-error={`#${idPrefix}-error`}
+  hx-target={`#${formId}-success`}
+  hx-target-error={`#${formId}-error`}
   hx-swap="innerHTML"
 >
   <legend>Integration Form</legend>
   <fieldset>
     <SelectField
-      id={`${idPrefix}-provider`}
+    {formId}
       name={"provider"}
-      errorId={idPrefix + "-error"}
+      
       options={providerOptions}
     />
     <InputField
-      id={`${idPrefix}-tenantId`}
+    {formId}
       name="tenantId"
-      model={model}
       type={"text"}
       autocomplete="off"
     />
     <InputField
-      id={`${idPrefix}-clientId`}
+      {formId}
       name="clientId"
-      model={model}
+      
       type={"text"}
       autocomplete="off"
     />
     <InputField
-      id={`${idPrefix}-secret`}
+      {formId}
       name="secret"
-      model={model}
       type={"password"}
       autocomplete="off"
     />
   </fieldset>
-  <div id={idPrefix + "-error"}></div>
-  <div id={`${idPrefix}-success`}></div>
+  <div id={formId + "-error"}></div>
+  <div id={`${formId}-success`}></div>
   <SubmitButton>Connect</SubmitButton>
 </form>

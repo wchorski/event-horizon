@@ -3,7 +3,8 @@ import IntegrationCredForm from "@components/form/IntegrationCredForm.astro";
 import InviteMemberForm from "@components/form/InviteMemberForm.astro";
 import MemberManagementTable from "@components/tables/MemberManagementTable.astro";
 import { db } from "@db/db";
-import { IntegrationCredential, Member, MEMBER_ROLES, User } from "@db/schema";
+import { integrationCredential } from "@db/schema";
+import { user as User, member as Member } from "@db/auth-schema";
 import OrgMemberPageLayout from "@layouts/OrgMemberPageLayout.astro";
 import { auth } from "@lib/auth";
 import { eq, inArray } from "drizzle-orm";
@@ -11,8 +12,6 @@ import IconPacket from "@icons/packet.svg";
 import IconAdd from "@icons/add.svg";
 import IconEnvelope from "@icons/envelope.svg";
 import CreateTeamForm from "@components/form/CreateTeamForm.astro";
-import Dialog from "@components/Dialog.astro";
-import EditMemberForm from "@components/form/EditMemberForm.astro";
 
 const params = Astro.url.searchParams;
 const msg = params.get("msg");
@@ -20,10 +19,6 @@ const { organization_slug } = Astro.params;
 const editMemberId = params.get("edit-member-id");
 const { user, organization, member } = Astro.locals;
 // TODO check if the slug matches the current organization, if not then switch active org
-const memberRoleOptions = MEMBER_ROLES.map((text) => ({
-  label: text,
-  value: text,
-})).reverse();
 
 const returnTo = Astro.url.pathname + Astro.url.search;
 
@@ -86,8 +81,12 @@ const rows =
     : [];
 
 // TODO another query auth to worry about
-const usersVerified = await db.query.User.findMany({
-  where: inArray(User.id, userIds),
+const usersVerified = await db.query.user.findMany({
+  where: {
+    id: {
+      in: userIds
+    }
+  },
   columns: {
     id: true,
     emailVerified: true,
@@ -115,8 +114,12 @@ const memberTableRows = members.map((m) => ({
 }));
 
 // TODO only pull some fields like provider and expire (not secret or other sensative info)
-const orgIntegrations = await db.query.IntegrationCredential.findMany({
-  where: eq(IntegrationCredential.organizationId, organization.id),
+const orgIntegrations = await db.query.integrationCredential.findMany({
+  where: {
+    organizationId: {
+      eq: organization.id
+    }
+  },
 });
 ---
 

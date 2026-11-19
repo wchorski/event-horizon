@@ -8,7 +8,7 @@ import type {
   DateTimeTimeZone,
 } from "@microsoft/microsoft-graph-types";
 import { db } from "@db/db";
-import { MeetingPacket } from "@db/schema";
+import { meetingPacket as MeetingPacket } from "@db/schema";
 import { validate } from "@lib/validate";
 import {
   BadRequestError,
@@ -62,14 +62,14 @@ const outcome = await useForm(input, {
 
     const meetingTimeZone = await resolveMeetingTimeZone(null);
 
-    const { mailbox_user_email, sharepoint_drive_id, sharepoint_site_id } =
+    const { mailboxUserEmail, sharepointDriveId, sharepointSiteId } =
       organization;
-    if (!mailbox_user_email || !sharepoint_drive_id || !sharepoint_site_id)
+    if (!mailboxUserEmail || !sharepointDriveId || !sharepointSiteId)
       throw new BadRequestError(
         "mailbox and or sharepoint api not setup for organization",
       );
 
-    const url = `/users/${mailbox_user_email}/events/${eventId}`;
+    const url = `/users/${mailboxUserEmail}/events/${eventId}`;
     const updated = await msGraphFetch<OutlookEventSummary>(
       organization.id,
       url,
@@ -84,8 +84,8 @@ const outcome = await useForm(input, {
     if (folderId) {
       await db
         .update(MeetingPacket)
-        .set({ outlook_web_link: updated.webLink })
-        .where(eq(MeetingPacket.sharepoint_folder_id, folderId));
+        .set({ outlookWebLink: updated.webLink })
+        .where(eq(MeetingPacket.sharepointFolderId, folderId));
     }
 
     return {

@@ -2,7 +2,7 @@
 // pages/org/:slug/partials/outlook-event/index
 
 import { db } from "@db/db";
-import { MeetingPacket } from "@db/schema";
+import { meetingPacket as MeetingPacket } from "@db/schema";
 import {
   BadRequestError,
   ForbiddenError,
@@ -53,16 +53,16 @@ const outcome = await useForm(input, {
 
     const meetingTimeZone = await resolveMeetingTimeZone(null);
 
-    const { mailbox_user_email, sharepoint_drive_id, sharepoint_site_id } =
+    const { mailboxUserEmail, sharepointDriveId, sharepointSiteId } =
       organization;
-    if (!mailbox_user_email || !sharepoint_drive_id || !sharepoint_site_id)
+    if (!mailboxUserEmail || !sharepointDriveId || !sharepointSiteId)
       throw new BadRequestError(
         "mailbox and or sharepoint api not setup for organization",
       );
 
     const created = await msGraphFetch<OutlookEventSummary>(
       organization.id,
-      `/users/${mailbox_user_email}/events`,
+      `/users/${mailboxUserEmail}/events`,
       {
         method: "POST",
         headers: outlookTimeZoneHeader(meetingTimeZone),
@@ -70,23 +70,25 @@ const outcome = await useForm(input, {
       },
     );
 
-    const existingPacket = await db.query.MeetingPacket.findFirst({
-      where: eq(MeetingPacket.sharepoint_folder_id, folderId),
+    const existingPacket = await db.query.meetingPacket.findFirst({
+      where: {
+        sharepointFolderId: folderId
+      }
     });
 
     if (existingPacket) {
       await db
         .update(MeetingPacket)
         .set({
-          outlook_event_id: created.id,
-          outlook_web_link: created.webLink,
+          outlookEventId: created.id,
+          outlookWebLink: created.webLink,
         })
         .where(eq(MeetingPacket.id, existingPacket.id));
     } else {
       await db.insert(MeetingPacket).values({
-        outlook_event_id: created.id,
-        outlook_web_link: created.webLink,
-        sharepoint_folder_id: folderId,
+        outlookEventId: created.id,
+        outlookWebLink: created.webLink,
+        sharepointFolderId: folderId,
       });
     }
 

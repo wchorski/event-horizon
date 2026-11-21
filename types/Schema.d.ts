@@ -81,23 +81,17 @@ export const schemaEntityMap = {
 export type SchemaEntity = keyof typeof schemaEntityMap;
 
 export type UserCreditFlat = {
-  user_id: number;
+  userId: number;
   id: number;
   date?: Date;
   courseId?: number;
   grade?: string | null;
   attended: boolean;
-  role_id?: number | null;
-  first_name: string;
-  last_name: string;
-  middle_initial: string | null;
+  firstName: string;
+  lastName: string;
+  middleInitial: string | null;
   phone: string;
   email: string;
-  address_1: string;
-  address_2?: string | null;
-  city: string;
-  state: string;
-  zip: string;
 };
 
 export type BookingStatus = (typeof bookingStatusEnum.enumValues)[number];
@@ -106,8 +100,8 @@ export type MemberRoles = (typeof memberRoleEnum.enumValues)[number];
 
 export type MomentStep = {
   id: number;
-  moment_id: number;
-  timeline_uuid: string;
+  momentId: number;
+  timelineUuid: string;
   tbd: boolean;
   text: string;
   note: string;
@@ -116,18 +110,18 @@ export type MomentStep = {
 
 export type Timeline = {
   id: string;
-  booking_uuid: string | null;
+  bookingUuid: string | null;
   summary: string | null;
   date: Date;
-  date_civil: string;
+  dateCivil: string;
   timezone: string | null;
   start: number;
   end: number;
-  date_modified: Date;
-  date_created: Date;
+  updatedAt: Date;
+  createdAt: Date;
   rev: number;
   notes: string | null;
-  secret_notes: string | null;
+  secretNotes: string | null;
 };
 
 export type TimelineState = Timeline & TimelineData;
@@ -153,16 +147,16 @@ export type TimelineMoment = {
   start: number; // minutes (can exceed 1440)
   end: number; // minutes (can exceed 1440)
   tbd?: boolean;
-  group_id: number;
-  skill_id: number;
-  timeline_uuid: string;
+  groupId: number;
+  skillId: number;
+  timelineUuid: string;
   // step_id: number
 };
 export type TimelineMomentInput = {
   id: string;
   desc: string;
-  group_id: string;
-  skill_id: string;
+  groupId: string;
+  skillId: string;
   note: string;
   start: string; // minutes (can exceed 1440)
   end: string; // minutes (can exceed 1440)
@@ -171,13 +165,13 @@ export type TimelineMomentInput = {
 export type TimelineGroup = {
   id: number;
   name: string;
-  timeline_uuid: string;
+  timelineUuid: string;
 };
 
 export type TimelineSkill = {
   name: string;
   id: number;
-  timeline_uuid: string;
+  timelineUuid: string;
   icon?: string;
   color?: string;
 };
@@ -194,47 +188,47 @@ export type BtnType = "blocks" | "groups" | "skills" | "todos";
 export type TimelineBtnAction = "commit" | "import" | "export" | "print";
 
 export type TemplateGroupClone = Omit<TimelineGroup, "id"> & {
-  source_id: number;
+  sourceId: number;
 };
 
 export type TemplateSkillClone = Omit<TimelineSkill, "id"> & {
-  source_id: number;
+  sourceId: number;
 };
 
 export type TemplateMomentClone = Omit<
   TimelineMoment,
-  "id" | "group_id" | "skill_id"
+  "id" | "groupId" | "skillId"
 > & {
-  source_id: number;
-  source_group_id: number;
-  source_skill_id: number;
+  sourceId: number;
+  sourceGroupId: number;
+  sourceSkillId: number;
 };
 
-export type TemplateStepClone = Omit<TimelineStep, "id" | "moment_id"> & {
-  source_id: number;
-  source_moment_id: number;
+export type TemplateStepClone = Omit<TimelineStep, "id" | "momentId"> & {
+  sourceId: number;
+  sourceMomentId: number;
 };
 
 export type InsertableGroup = Omit<TimelineGroup, "id"> & {
-  source_id: number;
+  sourceId: number;
 };
 
 export type InsertableSkill = Omit<TimelineSkill, "id"> & {
-  source_id: number;
+  sourceId: number;
 };
 
 export type InsertableMoment = Omit<
   TimelineMoment,
-  "id" | "group_id" | "skill_id"
+  "id" | "groupId" | "skillId"
 > & {
-  source_id: number;
-  source_group_id: number;
-  source_skill_id: number;
+  sourceId: number;
+  sourceGroupId: number;
+  sourceSkillId: number;
 };
 
-export type InsertableStep = Omit<MomentStep, "id" | "moment_id"> & {
-  source_id: number;
-  source_moment_id: number;
+export type InsertableStep = Omit<MomentStep, "id" | "momentId"> & {
+  sourceId: number;
+  sourceMomentId: number;
 };
 
 export type InsertableTimelineGraph = Omit<
@@ -249,23 +243,23 @@ export type InsertableTimelineGraph = Omit<
 
 export type MomentStepDB = {
   id: number;
-  moment_id: number;
-  timeline_uuid: string;
+  momentId: number;
+  timelineUuid: string;
   text: string;
   note: string;
   position: string;
   tbd: boolean;
 };
 
-export type MomentStepImport = Omit<MomentStepDB, "id" | "moment_id"> & {
-  source_id: number;
-  source_moment_id: number;
+export type MomentStepImport = Omit<MomentStepDB, "id" | "momentId"> & {
+  sourceId: number;
+  sourceMomentId: number;
 };
 
 export type GoogleCalendarData = {
-  event_id?: string;
-  calendar_id?: string;
-  synced_at?: string;
+  eventId?: string;
+  calendarId?: string;
+  syncedAt?: string;
   // ...whatever fields you actually store
 } | null;
 

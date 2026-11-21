@@ -238,11 +238,11 @@ export function createEmptyMoment(
     start: 0,
     end: 0,
     desc: "",
-    skill_id: 1,
-    group_id: 1,
+    skillId: 1,
+    groupId: 1,
     note: "",
     tbd: false,
-    timeline_uuid,
+    timelineUuid: timeline_uuid,
     ...partial,
   };
 }
@@ -254,7 +254,7 @@ export function timeMomentRowEl(
   steps: MomentStep[] | undefined,
 ): HTMLTableRowElement[] {
   // const fragment = document.createDocumentFragment();
-  const { id, start, end, desc, skill_id, group_id, note, tbd } = moment;
+  const { id, start, end, desc, skillId: skill_id, groupId: group_id, note, tbd } = moment;
 
   const tr = document.createElement("tr");
   tr.id = `timeline-moment-anchor-${id}`;

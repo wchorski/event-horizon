@@ -12,8 +12,6 @@ import type {
   InsertableTimelineGraph,
   MomentStepDB,
 } from "@ty/Schema";
-import { uuidv7 } from "./uuidv7";
-import type { buildFromTemplate } from "./templates/timelineTemplates";
 
 const DB_NAME = "timeline-db";
 //? any changes to the 'schema' need to up the version number
@@ -44,12 +42,12 @@ export function openDB(): Promise<IDBDatabase> {
           keyPath: "id",
         });
 
-        store.createIndex("timeline_uuid", "id", { unique: true });
+        store.createIndex("timelineUuid", "id", { unique: true });
       } else {
         const store = request.transaction!.objectStore(TIMELINES_STORE);
 
-        if (!store.indexNames.contains("timeline_uuid")) {
-          store.createIndex("timeline_uuid", "id", { unique: true });
+        if (!store.indexNames.contains("timelineUuid")) {
+          store.createIndex("timelineUuid", "id", { unique: true });
         }
       }
 
@@ -59,14 +57,14 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
 
-        store.createIndex("group_id", "group_id", { unique: false });
-        store.createIndex("skill_id", "skill_id", { unique: false });
-        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+        store.createIndex("groupId", "groupId", { unique: false });
+        store.createIndex("skillId", "skillId", { unique: false });
+        store.createIndex("timelineUuid", "timelineUuid", { unique: false });
       } else {
         const store = request.transaction!.objectStore(MOMENTS_STORE);
 
-        if (!store.indexNames.contains("timeline_uuid")) {
-          store.createIndex("timeline_uuid", "timeline_uuid", {
+        if (!store.indexNames.contains("timelineUuid")) {
+          store.createIndex("timelineUuid", "timelineUuid", {
             unique: false,
           });
         }
@@ -78,12 +76,12 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
 
-        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+        store.createIndex("timelineUuid", "timelineUuid", { unique: false });
       } else {
         const store = request.transaction!.objectStore(GROUPS_STORE);
 
-        if (!store.indexNames.contains("timeline_uuid")) {
-          store.createIndex("timeline_uuid", "timeline_uuid", {
+        if (!store.indexNames.contains("timelineUuid")) {
+          store.createIndex("timelineUuid", "timelineUuid", {
             unique: false,
           });
         }
@@ -95,12 +93,12 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
 
-        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
+        store.createIndex("timelineUuid", "timelineUuid", { unique: false });
       } else {
         const store = request.transaction!.objectStore(SKILLS_STORE);
 
-        if (!store.indexNames.contains("timeline_uuid")) {
-          store.createIndex("timeline_uuid", "timeline_uuid", {
+        if (!store.indexNames.contains("timelineUuid")) {
+          store.createIndex("timelineUuid", "timelineUuid", {
             unique: false,
           });
         }
@@ -112,20 +110,20 @@ export function openDB(): Promise<IDBDatabase> {
           autoIncrement: true,
         });
 
-        store.createIndex("moment_id", "moment_id", { unique: false });
-        store.createIndex("timeline_uuid", "timeline_uuid", { unique: false });
-        store.createIndex("by_list_position", ["moment_id", "position"]); // compound index
+        store.createIndex("momentId", "momentId", { unique: false });
+        store.createIndex("timelineUuid", "timelineUuid", { unique: false });
+        store.createIndex("by_list_position", ["momentId", "position"]); // compound index
       } else {
         const store = request.transaction!.objectStore(STEPS_STORE);
 
-        if (!store.indexNames.contains("timeline_uuid")) {
-          store.createIndex("timeline_uuid", "timeline_uuid", {
+        if (!store.indexNames.contains("timelineUuid")) {
+          store.createIndex("timelineUuid", "timelineUuid", {
             unique: false,
           });
         }
 
         if (!store.indexNames.contains("by_list_position")) {
-          store.createIndex("by_list_position", ["moment_id", "position"]);
+          store.createIndex("by_list_position", ["momentId", "position"]);
         }
       }
     };
@@ -146,7 +144,7 @@ export async function idbGetAllTimelines(): Promise<Timeline[]> {
     request.onerror = () => reject(request.error);
   });
 }
-export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
+export async function idbGetSingleTimelineData(timelineUuid: string): Promise<
   | (Timeline & {
       moments: TimelineMoment[];
       steps: MomentStep[];
@@ -161,35 +159,35 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
   const [timeline, moments, groups, skills] = await Promise.all([
     new Promise<Timeline>((resolve, reject) => {
       const tx = db.transaction(TIMELINES_STORE, "readonly");
-      const request = tx.objectStore(TIMELINES_STORE).get(timeline_uuid);
+      const request = tx.objectStore(TIMELINES_STORE).get(timelineUuid);
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     }),
     new Promise<TimelineMoment[]>((resolve, reject) => {
       const tx = db.transaction(MOMENTS_STORE, "readonly");
-      const index = tx.objectStore(MOMENTS_STORE).index("timeline_uuid");
-      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      const index = tx.objectStore(MOMENTS_STORE).index("timelineUuid");
+      const request = index.getAll(timelineUuid); // id === timelineUuid
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     }),
     new Promise<TimelineGroup[]>((resolve, reject) => {
       const tx = db.transaction(GROUPS_STORE, "readonly");
-      const index = tx.objectStore(GROUPS_STORE).index("timeline_uuid");
-      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      const index = tx.objectStore(GROUPS_STORE).index("timelineUuid");
+      const request = index.getAll(timelineUuid); // id === timelineUuid
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     }),
     new Promise<TimelineSkill[]>((resolve, reject) => {
       const tx = db.transaction(SKILLS_STORE, "readonly");
-      const index = tx.objectStore(SKILLS_STORE).index("timeline_uuid");
-      const request = index.getAll(timeline_uuid); // id === timeline_uuid
+      const index = tx.objectStore(SKILLS_STORE).index("timelineUuid");
+      const request = index.getAll(timelineUuid); // id === timelineUuid
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     }),
   ]);
 
   if (!timeline) {
-    console.log(`Timeline "${timeline_uuid}" not found in local idb.`);
+    console.log(`Timeline "${timelineUuid}" not found in local idb.`);
     return null;
   }
 
@@ -197,7 +195,7 @@ export async function idbGetSingleTimelineData(timeline_uuid: string): Promise<
 
   const steps = await new Promise<MomentStep[]>((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readonly");
-    const index = tx.objectStore(STEPS_STORE).index("moment_id");
+    const index = tx.objectStore(STEPS_STORE).index("momentId");
 
     const allSteps: MomentStep[] = [];
     // Query steps for each moment in parallel
@@ -244,7 +242,7 @@ export async function idbUpdateTimeline(
       const merged: Timeline = {
         ...existing,
         ...coerced,
-        date_modified: new Date(),
+        updatedAt: new Date(),
         // TODO don't need if getting from db
         // ...(isCommit ? { rev: existing.rev + 1 } : {}),
       };
@@ -330,7 +328,7 @@ export async function idbInsertTimelineGraph(
 
       // ✅ groups
       for (const g of groups) {
-        const { source_id, ...groupToInsert } = g;
+        const { sourceId: source_id, ...groupToInsert } = g;
 
         const newId = (await reqToPromise(
           groupsStore.add(groupToInsert),
@@ -346,7 +344,7 @@ export async function idbInsertTimelineGraph(
 
       // ✅ skills
       for (const s of skills) {
-        const { source_id, ...skillToInsert } = s;
+        const { sourceId: source_id, ...skillToInsert } = s;
 
         const newId = (await reqToPromise(
           skillsStore.add(skillToInsert),
@@ -363,32 +361,32 @@ export async function idbInsertTimelineGraph(
       // ✅ moments
       for (const m of moments) {
         const {
-          source_id,
-          source_group_id,
-          source_skill_id,
+          sourceId: source_id,
+          sourceGroupId: source_groupId,
+          sourceSkillId: source_skillId,
           ...momentToInsert
         } = m;
 
-        const newGroupId = groupIdMap.get(source_group_id);
-        const newSkillId = skillIdMap.get(source_skill_id);
+        const newGroupId = groupIdMap.get(source_groupId);
+        const newSkillId = skillIdMap.get(source_skillId);
 
         if (newGroupId == null) {
           throw new Error(
-            `Missing group remap for source_group_id=${source_group_id}`,
+            `Missing group remap for source_groupId=${source_groupId}`,
           );
         }
 
         if (newSkillId == null) {
           throw new Error(
-            `Missing skill remap for source_skill_id=${source_skill_id}`,
+            `Missing skill remap for source_skillId=${source_skillId}`,
           );
         }
 
         const newId = (await reqToPromise(
           momentsStore.add({
             ...momentToInsert,
-            group_id: newGroupId,
-            skill_id: newSkillId,
+            groupId: newGroupId,
+            skillId: newSkillId,
           }),
         )) as number;
 
@@ -397,27 +395,27 @@ export async function idbInsertTimelineGraph(
         insertedMoments.push({
           ...momentToInsert,
           id: newId,
-          group_id: newGroupId,
-          skill_id: newSkillId,
+          groupId: newGroupId,
+          skillId: newSkillId,
         });
       }
 
       // ✅ steps
       for (const s of steps) {
-        const { source_moment_id } = s;
+        const { sourceMomentId: source_momentId } = s;
 
-        const newMomentId = momentIdMap.get(source_moment_id);
+        const newMomentId = momentIdMap.get(source_momentId);
 
         if (newMomentId == null) {
           throw new Error(
-            `Missing moment remap for source_moment_id=${source_moment_id}`,
+            `Missing moment remap for source_momentId=${source_momentId}`,
           );
         }
 
         const newId = (await reqToPromise(
           stepsStore.add({
             ...s,
-            moment_id: newMomentId,
+            momentId: newMomentId,
           }),
         )) as number;
 
@@ -425,7 +423,7 @@ export async function idbInsertTimelineGraph(
         const inserted: MomentStepDB = {
           ...s,
           id: newId,
-          moment_id: newMomentId,
+          momentId: newMomentId,
         };
 
         insertedSteps.push(inserted);
@@ -456,7 +454,7 @@ export async function idbInsertTimelineGraph(
   });
 }
 export async function idbDeleteAllByTimelineUuid(
-  timeline_uuid: string | number,
+  timelineUuid: string | number,
 ) {
   const db = await openDB();
 
@@ -476,7 +474,7 @@ export async function idbDeleteAllByTimelineUuid(
       store: IDBObjectStore,
       timelineUuid: string | number,
     ) => {
-      const index = store.index("timeline_uuid");
+      const index = store.index("timelineUuid");
 
       const records = await reqToPromise<any[]>(index.getAll(timelineUuid));
 
@@ -487,20 +485,20 @@ export async function idbDeleteAllByTimelineUuid(
 
     (async () => {
       try {
-        await deleteByTimelineUuid(tx.objectStore(GROUPS_STORE), timeline_uuid);
+        await deleteByTimelineUuid(tx.objectStore(GROUPS_STORE), timelineUuid);
 
-        await deleteByTimelineUuid(tx.objectStore(SKILLS_STORE), timeline_uuid);
+        await deleteByTimelineUuid(tx.objectStore(SKILLS_STORE), timelineUuid);
 
         await deleteByTimelineUuid(
           tx.objectStore(MOMENTS_STORE),
-          timeline_uuid,
+          timelineUuid,
         );
 
-        await deleteByTimelineUuid(tx.objectStore(STEPS_STORE), timeline_uuid);
+        await deleteByTimelineUuid(tx.objectStore(STEPS_STORE), timelineUuid);
 
-        // timeline store uses id, not timeline_uuid
+        // timeline store uses id, not timelineUuid
         await reqToPromise(
-          tx.objectStore(TIMELINES_STORE).delete(timeline_uuid),
+          tx.objectStore(TIMELINES_STORE).delete(timelineUuid),
         );
       } catch (err) {
         tx.abort();
@@ -533,7 +531,7 @@ async function insertWithIdRemap<T extends { id: number }>(
 
 //* MOMENTS
 export async function idbGetAllMoments(
-  timeline_uuid?: string,
+  timelineUuid?: string,
 ): Promise<TimelineMoment[]> {
   const db = await openDB();
 
@@ -541,7 +539,7 @@ export async function idbGetAllMoments(
     const tx = db.transaction(MOMENTS_STORE, "readonly");
     const store = tx.objectStore(MOMENTS_STORE);
 
-    const request = store.getAll(timeline_uuid);
+    const request = store.getAll(timelineUuid);
 
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -622,20 +620,20 @@ export async function idbDeleteMoment(id: number) {
 }
 
 //* STEP
-export async function idbGetAllSteps(moment_id: number): Promise<MomentStep[]> {
+export async function idbGetAllSteps(momentId: number): Promise<MomentStep[]> {
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STEPS_STORE, "readonly");
     const index = tx.objectStore(STEPS_STORE).index("by_list_position");
-    const range = IDBKeyRange.bound([moment_id, ""], [moment_id, "\uffff"]);
+    const range = IDBKeyRange.bound([momentId, ""], [momentId, "\uffff"]);
     const request = index.getAll(range);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 export async function idbCreateStep(
-  moment_id: number,
+  momentId: number,
   baseStep: Omit<MomentStep, "id" | "position">,
 ): Promise<MomentStep> {
   const db = await openDB();
@@ -644,7 +642,7 @@ export async function idbCreateStep(
     const tx = db.transaction(STEPS_STORE, "readwrite");
     const store = tx.objectStore(STEPS_STORE);
     const index = store.index("by_list_position");
-    const range = IDBKeyRange.bound([moment_id, ""], [moment_id, "\uffff"]);
+    const range = IDBKeyRange.bound([momentId, ""], [momentId, "\uffff"]);
 
     const getReq = index.getAll(range);
 
@@ -655,7 +653,7 @@ export async function idbCreateStep(
       // new step goes at the end of this moment's list
       const position = generateKeyBetween(lastStep?.position ?? null, null);
 
-      const stepToInsert = { ...baseStep, moment_id, position };
+      const stepToInsert = { ...baseStep, momentId, position };
       const addReq = store.add(stepToInsert);
 
       addReq.onsuccess = () => {

@@ -509,7 +509,7 @@ export const crud = {
         return {
           ...row.users,
           ...row.tickets,
-          user_id: row.tickets.id, // preserve user id before Ticket.id overwrites it
+          userId: row.tickets.id, // preserve user id before Ticket.id overwrites it
           id: row.tickets.id,
         };
       } catch (e) {

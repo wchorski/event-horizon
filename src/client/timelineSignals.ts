@@ -58,7 +58,7 @@ async function init() {
   const match = window.location.pathname.match(/^\/timelines\/([0-9a-f-]{36})/);
   // TODO seem a bit lazy to let this check run on every other page it's loaded on. but it's more of a headache to make remove the listener after it's been loaded on the page
   if (!match) return; // not a timeline page — do nothing
-  const timeline_uuid = match[1];
+  const timelineUuid = match[1];
 
   const pageHeader = document.getElementById("page-header")!;
   const timelineRevSpan = document.getElementById("timeline-revision")!;
@@ -74,20 +74,27 @@ async function init() {
   // let timelineData: TimelineData | null = null;
 
   async function fetchData() {
-    if (!timeline_uuid)
+    if (!timelineUuid)
       throw new Error(
-        `timeline_uuid: ${timeline_uuid}. how did you even get here?`,
+        `timeline_uuid: ${timelineUuid}. how did you even get here?`,
       );
     try {
-      // TODO preven user from default seed. force them to pick from a preset/template
+      // TODO prevent user from default seed. force them to pick from a preset/template
       await seedIfEmpty().catch((e) => console.error(`seedIfEmpty: ${e}`));
-      const local = await idbGetSingleTimelineData(timeline_uuid);
+      const local = await idbGetSingleTimelineData(timelineUuid);
 
       // check server for a newer version
-      const response = await fetch(`/api/timelines/${timeline_uuid}`);
+      const response = await fetch(`/api/timelines/${timelineUuid}`);
 
       if (response.ok) {
-        const server: TimelineSelect = await response.json();
+        const server: TimelineSelect & {
+          data: {
+            moments: TimelineMoment[];
+            steps: MomentStep[];
+            groups: TimelineGroup[];
+            skills: TimelineSkill[];
+          };
+        } = await response.json();
 
         if (
           !local ||
@@ -97,8 +104,8 @@ async function init() {
         ) {
           const {
             data,
-            booking_id,
-            owner_user_id,
+            bookingId,
+            ownerUserId,
             timestamp,
             color,
             ...restOfServer
@@ -110,27 +117,28 @@ async function init() {
             const template = buildInsertableTimelineGraph(
               {
                 ...restOfServer,
-                booking_uuid: null,
+                bookingUuid: null,
                 moments: data.moments,
                 steps: data.steps,
                 groups: data.groups,
                 skills: data.skills,
-                date_modified: new Date(),
-                date_created: new Date(),
+                updatedAt: new Date(),
+                createdAt: new Date(),
               },
-              timeline_uuid,
-              booking_id,
+              timelineUuid,
+              bookingId,
             );
+            
             console.log("inserting timeline from server into local idb");
             return await idbInsertTimelineState(template);
           } else {
             // server has no jsonb data yet — just sync top-level fields
-            await idbUpdateTimeline(timeline_uuid, {
+            await idbUpdateTimeline(timelineUuid, {
               ...restOfServer,
               rev: server.rev,
-              date_modified: new Date(server.updatedAt),
+              updatedAt: new Date(server.updatedAt),
             });
-            return await idbGetSingleTimelineData(timeline_uuid);
+            return await idbGetSingleTimelineData(timelineUuid);
           }
         }
       } else {
@@ -182,7 +190,7 @@ async function init() {
 
   const sortedSteps = computed(() =>
     [...steps.value].sort((a, b) => {
-      if (a.moment_id !== b.moment_id) return a.moment_id - b.moment_id;
+      if (a.momentId !== b.momentId) return a.momentId - b.momentId;
       return a.position < b.position ? -1 : a.position > b.position ? 1 : 0;
     }),
   );
@@ -227,7 +235,7 @@ async function init() {
       case "updated":
         renderGraphUI(moments.value, skills.value);
         // if group assignment changed, re-render the groups UI
-        if (change.previous?.group_id !== change.item.group_id) {
+        if (change.previous?.groupId !== change.item.groupId) {
           renderGroupsUI(groups.value, moments.value);
         }
         break;
@@ -353,7 +361,7 @@ async function init() {
           el.replaceWith(
             groupCard(
               change.item,
-              moments.value.filter((m) => m.group_id === change.item.id),
+              moments.value.filter((m) => m.groupId === change.item.id),
             ),
           );
         tbody
@@ -387,12 +395,12 @@ async function init() {
 
     const created = await idbCreateMoment({
       desc: "",
-      timeline_uuid: timeline.value.id,
+      timelineUuid: timeline.value.id,
       note: "",
       start: lastMoment.end,
       end: lastMoment.end + 15,
-      skill_id: skills.value[0]?.id || 0,
-      group_id: groups.value[0]?.id || 0,
+      skillId: skills.value[0]?.id || 0,
+      groupId: groups.value[0]?.id || 0,
     });
     moments.add(created);
   });
@@ -498,7 +506,7 @@ async function init() {
               throw new Error(`moment id invalid: ${momentId}`);
             // delete cascaded steps from IDB first
             const momentSteps = steps.value.filter(
-              (s) => s.moment_id === momentId,
+              (s) => s.momentId === momentId,
             );
             await Promise.all(momentSteps.map((s) => idbDeleteStep(s.id)));
             await idbDeleteMoment(momentId);
@@ -536,9 +544,9 @@ async function init() {
         const newStep = await idbCreateStep(momentId, {
           text: "",
           tbd: false,
-          moment_id: momentId,
+          momentId: momentId,
           note: "",
-          timeline_uuid: timeline.value.id,
+          timelineUuid: timeline.value.id,
         });
         steps.add(newStep);
         // Step UI is nested inside the row so append directly —
@@ -629,7 +637,7 @@ async function init() {
   groupCreateBtn.addEventListener("pointerup", async (e) => {
     const created = await idbCreateTimelineGroup({
       name: "",
-      timeline_uuid: timeline.value.id,
+      timelineUuid: timeline.value.id,
     });
     groups.add(created);
   });
@@ -660,7 +668,7 @@ async function init() {
       name: "",
       icon: "☘",
       color: "grey",
-      timeline_uuid: timeline.value.id,
+      timelineUuid: timeline.value.id,
     });
 
     skills.add(created);
@@ -680,7 +688,7 @@ async function init() {
       throw new Error("timeline inputs not found");
 
     summaryInput.value = data.summary || "";
-    dateCivilInput.value = data.date_civil || "";
+    dateCivilInput.value = data.dateCivil || "";
     timezoneInput.value = data.timezone || "";
     uiTimelineMeta(data);
   }
@@ -694,9 +702,9 @@ async function init() {
     const revEl = pageHeader.querySelector('dt[data-field="rev"]');
 
     if (dateCreatedEl)
-      dateCreatedEl.textContent = prettyDateToLocale(data.date_created);
+      dateCreatedEl.textContent = prettyDateToLocale(data.createdAt);
     if (dateModifiedEl)
-      dateModifiedEl.textContent = prettyDateToLocale(data.date_modified);
+      dateModifiedEl.textContent = prettyDateToLocale(data.updatedAt);
     if (revEl) revEl.textContent = String(data.rev);
     timelineRevSpan.textContent = String(data.rev);
 
@@ -706,12 +714,12 @@ async function init() {
     if (!bookingLink) throw new Error("bookingLink not set");
 
     // TODO rev gt zero means it's been commited to the server at least once. is this resilent or do i need a `server commit link` boolean flag?
-    if (data.rev > 0 && data.booking_uuid) {
+    if (data.rev > 0 && data.bookingUuid) {
       bookingLink.innerText = "view booking";
-      bookingLink.href = `/bookings/${data.booking_uuid}`;
+      bookingLink.href = `/bookings/${data.bookingUuid}`;
     } else if (data.rev > 0) {
       bookingLink.innerText = "create new booking";
-      bookingLink.href = `/bookings/request?timelineId=${data.id}&start=${data.date_civil}`;
+      bookingLink.href = `/bookings/request?timelineId=${data.id}&start=${data.dateCivil}`;
     } else {
       bookingLink.innerText =
         "Must commit to server (rev 1) to link to booking";
@@ -741,7 +749,7 @@ async function init() {
           b,
           skills,
           groups,
-          steps.filter((t) => t.moment_id === b.id),
+          steps.filter((t) => t.momentId === b.id),
         ),
       ),
     );
@@ -763,17 +771,17 @@ async function init() {
       groupsList.appendChild(
         groupCard(
           g,
-          moments.filter((m) => m.group_id === g.id),
+          moments.filter((m) => m.groupId === g.id),
         ),
       ),
     );
     const momentsUngrouped = moments.filter(
-      (m) => !m.group_id || !groups.find((g) => g.id === m.group_id),
+      (m) => !m.groupId || !groups.find((g) => g.id === m.groupId),
     );
     if (momentsUngrouped.length > 0) {
       groupsList.appendChild(
         groupCard(
-          { name: "ungrouped", id: 0, timeline_uuid: timeline.value.id },
+          { name: "ungrouped", id: 0, timelineUuid: timeline.value.id },
           momentsUngrouped,
         ),
       );
@@ -898,7 +906,7 @@ async function init() {
       case "export":
         console.log("export");
         // const tmlDt = await idbGetSingleTimelineData(timeline_uuid);
-        const { summary, rev, date_modified } = timeline.value;
+        const { summary, rev, updatedAt: date_modified } = timeline.value;
         return downloadAsJSON(
           {
             ...timeline.value,
@@ -942,10 +950,9 @@ async function init() {
         const template = buildInsertableTimelineGraph(
           base,
           timeline.value.id,
-          timeline.value.booking_uuid,
+          timeline.value.bookingUuid,
         );
 
-        console.log(base);
         if (!template)
           throw new Error(`template not created with id ${timeline.value.id}`);
 
@@ -953,7 +960,7 @@ async function init() {
 
         await idbDeleteAllByTimelineUuid(template.id);
         const inserted = await idbInsertTimelineState(template);
-        console.log({ inserted });
+  
         const {
           groups: g,
           skills: sk,
@@ -980,11 +987,11 @@ async function init() {
 
   function updateStepsCountSummary(item: MomentStep) {
     const summary = document.querySelector(
-      `tr[data-moment-id="${item.moment_id}"] > td > details > summary`,
+      `tr[data-moment-id="${item.momentId}"] > td > details > summary`,
     );
     if (!summary) throw new Error("summary not in dom");
     const count = steps.value.filter(
-      (step) => step.moment_id === item.moment_id,
+      (step) => step.momentId === item.momentId,
     ).length;
     summary.textContent = `${count} steps`;
   }

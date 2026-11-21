@@ -145,21 +145,21 @@ export function localDateTimeToRealDate(localString: string, timezone: string) {
 const LOCAL_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_DATE_TIME_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
-export function prettyPlainCivilDateFull(date_civil: string): string {
+export function prettyPlainCivilDateFull(dateCivil: string): string {
   // Step 1: shape check — fails fast with a clear "wrong format" message
-  const isDateOnly = LOCAL_DATE_REGEX.test(date_civil);
-  const isDateTime = LOCAL_DATE_TIME_REGEX.test(date_civil);
+  const isDateOnly = LOCAL_DATE_REGEX.test(dateCivil);
+  const isDateTime = LOCAL_DATE_TIME_REGEX.test(dateCivil);
 
   if (!isDateOnly && !isDateTime) {
     throw new Error(
-      `Invalid format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm, received: "${date_civil}"`,
+      `Invalid format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm, received: "${dateCivil}"`,
     );
   }
 
   // Step 2: value check — shape was fine, but is this a real calendar date/time?
   try {
     if (isDateOnly) {
-      const date = Temporal.PlainDate.from(date_civil);
+      const date = Temporal.PlainDate.from(dateCivil);
       return date.toLocaleString("en-US", {
         weekday: "long",
         year: "numeric",
@@ -168,7 +168,7 @@ export function prettyPlainCivilDateFull(date_civil: string): string {
       });
     }
 
-    const dt = Temporal.PlainDateTime.from(date_civil);
+    const dt = Temporal.PlainDateTime.from(dateCivil);
     return dt.toLocaleString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -179,7 +179,7 @@ export function prettyPlainCivilDateFull(date_civil: string): string {
     });
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid calendar date/time in "${date_civil}": ${reason}`);
+    throw new Error(`Invalid calendar date/time in "${dateCivil}": ${reason}`);
   }
 }
 

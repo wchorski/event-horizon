@@ -54,7 +54,7 @@ function computeBlockFormats(
       c1 = clamp(c1, 1, maxLine - 1);
       c2 = clamp(Math.max(c1 + 1, c2), 2, maxLine);
 
-      const r = laneIndex.get(b.skill_id) ?? 1;
+      const r = laneIndex.get(b.skillId) ?? 1;
       return { block: b, c1, c2, r };
     });
 }
@@ -89,7 +89,7 @@ function createTimeBlock(
   wrapper.style.setProperty("--c1", String(c1));
   wrapper.style.setProperty("--c2", String(c2));
   wrapper.style.setProperty("--r", String(r));
-  wrapper.title = `${block.desc} ${formatTimeMinutesToClockString(block.start, true)}–${formatTimeMinutesToClockString(block.end, true)} • skill:${block.skill_id}`;
+  wrapper.title = `${block.desc} ${formatTimeMinutesToClockString(block.start, true)}–${formatTimeMinutesToClockString(block.end, true)} • skill:${block.skillId}`;
 
   const title = document.createElement("div");
   const titleLink = document.createElement("a");

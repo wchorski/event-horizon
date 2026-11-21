@@ -1,7 +1,7 @@
 // pages/api/timelines/:id
 import type { APIRoute } from "astro";
 import { db } from "@db/db";
-import { Timeline } from "@db/schema";
+import { timeline as Timeline } from "@db/schema";
 import { eq } from "drizzle-orm";
 
 export const GET: APIRoute = async ({ params }) => {
@@ -9,11 +9,13 @@ export const GET: APIRoute = async ({ params }) => {
   if (!id) return new Response("Bad Request", { status: 400 });
 
   try {
-    const [timeline] = await db
-      .select()
-      .from(Timeline)
-      .where(eq(Timeline.id, id))
-      .limit(1);
+    // const [timeline] = await db
+    //   .select()
+    //   .from(Timeline)
+    //   .where(eq(Timeline.id, id))
+    //   .limit(1);
+
+    const timeline = await db.query.timeline.findFirst({ where: { id } });
 
     if (!timeline) return new Response("Not Found", { status: 404 });
 

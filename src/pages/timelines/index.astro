@@ -69,7 +69,6 @@ const bookingId = Astro.url.searchParams.get("bookingId");
 <script>
   import {
     baseTemplates,
-    buildFromTemplate,
     buildInsertableTimelineGraph,
   } from "@client/templates/timelineTemplates";
   import {
@@ -111,7 +110,7 @@ const bookingId = Astro.url.searchParams.get("bookingId");
         "a",
         {
           href: `/timelines/${t.id}`,
-          textContent: `${t.summary} (rev ${t.rev}) @ ${prettyPlainCivilDateFull(t.date_civil)}`,
+          textContent: `${t.summary} (rev ${t.rev}) @ ${prettyPlainCivilDateFull(t.dateCivil)}`,
         },
         {
           astroReload: "true",
@@ -143,24 +142,20 @@ const bookingId = Astro.url.searchParams.get("bookingId");
       throw new Error(`template not found with id ${templateId}`);
     }
 
-    const timeline_uuid = uuidv7();
+    const timelineUuid = uuidv7();
 
     const template = buildInsertableTimelineGraph(
       base,
-      timeline_uuid,
+      timelineUuid,
       bookingId,
     );
 
     if (!template) throw new Error(`template not found with id ${templateId}`);
 
-    // console.log(timeline_uuid);
-
     await idbInsertTimelineGraph(template);
-    window.location.href = `/timelines/${timeline_uuid}`;
+    window.location.href = `/timelines/${timelineUuid}`;
     // target.disabled = false;
   });
   document.addEventListener("astro:page-load", init);
   document.addEventListener("astro:after-swap", init);
-
-  console.log("fetch local timelines");
 </script>

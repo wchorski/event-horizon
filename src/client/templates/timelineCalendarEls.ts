@@ -79,7 +79,7 @@ export function timelineCalendarEls(timelineState: TimelineState) {
   const bySkill = {};
   skills.forEach((s) => (bySkill[s.id] = []));
   moments.forEach((m) => {
-    if (bySkill[m.skill_id]) bySkill[m.skill_id].push(m);
+    if (bySkill[m.skillId]) bySkill[m.skillId].push(m);
   });
 
   const tooltip = document.getElementById("tooltip")!;

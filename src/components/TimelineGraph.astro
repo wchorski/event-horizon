@@ -68,7 +68,7 @@ const momentFormat = moments
     c1 = clamp(c1, 1, maxLine - 1);
     c2 = clamp(Math.max(c1 + 1, c2), 2, maxLine);
 
-    const r = laneIndex.get(item.skill_id) ?? 1;
+    const r = laneIndex.get(item.skillId) ?? 1;
 
     return { item, c1, c2, r };
   });
@@ -104,7 +104,7 @@ const momentFormat = moments
       <div
         class="time-moment"
         style={`--c1:${c1}; --c2:${c2}; --r:${r};`}
-        title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}–${formatTimeMinutesToClockString(item.end, true)} • skill:${item.skill_id}`}
+        title={`${item.desc} ${formatTimeMinutesToClockString(item.start, true)}–${formatTimeMinutesToClockString(item.end, true)} • skill:${item.skillId}`}
       >
         <div class="time-moment__title">{item.desc}</div>
         <div class="time-moment__meta">

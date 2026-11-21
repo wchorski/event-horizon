@@ -5,11 +5,8 @@ import locations from "./locations";
 import { randomDate, randomInt, randomItem } from "@lib/random";
 import { modifyByNumOfHours } from "@lib/dateAndTime";
 import { uuidv7 } from "@client/uuidv7";
+const locationIds = locations.map((l) => l.id ?? null);
 
-const userIds: (string | null)[] = users.map((u) => u.id);
-userIds.push(null);
-const locationIds: (string | null)[] = locations.map((l) => l.id);
-locationIds.push(null);
 
 const numToGenerate = 10;
 const range = {
@@ -37,6 +34,9 @@ function createBooking(i: number): BookingSelect {
   const durationHours = randomInt(1, 8); // 1–8 hour events
   const end = modifyByNumOfHours(start, durationHours);
 
+  const siteOwnerUserId = users[0].id
+  if(!siteOwnerUserId) throw new Error('siteOwnerUserId is undefined')
+
   return {
     id,
     start,
@@ -44,14 +44,13 @@ function createBooking(i: number): BookingSelect {
     createdAt: modifyByNumOfHours(start, -500),
     updatedAt: modifyByNumOfHours(start, -300),
     revision: Math.floor(Math.random() * 20),
-    google_calendar: null,
+    googleCalendar: null,
     status: randomStatus(),
-    clientId: randomItem(userIds),
     locationId: randomItem(locationIds),
     eventId: null,
     notes: null,
     secretNotes: null,
-    authorUserId: users[0].id,
+    authorUserId: siteOwnerUserId,
     organizationId: null,
   };
 }

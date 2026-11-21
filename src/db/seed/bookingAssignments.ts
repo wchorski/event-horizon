@@ -15,7 +15,7 @@ export function createAssignmentsForBooking(
 ): BookingAssignmentSelect[] {
   // exclude null users
   const validUsers = users.map((u) => u.id);
-  const userIds = randomSubset(validUsers, 3);
+  const userIds = randomSubset(validUsers, 3).filter(item => item !== undefined);;
 
   return userIds.map((userId, i) => ({
     id: crypto.randomUUID(),

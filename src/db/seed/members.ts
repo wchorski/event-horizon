@@ -27,10 +27,9 @@ const member = (
         {
           id,
           organizationId: org.id,
-          userId: user.id,
+          userId: user.id as string,
           role,
           createdAt: now,
-          updatedAt: now,
         },
       ]
     : [];

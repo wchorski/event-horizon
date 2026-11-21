@@ -33,6 +33,7 @@ export const user = pgTable("user", {
   phone: text("phone"),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  middleInitial: text("middle_initial"),
 });
 
 export const session = pgTable(

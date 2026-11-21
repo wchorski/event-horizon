@@ -1,23 +1,18 @@
 import type { MOMENTS_STORE } from "@client/indexedDB";
 import {
-  BookingAssignment,
+  bookingAssignment as BookingAssignment,
   // Role,
-  Location,
-  User,
-  Event,
-  Ticket,
-  Booking,
+  location as Location,
+  event as Event,
+  ticket as Ticket,
+  booking as Booking,
   bookingStatusEnum,
   memberRoleEnum,
   assignmentsRoleEnum,
-  BookingContractorWithRole,
-  Timeline,
-  Account,
-  Organization,
-  Department,
-  Member,
-  Team,
+  timeline as Timeline,
 } from "@db/schema";
+
+import {user as User, organization as Organization, account as Account, member as Member, team as Team } from "@db/auth-schema"
 
 export const models = {
   locations: Location,

@@ -13,6 +13,7 @@ import {
   primaryKey,
   unique,
   check,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { pgTable } from "@db/table";
@@ -33,6 +34,7 @@ export const bookingStatus = pgEnum("booking_status", [
   "ACCEPTED",
   "POSTPONED",
 ]);
+export const locationType = pgEnum("location_type", ["PUBLIC", "PRIVATE"]);
 export const meetingPacketStatus = pgEnum("meeting_packet_status", [
   "DRAFT",
   "PUBLISHED",
@@ -234,6 +236,10 @@ export const location = pgTable(
     zip: text().notNull(),
     timezone: text().notNull(),
     excerpt: text(),
+    private: boolean().default(true),
+    // type: 
+    // latitude: doublePrecision("latitude"),
+    // longitude: doublePrecision("longitude"),
     authorUserId: uuid("author_user_id")
       .notNull()
       .references(() => user.id),

@@ -11,10 +11,10 @@ import { validate } from "@lib/validate";
 
 const { user } = Astro.locals;
 
-// if (user)
-//   return Astro.redirect(
-//     `/dashboard?msg=Already signed in as ${user.first_name}`,
-//   );
+if (user)
+  return Astro.redirect(
+    `/dashboard?msg=Already signed in as ${user.firstName}`,
+  );
 
 let state = emptyForm(); // every request starts clean
 
@@ -22,7 +22,7 @@ if (Astro.request.method === "POST") {
   const outcome = await useForm(await Astro.request.formData(), {
     schema: validate.signup,
     sensitive: ["password"],
-    labels: { first_name: "first name", last_name: "last name" },
+    labels: { firstName: "first name", lastName: "last name" },
     successMessage: "Account created! Check your email for a code.",
     run: signup,
   });
@@ -53,46 +53,40 @@ const formId = 'sign-up-form'
     <FormCard id={formId} submitText="Sign Up" {state}>
       <div class="flex gap-m">
         <InputField
-        {formId}
-          name="first_name"
+          {formId}
+          name="firstName"
           type="text"
-
-          model="accounts"
-          value={state.values.first_name}
-          fieldError={state.fieldErrors.first_name}
+          value={state.values.firstName as string| undefined}
+          error={state.fieldErrors.firstName}
         />
         <InputField
-        {formId}
-          name="last_name"
+          {formId}
+          name="lastName"
           type="text"
-   
-          model="accounts"
-          value={state.values.last_name}
-          error={state.fieldErrors.last_name}
+          value={state.values.lastName as string | undefined}
+          error={state.fieldErrors.lastName}
         />
       </div>
       <InputField
-      {formId}
+        {formId}
         name="email"
         type="email"
         required
-        value={state.values.email}
+        value={state.values.email as string | undefined}
         error={state.fieldErrors.email}
       />
       <InputField
-      {formId}
+        {formId}
         name="password"
         type="password"
-
         required
         error={state.fieldErrors.password}
       />
       <InputField
-      {formId}
+        {formId}
         name="image"
         type="text"
-
-        value={state.values.image}
+        value={state.values.image as string | undefined}
         error={state.fieldErrors.image}
       />
     </FormCard>

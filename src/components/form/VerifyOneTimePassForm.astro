@@ -79,6 +79,6 @@ const {
   }
 
   <fieldset slot="sub-actions" class="no-style">
-    <button id="request-otp-btn" type="button" class="just-text" hx-post="/partials/auth/resend-verification-otp" hx-swap="outerHTML" hx-vals={JSON.stringify(email)} hx-tar>resend new code</button>
+    <button id="request-otp-btn" type="button" class="just-text" hx-post="/partials/auth/resend-verification-otp" hx-swap="outerHTML" hx-vals={JSON.stringify({email})} >resend new code</button>
   </fieldset>
 </FormCard>

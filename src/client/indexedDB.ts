@@ -318,7 +318,7 @@ export async function idbInsertTimelineGraph(
 
   const work = (async () => {
     try {
-      // ✅ timeline
+      // timeline
       timelineResult = {
         ...timelineBase,
         id: graph.id,
@@ -326,7 +326,7 @@ export async function idbInsertTimelineGraph(
 
       await reqToPromise(timelinesStore.put(timelineResult));
 
-      // ✅ groups
+      // groups
       for (const g of groups) {
         const { sourceId: source_id, ...groupToInsert } = g;
 
@@ -342,7 +342,7 @@ export async function idbInsertTimelineGraph(
         });
       }
 
-      // ✅ skills
+      // skills
       for (const s of skills) {
         const { sourceId: source_id, ...skillToInsert } = s;
 
@@ -358,7 +358,7 @@ export async function idbInsertTimelineGraph(
         });
       }
 
-      // ✅ moments
+      // moments
       for (const m of moments) {
         const {
           sourceId: source_id,
@@ -400,7 +400,7 @@ export async function idbInsertTimelineGraph(
         });
       }
 
-      // ✅ steps
+      // steps
       for (const s of steps) {
         const { sourceMomentId: source_momentId } = s;
 

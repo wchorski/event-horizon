@@ -6,7 +6,7 @@ import {
 } from "@lib/errors";
 import type { TimelineInsert, TimelineState } from "@ty/Schema";
 import { db } from "@db/db";
-import { Timeline } from "@db/schema";
+import { timeline as Timeline } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { validate } from "@lib/validate";
 
@@ -23,8 +23,8 @@ if (Astro.request.method === "POST") {
       body;
     const payload: TimelineInsert = {
       ...restTimeline,
-      owner_user_id: null,
-      booking_id: booking_uuid,
+      ownerUserId: null,
+      bookingId: booking_uuid,
       color: "pink",
       data: {
         moments,

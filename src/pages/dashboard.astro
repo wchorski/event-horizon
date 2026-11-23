@@ -3,52 +3,32 @@
 import BookingArticleQuickView from "@components/BookingArticleQuickView.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import MiniPaginationControls from "@components/navigation/MiniPaginationControls.astro";
-import { getBookingsPage } from "@lib/getBookingsPage";
 import { SITE_TITLE } from "astro:env/client";
 import { auth } from "@lib/auth";
 import OrganizationCreationForm from "@components/form/OrganizationCreationForm.astro";
 import { db } from "@db/db";
-import Request from "./bookings/request.astro";
+import BookingsManagementTable from "@components/tables/BookingsManagementTable.astro";
+import { getUserDashboard } from "@lib/dbQueries/getUsers";
+
 
 const user = Astro.locals.user;
 
-if (!user) return Astro.redirect("/login?msg=Must be logged in to view this page.");
+if (!user)
+  return Astro.redirect("/login?msg=Must be logged in to view this page.");
 const organizations = await auth.api.listOrganizations({
   headers: Astro.request.headers,
 });
 
-console.log({organizations});
+console.log({ organizations });
 
 const page = Number(Astro.url.searchParams.get("bookings_page") ?? 1);
 const msg = Astro.url.searchParams.get("msg");
 const status = Astro.url.searchParams.get("status");
 
-const foundUser = await db.query.user.findFirst({
-  with: {
-    authoredLocations: {
-      limit: 5,
-      orderBy: {
-        createdAt: "desc"
-      }
-    },
-    authoredBookings: {
-      limit: 5,
-      orderBy: {
-        start: 'desc'
-      }
-    },
-    clientBookings: {
-      limit: 5,
-      orderBy: {
-        start: 'desc'
-      }
-    }
-  },
-});
-if(!foundUser) return new Response('User Not Found', {status: 404})
+const foundUser = await getUserDashboard(user.id);
+if (!foundUser) return new Response("User Not Found", { status: 404 });
 
-const {authoredBookings, authoredLocations, clientBookings } = foundUser
-
+const { authoredBookings, authoredLocations, clientBookings } = foundUser;
 
 // TODO don't fetch ALL locations. maybe use a join?
 // const { bookings, locations, totalPages } = await getBookingsPage({
@@ -61,50 +41,48 @@ const {authoredBookings, authoredLocations, clientBookings } = foundUser
 <CommonPageLayout title={`Dashboard | ${SITE_TITLE}`}>
   <header>
     <h1 class="etched-line">Dashboard</h1>
-    {
-      msg ? (
-        <p class:list={["callout", status]} data-status={status} role="status">
-          {msg}
-        </p>
-      ) : null
-    }
+    {msg ? (
+      <p class:list={["callout", status]} data-status={status} role="status">
+        {msg}
+      </p>
+    ) : null}
   </header>
   <div data-layout="content">
     <section>
       <h2>Locations</h2>
       <ul>
-        {authoredLocations.map(item => <li>{item.name}</li>)}
+        {authoredLocations.map((item) => (
+          <li>{item.name}</li>
+        ))}
       </ul>
-      <h2>Gigs</h2>
-      <ul>
-        {authoredBookings.length > 0 ? (authoredBookings.map(item => <li>{item.start}</li>)) : (<li class="no-data">none</li>)}
-      </ul>
-      <h2>Booking as a client</h2>
-      <ul>
-        {clientBookings.length > 0 ? clientBookings.map(item => <li>{item.start}</li>) : (<li class="no-data">none</li>)}
-      </ul>
+      <h2>Upcoming Gigs</h2>
+      <BookingsManagementTable rows={authoredBookings} orgSlug={'org-not-integrated-yet'} />
+      <h2>Bookings</h2>
+      <BookingsManagementTable rows={clientBookings} orgSlug={'org-not-integrated-yet'} />
+      <div>
+        <h2>Edit Booking</h2>
+        <div id="edit-booking-wrap"></div>
+      </div>
     </section>
     <secton class="grid gap-m">
       <h2>Organizations</h2>
-      {
-        organizations.length > 0 ? (
-          <ul class="unstyled flex gap-m wrap">
-            {organizations.map((org) => (
-              <li>
-                <article class="card">
-                  <h3>{org.name}</h3>
-                  <img src={org.logo} width="auto" height="50" class="shadow" />
-                  <p>
-                    <a class="btn" href={`/org/${org.slug}`}>
-                      manage
-                    </a>
-                  </p>
-                </article>
-              </li>
-            ))}
-          </ul>
-        ) : null
-      }
+      {organizations.length > 0 ? (
+        <ul class="unstyled flex-scroll-no-wrap gap-m">
+          {organizations.map((org) => (
+            <li>
+              <article class="card">
+                <h3>{org.name}</h3>
+                <img src={org.logo} width="auto" height="50" class="shadow" />
+                <p>
+                  <a class="btn" href={`/org/${org.slug}`}>
+                    manage
+                  </a>
+                </p>
+              </article>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <OrganizationCreationForm />
     </secton>
     <hr />

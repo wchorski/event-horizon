@@ -1,7 +1,7 @@
 ---
 import PaginationNav from "@components/navigation/PaginationNav.astro";
 import CommonPageLayout from "@layouts/CommonPageLayout.astro";
-import { Booking } from "@db/schema";
+import { booking as Booking } from "@db/schema";
 import { getBookingsPage } from "@lib/getBookingsPage";
 import { bookingConfigRequired } from "@lib/tableConfigs";
 import TableMenu from "@components/tables/TableMenu.astro";
@@ -23,13 +23,13 @@ if (page === 1 && Astro.url.searchParams.has("page")) {
 
 
 const params = Astro.url.searchParams;
-const rawLocation = params.get("location_id");
+const rawLocation = params.get("locationId");
 
-if (params.has("location_id") && rawLocation === "") {
+if (params.has("locationId") && rawLocation === "") {
   return Astro.redirect(Astro.url.pathname);
 }
 
-const location_id = rawLocation ?? undefined;
+const locationId = rawLocation ?? undefined;
 
 const ALLOWED_PER_PAGE = [5, 10, 25, 50, 100];
 const DEFAULT_PER_PAGE = 25;
@@ -49,10 +49,10 @@ if (rawPerPage !== null) {
 }
 
 const result = await getBookingsPage({
-  session_user_id: user.id,
+  sessionUserId: user.id,
   page,
   perPage: perPageParam,
-  location_id,
+  locationId,
 });
 
 if ("redirect" in result) {
@@ -110,12 +110,12 @@ const pageTitle = page === 1 ? "Bookings" : `Bookings - Page ${page}`;
       >
         <fieldset slot="filters-fieldset">
           <FilterSelect
-            name="location_id"
+            name="locationId"
             options={locations.map((loc) => ({
               value: loc.id,
               label: loc.name,
             }))}
-            value={location_id}
+            value={locationId}
             model="locations"
           />
         </fieldset>

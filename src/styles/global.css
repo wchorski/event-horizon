@@ -491,3 +491,9 @@ button.drag-handle:active {
   bottom: 2%;
   right: 2%;
 }
+
+.flex-scroll-no-wrap {
+  display: flex;
+  overflow-x: scroll;
+  flex-wrap: nowrap;
+}

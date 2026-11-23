@@ -14,6 +14,7 @@ import {
   unique,
   check,
   doublePrecision,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { pgTable } from "@db/table";
@@ -126,7 +127,8 @@ export const booking = pgTable(
       .references(() => user.id),
     locationId: uuid("location_id").references(() => location.id),
     eventId: uuid("event_id").references(() => event.id),
-    // timelineId: uuid().references(() => timeline.id),
+    //! circular type error
+    // timelineId: uuid("timeline_id").references((): AnyPgColumn => timeline.id, { onDelete: "set null" }),
     organizationId: uuid("organization_id").references(() => organization.id, {
       onDelete: "cascade",
     }),
@@ -317,8 +319,8 @@ export const timeline = pgTable(
   {
     id: pk(),
     bookingId: uuid("booking_id").references(() => booking.id, {
-      onDelete: "cascade",
-    }),
+      onDelete: "set null",
+    }).unique(),
     ownerUserId: uuid("owner_user_id").references(() => user.id, {
       onDelete: "cascade",
     }),

@@ -1,6 +1,6 @@
 ---
 // components/tables/BookingManagementTable
-import type { BookingWithRelations } from "@lib/getBookingsPage";
+import type { BookingWithRelations } from "@lib/dbQueries/getUsers";
 import BookingManagementRow from "./BookingManagementRow.astro";
 
 interface Props {
@@ -12,7 +12,7 @@ const { rows, orgSlug } = Astro.props;
 // console.log(JSON.stringify({rows},null,2));
 ---
 
-<table class="color-alternate"> 
+<table class="color-alternate">
   <thead>
     <tr>
       <th>start</th>
@@ -23,12 +23,15 @@ const { rows, orgSlug } = Astro.props;
     </tr>
   </thead>
   <tbody>
-    {
-      rows.length > 0 ? (
-        rows.map((row) => <BookingManagementRow {row} {orgSlug} />)
-      ) : (
-        <tr> <td class='no-data'>-- no bookings found --</td></tr>
-      )
-    }
+    {rows.length > 0 ? (
+      rows.map((row) => <BookingManagementRow {row} {orgSlug} />)
+    ) : (
+      <tr>
+        {" "}
+        <td class="no-data" colspan="100%">
+          -- no bookings found --
+        </td>
+      </tr>
+    )}
   </tbody>
 </table>

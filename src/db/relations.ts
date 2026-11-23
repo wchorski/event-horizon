@@ -89,11 +89,16 @@ export const relations = defineRelations(
         to: r.location.id,
         alias: "booking_location",
       }),
-      // timeline: r.one.timeline({
-      //   from: r.booking.timelineId,
-      //   to: r.location.id,
-      //   alias: "booking_location",
-      // }),
+      timeline: r.one.timeline({
+        from: r.booking.id,
+        to: r.timeline.bookingId,
+      }),
+    },
+    timeline: {
+      bookings: r.many.booking({
+        from: r.timeline.bookingId,
+        to: r.booking.id,
+      }),
     },
     // event: {
     //   booking: r.many.booking(),

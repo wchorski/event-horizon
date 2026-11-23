@@ -1,0 +1,1 @@
+ALTER TABLE "timeline" DROP CONSTRAINT "timeline_booking_id_booking_id_fkey", ADD CONSTRAINT "timeline_booking_id_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "booking"("id") ON DELETE SET NULL;

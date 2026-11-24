@@ -1,5 +1,5 @@
 import { db } from "@db/db";
-import { Location } from "@db/schema";
+import { location as Location } from "@db/schema";
 import { desc, count } from "drizzle-orm";
 
 interface Props {

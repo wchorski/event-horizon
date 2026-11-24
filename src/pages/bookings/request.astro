@@ -3,6 +3,7 @@ import CommonPageLayout from "@layouts/CommonPageLayout.astro";
 import BookingRequestForm from "@components/BookingRequestForm.astro";
 import { getLocationsPage } from "@lib/getLocationsPage";
 import { getUsersPage } from "@lib/getUsersPage";
+import { location as Location } from "@db/schema";
 
 const { user: author } = Astro.locals;
 const returnTo = Astro.url.pathname + Astro.url.search;
@@ -19,9 +20,18 @@ const start = Astro.url.searchParams.get("start");
 const { users } = await getUsersPage({ page: 1, perPage: 200 });
 const usersOptions = users?.map((usr) => ({
   value: usr.id,
-  label: `${usr.first_name} ${usr.last_name} <${usr.email}>`,
+  label: `${usr.firstName} ${usr.lastName} <${usr.email}>`,
 }));
-const { locations } = await getLocationsPage({ page: 1, perPage: 25 });
+// const { locations } = await getLocationsPage({ page: 1, perPage: 25 });
+// const locations = await Astro.locals.rls((tx) =>
+//   tx.query.location.findMany({
+//     // where: { id: bookingId },
+//     // with: { location: true },
+//   }),
+// );
+const locations = await Astro.locals.rls((tx) =>
+  tx.select().from(Location).orderBy(Location.name),
+);
 const locationOptions = locations?.map((loc) => ({
   value: loc.id,
   label: `${loc.name} <${loc.address}>`,
@@ -38,10 +48,16 @@ const locationOptions = locations?.map((loc) => ({
     </header>
 
     <div data-layout="content" class="content">
+      <h2>debug locations</h2>
+      <ul>
+        {locations?.map((loc) => (
+          <li>{loc.name}</li>
+        ))}
+      </ul>
       <BookingRequestForm
         userOptions={usersOptions}
         locationOptions={locationOptions}
-        author_user_id={author.id}
+        authorUserId={author.id}
         timelineId={timelineId}
         start={start}
       />

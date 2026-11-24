@@ -23,7 +23,7 @@ export type TBookingsManagementRow = BookingSelect & {
   timeline: TimelineSelect;
 };
 const { row, orgSlug, class: className, ...attrs } = Astro.props;
-const { id, start, location, timeline, clients } = row;
+const { id, start, location, timeline, clients, status } = row;
 const rowId = `bookings-row--${id}`;
 const dateAndTime = prettyDateToLocale(start)
 const clientLabel = (c: (typeof clients)[number]) =>
@@ -55,6 +55,7 @@ const clientLabel = (c: (typeof clients)[number]) =>
       <button class="just-text">create/connect</button>
     )}
   </td>
+  <td><span data-status={status} class="status">{status}</span></td>
   <td>
     <button
       hx-get={`/partials/bookings/${encodeURIComponent(id)}/edit-form`}

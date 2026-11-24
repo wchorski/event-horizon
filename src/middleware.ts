@@ -1,18 +1,27 @@
 // src/middleware.ts
 import { auth } from "@lib/auth";
-import { Organization, Member } from "@db/schema";
 import { defineMiddleware } from "astro:middleware";
 import {
   UMAMI_HOST_URL,
   UMAMI_PROXY_PREFIX,
   UMAMI_SCRIPT,
 } from "astro:env/client";
-import { db } from "@db/db";
-import { and, eq } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import type { SessionOrganization, SessionTeam } from "./env";
+import { withRls, type RlsContext, type Tx } from "@db/with-user";
 
 const isDev = import.meta.env.DEV;
+
+// Paths that never need a session lookup
+const SKIP = ["/public", "/_astro", "/api/auth"];
+const shouldSkip = (pathname: string) =>
+  SKIP.some((p) => pathname === p || pathname.startsWith(p + "/"));
+
+const bindRls =
+  (ctx: RlsContext) =>
+  <T>(fn: (tx: Tx) => Promise<T>) =>
+    withRls(ctx, fn);
+
 
 const publicRoutesPrefixes = [
   //! do not put route path in this list
@@ -48,6 +57,15 @@ const ROUTE_MAP: Record<string, string> = {
 };
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  if (shouldSkip(context.url.pathname)) {
+    // Still define locals so code on these routes can't crash,
+    // but as an anonymous user: no session lookup, public rows only.
+    context.locals.user = null;
+    context.locals.session = null;
+    context.locals.rls = bindRls({ userId: null, isAdmin: false });
+    return next();
+  }
+
   const headers = context.request.headers;
   const session = await auth.api.getSession({
     headers,
@@ -57,6 +75,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.session = session?.session ?? null;
   context.locals.organization = null;
   context.locals.member = null;
+  context.locals.rls = bindRls({
+    userId: session?.user.id ?? null,
+    isAdmin: session?.user.role === "admin",
+  });
 
   const pathname = context.url.pathname;
   const pathParts = pathname.split("/").filter(Boolean);
@@ -137,9 +159,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // TODO make sure user isn't banned
   //? this is for multi tab org managment (useful now, but may want to revert to commented code below)
   if (organizationSlug && context.locals.user) {
-    let organization:SessionOrganization|null = null;
+    let organization: SessionOrganization | null = null;
     let member;
-    let teams:SessionTeam[]|null = null;
+    let teams: SessionTeam[] | null = null;
 
     try {
       organization = await auth.api.getOrganization({
@@ -164,10 +186,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
         const userTeams = await auth.api.listUserTeams({
           headers, // session of the user
         });
-  
-        teams = userTeams.filter((tm) => tm.organizationId === organization?.id);
-      }
 
+        teams = userTeams.filter(
+          (tm) => tm.organizationId === organization?.id,
+        );
+      }
     } catch (err) {
       // treat API errors (not found / not permitted) like missing data
       // Expected "no access / no such org" responses fall through to the

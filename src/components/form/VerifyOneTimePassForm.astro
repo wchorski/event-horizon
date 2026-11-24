@@ -32,25 +32,20 @@ const {
   <input type="hidden" name="type" value={type} />
   {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
 
-  {
-    email ? (
-      <>
-        <input type="text" name="email" value={email} />
-        <p>
-          Code sent to <strong>{email}</strong>
-        </p>
-      </>
-    ) : (
-      <InputField
+  {email ? (
+    <>
+      <input type="text" name="email" value={email} />
+      <p>
+        Code sent to {' '}<code>{email}</code>
+      </p>
+    </>
+  ) : (
+    <InputField
       formId={id}
-        
-        name="email"
-        type="email"
-        
-        
-      />
-    )
-  }
+      name="email"
+      type="email"
+    />
+  )}
 
   <InputField
     formId={id}
@@ -58,27 +53,33 @@ const {
     label="Code"
     type="text"
 
-    
     value={otp ?? undefined}
     inputmode="numeric"
     autocomplete="one-time-code"
     maxlength="6"
   />
 
-  {
-    type === "forget-password" && (
-      <InputField
-        formId={id}
-        name="password"
-        label="New Password"
-        type="password"
-        
-        autocomplete="new-password"
-      />
-    )
-  }
+  {type === "forget-password" && (
+    <InputField
+      formId={id}
+      name="password"
+      label="New Password"
+      type="password"
+
+      autocomplete="new-password"
+    />
+  )}
 
   <fieldset slot="sub-actions" class="no-style">
-    <button id="request-otp-btn" type="button" class="just-text" hx-post="/partials/auth/resend-verification-otp" hx-swap="outerHTML" hx-vals={JSON.stringify({email})} >resend new code</button>
+    <button
+      id="request-otp-btn"
+      type="button"
+      class="just-text"
+      hx-post="/partials/auth/resend-verification-otp"
+      hx-swap="outerHTML"
+      hx-vals={JSON.stringify({ email })}
+    >
+      resend new code
+    </button>
   </fieldset>
 </FormCard>

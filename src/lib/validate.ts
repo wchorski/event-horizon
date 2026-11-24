@@ -129,6 +129,7 @@ export const checkboxMulti = <T extends ZodType>(item: T) =>
 export const validate = {
   // TODO validate as a uuidv7 when i fix seed data?
   // id: z.uuid(),
+  email: z.email().trim().toLowerCase(),
   login: z.object({
     email: z.email().trim().toLowerCase(),
     password: z.string().min(1, "Enter your password"),
@@ -136,12 +137,12 @@ export const validate = {
   signup: z.object({
     email: z.email().trim().toLowerCase(),
     password: passwordVerification,
-    first_name: z
+    firstName: z
       .string()
       .trim()
       .max(100)
       .min(3, "First name must be 3 characters or more"),
-    last_name: z
+    lastName: z
       .string()
       .trim()
       .max(100)
@@ -173,8 +174,8 @@ export const validate = {
   // TODO i should prob use .strict() where i can as a lot of these data inputs usually contain all fields type
   user: z.object({
     id: z.string(),
-    first_name: z.string().trim().min(3, "Must be more than 3 characters"),
-    last_name: z.string().trim().min(3, "Must be more than 3 characters"),
+    firstName: z.string().trim().min(3, "Must be more than 3 characters"),
+    lastName: z.string().trim().min(3, "Must be more than 3 characters"),
     middle_initial: z
       .string()
       .trim()
@@ -337,8 +338,8 @@ export const validate = {
 
   userCreateAndLink: z
     .object({
-      first_name: z.string().min(3),
-      last_name: z.string().min(3),
+      firstName: z.string().min(3),
+      lastName: z.string().min(3),
       phone: z
         .string()
         .trim()
@@ -368,7 +369,7 @@ export const validate = {
 
       if (
         isLinking &&
-        (data.first_name || data.last_name || data.email || data.phone)
+        (data.firstName || data.lastName || data.email || data.phone)
       ) {
         ctx.addIssue({
           code: "custom",
@@ -475,8 +476,8 @@ const optionalUser = z.preprocess(
   },
   z
     .object({
-      first_name: z.string().min(3, "First name is required"),
-      last_name: z.string().min(3, "Last name is required"),
+      firstName: z.string().min(3, "First name is required"),
+      lastName: z.string().min(3, "Last name is required"),
       email: z.email().min(3, "Email is required").toLowerCase(),
       phone: validate.phoneOptional,
     })

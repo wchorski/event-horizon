@@ -227,7 +227,8 @@ button,
 
 button.just-text {
   background-color: transparent;
-  border: none;
+  border-color: var(--c-seperator);
+  border-width: 1px;
   color: var(--c-primary);
 
   &:hover {

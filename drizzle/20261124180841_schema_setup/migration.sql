@@ -2,6 +2,7 @@ CREATE TYPE "booking_client_role" AS ENUM('client');--> statement-breakpoint
 CREATE TYPE "booking_client_status" AS ENUM('invited', 'accepted', 'declined');--> statement-breakpoint
 CREATE TYPE "booking_status" AS ENUM('REQUESTED', 'CANCELED', 'DECLINED', 'HOLDING', 'ACCEPTED', 'POSTPONED');--> statement-breakpoint
 CREATE TYPE "integration_provider" AS ENUM('microsoft', 'google');--> statement-breakpoint
+CREATE TYPE "location_type" AS ENUM('PUBLIC', 'PRIVATE');--> statement-breakpoint
 CREATE TYPE "meeting_packet_status" AS ENUM('DRAFT', 'PUBLISHED');--> statement-breakpoint
 CREATE TYPE "member_role" AS ENUM('owner', 'admin', 'member');--> statement-breakpoint
 CREATE TABLE "booking" (
@@ -22,6 +23,7 @@ CREATE TABLE "booking" (
 	CONSTRAINT "end_after_start" CHECK (("end" >= start))
 );
 --> statement-breakpoint
+ALTER TABLE "booking" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "booking_assignment" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"booking_id" uuid NOT NULL,
@@ -42,6 +44,7 @@ CREATE TABLE "booking_client" (
 	CONSTRAINT "booking_clients_booking_email_role_unique" UNIQUE("booking_id","email","role")
 );
 --> statement-breakpoint
+ALTER TABLE "booking_client" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "event" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"wp_post_id" integer CONSTRAINT "events_wp_post_id_unique" UNIQUE,
@@ -93,12 +96,14 @@ CREATE TABLE "location" (
 	"zip" text NOT NULL,
 	"timezone" text NOT NULL,
 	"excerpt" text,
+	"private" boolean DEFAULT true NOT NULL,
 	"author_user_id" uuid NOT NULL,
 	"organization_id" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "location" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "meeting_packet" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"event_id" uuid,
@@ -145,6 +150,7 @@ CREATE TABLE "timeline" (
 	"data" jsonb
 );
 --> statement-breakpoint
+ALTER TABLE "timeline" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"account_id" text NOT NULL,
@@ -272,6 +278,7 @@ CREATE TABLE "verification" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX "bookings_author_idx" ON "booking" ("author_user_id");--> statement-breakpoint
 CREATE INDEX "booking_clients_booking_idx" ON "booking_client" ("booking_id");--> statement-breakpoint
 CREATE INDEX "booking_clients_email_idx" ON "booking_client" ("email");--> statement-breakpoint
 CREATE INDEX "booking_clients_user_idx" ON "booking_client" ("user_id");--> statement-breakpoint
@@ -282,6 +289,7 @@ CREATE UNIQUE INDEX "locations_author_name_unique" ON "location" ("author_user_i
 CREATE INDEX "locations_city_idx" ON "location" ("city");--> statement-breakpoint
 CREATE UNIQUE INDEX "locations_org_name_unique" ON "location" ("organization_id",lower(name)) WHERE (organization_id IS NOT NULL);--> statement-breakpoint
 CREATE INDEX "locations_state_idx" ON "location" ("state");--> statement-breakpoint
+CREATE INDEX "locations_author_idx" ON "location" ("author_user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "meeting_packets_folder_unique" ON "meeting_packet" ("sharepoint_folder_id");--> statement-breakpoint
 CREATE INDEX "tickets_event_id_idx" ON "ticket" ("event_id");--> statement-breakpoint
 CREATE INDEX "tickets_user_id_idx" ON "ticket" ("user_id");--> statement-breakpoint
@@ -317,7 +325,7 @@ ALTER TABLE "location" ADD CONSTRAINT "location_organization_id_organization_id_
 ALTER TABLE "meeting_packet" ADD CONSTRAINT "meeting_packet_event_id_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "event"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "ticket" ADD CONSTRAINT "ticket_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id");--> statement-breakpoint
 ALTER TABLE "ticket" ADD CONSTRAINT "ticket_event_id_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "event"("id");--> statement-breakpoint
-ALTER TABLE "timeline" ADD CONSTRAINT "timeline_booking_id_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "booking"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "timeline" ADD CONSTRAINT "timeline_booking_id_booking_id_fkey" FOREIGN KEY ("booking_id") REFERENCES "booking"("id") ON DELETE SET NULL;--> statement-breakpoint
 ALTER TABLE "timeline" ADD CONSTRAINT "timeline_owner_user_id_user_id_fkey" FOREIGN KEY ("owner_user_id") REFERENCES "user"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE CASCADE;--> statement-breakpoint
@@ -328,4 +336,36 @@ ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_user_id_fkey" FOREIGN KEY 
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "team" ADD CONSTRAINT "team_organization_id_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "team_member" ADD CONSTRAINT "team_member_team_id_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "team"("id") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "team_member" ADD CONSTRAINT "team_member_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE;
+ALTER TABLE "team_member" ADD CONSTRAINT "team_member_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE;--> statement-breakpoint
+CREATE POLICY "booking_admin" ON "booking" AS PERMISSIVE FOR ALL TO "app_user" USING ((select coalesce(current_setting('app.is_admin', true), '') = 'true')) WITH CHECK ((select coalesce(current_setting('app.is_admin', true), '') = 'true'));--> statement-breakpoint
+CREATE POLICY "booking_author" ON "booking" AS PERMISSIVE FOR ALL TO "app_user" USING ("booking"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid)) WITH CHECK ("booking"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "booking_read" ON "booking" AS PERMISSIVE FOR SELECT TO "app_user" USING ("booking"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "booking_not_banned" ON "booking" AS RESTRICTIVE FOR ALL TO "app_user" USING (
+      NOT EXISTS (
+        SELECT 1
+        FROM public."user"
+        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)
+        AND banned = true
+      )
+    );--> statement-breakpoint
+CREATE POLICY "booking_client_admin" ON "booking_client" AS PERMISSIVE FOR ALL TO "app_user" USING ((select coalesce(current_setting('app.is_admin', true), '') = 'true')) WITH CHECK ((select coalesce(current_setting('app.is_admin', true), '') = 'true'));--> statement-breakpoint
+CREATE POLICY "booking_client_read" ON "booking_client" AS PERMISSIVE FOR SELECT TO "app_user" USING ("booking_client"."user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "booking_clients_not_banned" ON "booking_client" AS RESTRICTIVE FOR ALL TO "app_user" USING (
+      NOT EXISTS (
+        SELECT 1
+        FROM public."user"
+        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)
+        AND banned = true
+      )
+    );--> statement-breakpoint
+CREATE POLICY "location_admin" ON "location" AS PERMISSIVE FOR ALL TO "app_user" USING ((select coalesce(current_setting('app.is_admin', true), '') = 'true')) WITH CHECK ((select coalesce(current_setting('app.is_admin', true), '') = 'true'));--> statement-breakpoint
+CREATE POLICY "location_read" ON "location" AS PERMISSIVE FOR SELECT TO "app_user" USING ("location"."private" = false or "location"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "location_write" ON "location" AS PERMISSIVE FOR ALL TO "app_user" USING ("location"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid)) WITH CHECK ("location"."author_user_id" = (select nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "location_not_banned" ON "location" AS RESTRICTIVE FOR ALL TO "app_user" USING (
+      NOT EXISTS (
+        SELECT 1
+        FROM public."user"
+        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)
+        AND banned = true
+      )
+    );

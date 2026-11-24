@@ -58,6 +58,7 @@ declare global {
   namespace App {
     interface Locals {
       user: typeof auth.$Infer.Session.user | null;
+      rls: <T>(fn: (tx: import("@db/with-user").Tx) => Promise<T>) => Promise<T>;
       session: typeof auth.$Infer.Session.session | null;
       organization: NonNullable<SessionOrganization> | null;
       member: NonNullable<SessionMember> | null;

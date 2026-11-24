@@ -145,7 +145,7 @@ if (isProd && process.env.ALLOW_PROD_SEED !== "true") {
   const membersCoreced = members.map((item) => ({
     ...item,
     createdAt: new Date(item.createdAt),
-    updatedAt: new Date(item.updatedAt),
+    // updatedAt: new Date(item.updatedAt),
   }));
   const inMembers = await db
     .insert(authSchema.member)

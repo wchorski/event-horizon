@@ -43,6 +43,7 @@ const locations: LocationSeedInsert[] = [
     authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
+    private: false,
   },
   {
     id: "019f3930-2608-7d4f-a6cf-a977a903e9f1",
@@ -55,6 +56,7 @@ const locations: LocationSeedInsert[] = [
     authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
+    private: false,
     excerpt:
       "Instant Motown theme—think soul, R&B, and the 'Sound of Young America' energy for a dance-forward party.",
   },
@@ -69,6 +71,7 @@ const locations: LocationSeedInsert[] = [
     authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
+    private: false,
     excerpt:
       "Iconic Minneapolis music venue strongly associated with Prince/pop-funk era aesthetics—great for an 80s / purple neon theme.",
   },
@@ -83,6 +86,7 @@ const locations: LocationSeedInsert[] = [
     authorUserId,
     createdAt: "2026-05-01T21:06:36.444Z",
     updatedAt: "2026-05-01T21:06:36.444Z",
+    private: false,
     excerpt:
       "Classic Sunset Strip rock landmark—ideal for a guitars-and-leather, glam/rock party concept.",
   },

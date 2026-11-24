@@ -19,6 +19,7 @@ import {
 import { sql } from "drizzle-orm";
 import { pgTable } from "@db/table";
 import { organization, user } from "@db/auth-schema";
+import { bookingClientPolicies, bookingPolicies, locationPolicies } from "./policies";
 
 export const pk = () =>
   uuid()
@@ -72,7 +73,7 @@ export const bookingAssignment = pgTable(
   ],
 );
 
-export const bookingClient = pgTable(
+export const bookingClient = pgTable.withRLS(
   "booking_client",
   {
     id: pk(),
@@ -106,6 +107,7 @@ export const bookingClient = pgTable(
       table.email,
       table.role,
     ),
+    ...bookingClientPolicies(table)
   ],
 );
 
@@ -133,7 +135,11 @@ export const booking = pgTable(
       onDelete: "cascade",
     }),
   },
-  (table) => [check("end_after_start", sql`("end" >= start)`)],
+  (table) => [
+    check("end_after_start", sql`("end" >= start)`),
+    index("bookings_author_idx").on(table.authorUserId),
+    ...bookingPolicies(table),
+  ],
 );
 
 export const eventHost = pgTable(
@@ -227,7 +233,7 @@ export const integrationCredential = pgTable(
   ],
 );
 
-export const location = pgTable(
+export const location = pgTable.withRLS(
   "location",
   {
     id: pk(),
@@ -238,8 +244,8 @@ export const location = pgTable(
     zip: text().notNull(),
     timezone: text().notNull(),
     excerpt: text(),
-    private: boolean().default(true),
-    // type: 
+    private: boolean().default(true).notNull(),
+    // type:
     // latitude: doublePrecision("latitude"),
     // longitude: doublePrecision("longitude"),
     authorUserId: uuid("author_user_id")
@@ -260,6 +266,8 @@ export const location = pgTable(
       .using("btree", table.organizationId.asc().nullsLast(), sql`lower(name)`)
       .where(sql`(organization_id IS NOT NULL)`),
     index("locations_state_idx").using("btree", table.state.asc().nullsLast()),
+    index("locations_author_idx").on(table.authorUserId), // serves the RLS predicate
+    ...locationPolicies(table),
   ],
 );
 
@@ -314,13 +322,15 @@ export const ticket = pgTable(
   ],
 );
 
-export const timeline = pgTable(
+export const timeline = pgTable.withRLS(
   "timeline",
   {
     id: pk(),
-    bookingId: uuid("booking_id").references(() => booking.id, {
-      onDelete: "set null",
-    }).unique(),
+    bookingId: uuid("booking_id")
+      .references(() => booking.id, {
+        onDelete: "set null",
+      })
+      .unique(),
     ownerUserId: uuid("owner_user_id").references(() => user.id, {
       onDelete: "cascade",
     }),

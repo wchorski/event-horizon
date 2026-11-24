@@ -16,17 +16,17 @@ type AuthErrorBody = { message?: string; code?: string };
 export async function signup(
   credentials: SignupCredentials,
 ): Promise<SignupResult> {
-  const { first_name, last_name, email, password, image } = credentials;
+  const { firstName, lastName, email, password, image } = credentials;
 
   const response = await auth.api.signUpEmail({
     body: {
       email,
       password,
       image,
-      username: makeUsername(first_name, last_name),
-      name: `${first_name} ${last_name}`,
-      first_name,
-      last_name,
+      username: makeUsername(firstName, lastName),
+      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
     },
     asResponse: true, // real Response, so we can forward Set-Cookie
   });

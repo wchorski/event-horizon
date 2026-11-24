@@ -1,5 +1,5 @@
 import { db } from "@db/db";
-import { User } from "@db/schema";
+import { user as User } from "@db/auth-schema";
 import { count, asc } from "drizzle-orm";
 
 interface Props {
@@ -22,7 +22,7 @@ export async function getUsersPage({ page, perPage = 15 }: Props) {
   const users = await db
     .select()
     .from(User)
-    .orderBy(asc(User.last_name))
+    .orderBy(asc(User.lastName))
     .limit(perPage)
     .offset((page - 1) * perPage);
 

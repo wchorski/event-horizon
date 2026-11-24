@@ -10,25 +10,23 @@ cp .env.development .env
 pnpm db:create
 ## If any schema changes have been made
 pnpm db:generate
-
-pnpm db:push
+pnpm db:migrate
 pnpm db:seed:truncate
 ```
 
 any changes made to `schema.ts` or `seed-data.ts` need to rerun
 
 ```shell
-pnpm db:push
+pnpm db:generate
+pnpm db:migrate
 pnpm db:seed:truncate
 ```
 
 Drizzle will warn you of any changes with an interactive cli. For example if a column name is new or a rename
 
 ```shell
-pnpm db:push
-
-> my-app@0.0.1 db:push
-> npx drizzle-kit push
+pnpm db:generate
+pnpm db:migrate
 
 No config path provided, using default 'drizzle.config.ts'
 Reading config file '../drizzle.config.ts'

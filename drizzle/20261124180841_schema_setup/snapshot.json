@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "d6bbf40b-264c-49df-95a8-164b66140235",
+  "id": "70a410c1-3bfb-4c5e-9422-ef04280570e8",
   "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
+    "a35adcb5-9a87-4eaf-be4f-a96c4ab124eb"
   ],
   "ddl": [
     {
@@ -48,6 +48,15 @@
     },
     {
       "values": [
+        "PUBLIC",
+        "PRIVATE"
+      ],
+      "name": "location_type",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
         "DRAFT",
         "PUBLISHED"
       ],
@@ -66,7 +75,7 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "booking",
       "entityType": "tables",
       "schema": "public"
@@ -78,7 +87,7 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "booking_client",
       "entityType": "tables",
       "schema": "public"
@@ -102,7 +111,7 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "location",
       "entityType": "tables",
       "schema": "public"
@@ -120,7 +129,7 @@
       "schema": "public"
     },
     {
-      "isRlsEnabled": false,
+      "isRlsEnabled": true,
       "name": "timeline",
       "entityType": "tables",
       "schema": "public"
@@ -1026,6 +1035,19 @@
       "generated": null,
       "identity": null,
       "name": "excerpt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "location"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
+      "name": "private",
       "entityType": "columns",
       "schema": "public",
       "table": "location"
@@ -2828,6 +2850,27 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "author_user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "bookings_author_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "booking"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "booking_id",
           "isExpression": false,
           "asc": true,
@@ -3058,6 +3101,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "locations_state_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "location"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "author_user_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "locations_author_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "location"
@@ -3732,7 +3796,7 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
+      "onDelete": "SET NULL",
       "name": "timeline_booking_id_booking_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -4268,6 +4332,149 @@
       "entityType": "checks",
       "schema": "public",
       "table": "booking"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "withCheck": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "name": "booking_admin",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\"booking\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "withCheck": "\"booking\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "name": "booking_author",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\"booking\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "withCheck": null,
+      "name": "booking_read",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking"
+    },
+    {
+      "as": "RESTRICTIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\n      NOT EXISTS (\n        SELECT 1\n        FROM public.\"user\"\n        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)\n        AND banned = true\n      )\n    ",
+      "withCheck": null,
+      "name": "booking_not_banned",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "withCheck": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "name": "booking_client_admin",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking_client"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\"booking_client\".\"user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "withCheck": null,
+      "name": "booking_client_read",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking_client"
+    },
+    {
+      "as": "RESTRICTIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\n      NOT EXISTS (\n        SELECT 1\n        FROM public.\"user\"\n        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)\n        AND banned = true\n      )\n    ",
+      "withCheck": null,
+      "name": "booking_clients_not_banned",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "booking_client"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "withCheck": "(select coalesce(current_setting('app.is_admin', true), '') = 'true')",
+      "name": "location_admin",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "location"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "SELECT",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\"location\".\"private\" = false or \"location\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "withCheck": null,
+      "name": "location_read",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "location"
+    },
+    {
+      "as": "PERMISSIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\"location\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "withCheck": "\"location\".\"author_user_id\" = (select nullif(current_setting('app.user_id', true), '')::uuid)",
+      "name": "location_write",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "location"
+    },
+    {
+      "as": "RESTRICTIVE",
+      "for": "ALL",
+      "roles": [
+        "app_user"
+      ],
+      "using": "\n      NOT EXISTS (\n        SELECT 1\n        FROM public.\"user\"\n        WHERE id = (select nullif(current_setting('app.user_id', true), '')::uuid)\n        AND banned = true\n      )\n    ",
+      "withCheck": null,
+      "name": "location_not_banned",
+      "entityType": "policies",
+      "schema": "public",
+      "table": "location"
     }
   ],
   "renames": []

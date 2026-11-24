@@ -1,3 +1,4 @@
+// db/sql.ts
 import { sql } from "drizzle-orm";
 
 export const myself = sql`(select nullif(current_setting('app.user_id', true), '')::uuid)`;

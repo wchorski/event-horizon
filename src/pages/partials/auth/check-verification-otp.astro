@@ -4,6 +4,7 @@ import { z } from "astro/zod"; // same zod copy as validate.ts
 import { auth } from "@lib/auth";
 import { FormError, useForm } from "@lib/useForm";
 import { authRedirect, safeReturnTo } from "@lib/auth/respond";
+import FieldErrors from "@components/form/FieldErrors.astro";
 
 if (Astro.request.method !== "POST") {
   return new Response("Only POST is allowed", { status: 405 });
@@ -54,7 +55,6 @@ async function verify({ otp, email, type, password, redirectTo }: Input) {
   throw new FormError("Unsupported verification type.", 400);
 }
 const formData = await Astro.request.formData()
-console.log({formData});
 const outcome = await useForm(formData, {
   schema,
   sensitive: ["otp", "password"],
@@ -68,6 +68,16 @@ if (outcome.ok) {
 // One message area on this form: show the first field error if there is one
 const message = Object.values(outcome.state.fieldErrors)[0] ?? outcome.state.error ?? "";
 Astro.response.status = outcome.state.status;
+const formId = Astro.request.headers.get("HX-Trigger");
+// avoids junk from client
+if (!formId || !/^[\w-]+$/.test(formId))
+  return new Response("Bad request", { status: 400 });
 ---
 
 <p class="form-error error callout" role="alert">{message}</p>
+
+<FieldErrors
+  {formId}
+  names={Object.keys(schema.shape)}
+  errors={outcome.ok ? {} : outcome.state.fieldErrors}
+/>
